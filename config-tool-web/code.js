@@ -8,7 +8,7 @@ const STICKY_FLAG = 1 << 0;
 const TAP_FLAG = 1 << 1;
 const HOLD_FLAG = 1 << 2;
 const CONFIG_SIZE = 32;
-const CONFIG_VERSION = 14;
+const CONFIG_VERSION = 15;
 const VENDOR_ID = 0xCAFE;
 const PRODUCT_ID = 0xBAF2;
 const DEFAULT_PARTIAL_SCROLL_TIMEOUT = 1000000;
@@ -97,6 +97,19 @@ const ops = {
     "PORT": 34,
     "DPAD": 35,
     "EOL": 36,
+    "INPUT_STATE_FP32": 37,
+    "PREV_INPUT_STATE_FP32": 38,
+    "MIN": 39,
+    "MAX": 40,
+    "IFTE": 41,
+    "DIV": 42,
+    "SWAP": 43,
+    "MONITOR": 44,
+    "SIGN": 45,
+    "SUB": 46,
+    "PRINT_IF": 47,
+    "TIME_SEC": 48,
+    "LT": 49,
 }
 
 const opcodes = Object.fromEntries(Object.entries(ops).map(([key, value]) => [value, key]));
@@ -147,6 +160,8 @@ let monitor_enabled = false;
 let monitor_min_val = {};
 let monitor_max_val = {};
 let unique_id_counter = 0;
+let save_to_device_checkmark_timeout_id = null;
+let busy = false;
 const ignored_usages = new Set([
 ]);
 
@@ -197,26 +212,36 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 async function open_device() {
+    if (busy) {
+        return;
+    }
+    busy = true;
+
     clear_error();
     let success = false;
-    const devices = await navigator.hid.requestDevice({
-        filters: [{ usagePage: 0xFF00, usage: 0x0020 }]
-    }).catch((err) => { display_error(err); });
-    const config_interface = devices?.find(d => d.collections.some(c => c.usagePage == 0xff00));
-    if (config_interface !== undefined) {
-        device = config_interface;
-        if (!device.opened) {
-            await device.open().catch((err) => { display_error(err + "\nIf you're on Linux, you might need to give yourself permissions to the appropriate /dev/hidraw* device."); });
+
+    try {
+        const devices = await navigator.hid.requestDevice({
+            filters: [{ usagePage: 0xFF00, usage: 0x0020 }]
+        });
+        const config_interface = devices?.find(d => d.collections.some(c => c.usagePage == 0xff00));
+        if (config_interface !== undefined) {
+            device = config_interface;
+            if (!device.opened) {
+                await device.open().catch((err) => { display_error(err + "\nIf you're on Linux, you might need to give yourself permissions to the appropriate /dev/hidraw* device."); });
+            }
+            success = device.opened;
+            success &&= await check_device_version();
+            if (success) {
+                device.addEventListener('inputreport', input_report_received);
+                await set_monitor_enabled(monitor_enabled);
+                await get_usages_from_device();
+                setup_usages_modals();
+                bluetooth_buttons_set_visibility(device.productName.includes("Bluetooth"));
+            }
         }
-        success = device.opened;
-        success &&= await check_device_version();
-        if (success) {
-            device.addEventListener('inputreport', input_report_received);
-            await set_monitor_enabled(monitor_enabled);
-            await get_usages_from_device();
-            setup_usages_modals();
-            bluetooth_buttons_set_visibility(device.productName.includes("Bluetooth"));
-        }
+    } catch (e) {
+        display_error(e);
     }
 
     device_buttons_set_disabled_state(!success);
@@ -224,13 +249,23 @@ async function open_device() {
     if (!success) {
         device = null;
     }
+
+    busy = false;
 }
 
 async function load_from_device() {
     if (device == null) {
         return;
     }
+
+    if (busy) {
+        return;
+    }
+    busy = true;
+
     clear_error();
+
+    document.getElementById('load_from_device').disabled = true;
 
     try {
         await send_feature_command(GET_CONFIG);
@@ -355,13 +390,31 @@ async function load_from_device() {
     } catch (e) {
         display_error(e);
     }
+
+    if (device != null) {
+        document.getElementById('load_from_device').disabled = false;
+    }
+
+    busy = false;
 }
 
 async function save_to_device() {
     if (device == null) {
         return;
     }
+
+    if (busy) {
+        return;
+    }
+    busy = true;
+
     clear_error();
+
+    document.getElementById('save_to_device').disabled = true;
+    if (save_to_device_checkmark_timeout_id != null) {
+        clearTimeout(save_to_device_checkmark_timeout_id);
+    }
+    document.getElementById('save_to_device_checkmark').classList.add('d-none');
 
     try {
         await send_feature_command(SUSPEND);
@@ -471,9 +524,21 @@ async function save_to_device() {
 
         await send_feature_command(PERSIST_CONFIG);
         await send_feature_command(RESUME);
+
+        document.getElementById('save_to_device_checkmark').classList.remove('d-none');
+        save_to_device_checkmark_timeout_id = setTimeout(() => {
+            document.getElementById('save_to_device_checkmark').classList.add('d-none');
+            save_to_device_checkmark_timeout_id = null;
+        }, 3000);
     } catch (e) {
         display_error(e);
     }
+
+    if (device != null) {
+        document.getElementById('save_to_device').disabled = false;
+    }
+
+    busy = false;
 }
 
 async function do_get_usages_from_device(command, rle_count) {
@@ -505,19 +570,15 @@ async function do_get_usages_from_device(command, rle_count) {
 }
 
 async function get_usages_from_device() {
-    try {
-        await send_feature_command(GET_CONFIG);
-        const [config_version, flags, unmapped_passthrough_layer_mask, partial_scroll_timeout, mapping_count, our_usage_count, their_usage_count, interval_override, tap_hold_threshold, gpio_debounce_time_ms, our_descriptor_number, macro_entry_duration, quirk_count] =
-            await read_config_feature([UINT8, UINT8, UINT8, UINT32, UINT16, UINT32, UINT32, UINT8, UINT32, UINT8, UINT8, UINT8, UINT16]);
-        check_received_version(config_version);
+    await send_feature_command(GET_CONFIG);
+    const [config_version, flags, unmapped_passthrough_layer_mask, partial_scroll_timeout, mapping_count, our_usage_count, their_usage_count, interval_override, tap_hold_threshold, gpio_debounce_time_ms, our_descriptor_number, macro_entry_duration, quirk_count] =
+        await read_config_feature([UINT8, UINT8, UINT8, UINT32, UINT16, UINT32, UINT32, UINT8, UINT32, UINT8, UINT8, UINT8, UINT16]);
+    check_received_version(config_version);
 
-        extra_usages['target'] =
-            await do_get_usages_from_device(GET_OUR_USAGES, our_usage_count);
-        extra_usages['source'] =
-            await do_get_usages_from_device(GET_THEIR_USAGES, their_usage_count);
-    } catch (e) {
-        display_error(e);
-    }
+    extra_usages['target'] =
+        await do_get_usages_from_device(GET_OUR_USAGES, our_usage_count);
+    extra_usages['source'] =
+        await do_get_usages_from_device(GET_THEIR_USAGES, their_usage_count);
 }
 
 function set_config_ui_state() {
@@ -864,7 +925,7 @@ function add_crc(data) {
 }
 
 function check_json_version(config_version) {
-    if (!([3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].includes(config_version))) {
+    if (!([3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].includes(config_version))) {
         throw new Error("Incompatible version.");
     }
 }
@@ -880,7 +941,7 @@ async function check_device_version() {
     // device because it could be version X, ignore our GET_CONFIG call with version Y and
     // just happen to have Y at the right place in the buffer from some previous call done
     // by some other software.
-    for (const version of [CONFIG_VERSION, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2]) {
+    for (const version of [CONFIG_VERSION, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2]) {
         await send_feature_command(GET_CONFIG, [], version);
         const [received_version] = await read_config_feature([UINT8]);
         if (received_version == version) {

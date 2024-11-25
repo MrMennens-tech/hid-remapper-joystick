@@ -10,7 +10,7 @@ PRODUCT_ID = 0xBAF2
 CONFIG_USAGE_PAGE = 0xFF00
 CONFIG_USAGE = 0x0020
 
-CONFIG_VERSION = 14
+CONFIG_VERSION = 15
 CONFIG_SIZE = 32
 REPORT_ID_CONFIG = 100
 
@@ -103,6 +103,19 @@ ops = {
     "PORT": 34,
     "DPAD": 35,
     "EOL": 36,
+    "INPUT_STATE_FP32": 37,
+    "PREV_INPUT_STATE_FP32": 38,
+    "MIN": 39,
+    "MAX": 40,
+    "IFTE": 41,
+    "DIV": 42,
+    "SWAP": 43,
+    "MONITOR": 44,
+    "SIGN": 45,
+    "SUB": 46,
+    "PRINT_IF": 47,
+    "TIME_SEC": 48,
+    "LT": 49,
 }
 
 opcodes = {v: k for k, v in ops.items()}

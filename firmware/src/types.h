@@ -91,17 +91,35 @@ enum class Op : int8_t {
     PORT = 34,
     DPAD = 35,
     EOL = 36,
-};
-
-struct expr_elem_t {
-    Op op;
-    uint32_t val = 0;
+    INPUT_STATE_FP32 = 37,
+    PREV_INPUT_STATE_FP32 = 38,
+    MIN = 39,
+    MAX = 40,
+    IFTE = 41,
+    DIV = 42,
+    SWAP = 43,
+    MONITOR = 44,
+    SIGN = 45,
+    SUB = 46,
+    PRINT_IF = 47,
+    TIME_SEC = 48,
+    LT = 49,
 };
 
 struct tap_hold_state_t {
     bool tap : 1;
     bool hold : 1;
     bool prev_hold : 1;
+};
+
+struct expr_elem_t {
+    Op op;
+    uint32_t val = 0;
+    union {
+        int32_t* state_ptr = NULL;
+        uint8_t* sticky_state_ptr;
+        tap_hold_state_t* tap_hold_state_ptr;
+    };
 };
 
 struct map_source_t {

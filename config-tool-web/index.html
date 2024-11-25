@@ -25,7 +25,10 @@
                 <button id="load_from_device" type="button" class="btn btn-primary w-100">Load from device</button>
             </div>
             <div class="col">
-                <button id="save_to_device" type="button" class="btn btn-primary w-100">Save to device</button>
+                <button id="save_to_device" type="button" class="btn btn-primary w-100 position-relative">
+                    <span id="save_to_device_checkmark" class="position-absolute top-0 start-100 translate-middle badge bg-success rounded-pill hub_port_badge d-none">&check;</span>
+                    <span>Save to device</span>
+                </button>
             </div>
         </div>
 
@@ -182,7 +185,7 @@
                             <option value="2">Switch gamepad</option>
                             <option value="3">PS4 arcade stick</option>
                             <option value="4">Stadia controller</option>
-                            <option value="5">XAC compatible</option>
+                            <option value="5">XAC/Flex compatible</option>
                         </select>
                     </div>
                 </div>

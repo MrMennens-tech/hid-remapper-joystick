@@ -100,6 +100,7 @@ std::queue<macro_entry_t> macro_queue;
 
 uint32_t reports_received;
 uint32_t reports_sent;
+uint32_t processing_time;
 
 bool expression_valid[NEXPRESSIONS] = { false };
 
@@ -199,6 +200,7 @@ bool is_expr_valid(uint8_t expr) {
             case Op::TIME:
             case Op::SCALING:
             case Op::LAYER_STATE:
+            case Op::TIME_SEC:
                 if (on_stack >= STACK_SIZE) {
                     return false;
                 }
@@ -220,6 +222,9 @@ bool is_expr_valid(uint8_t expr) {
             case Op::RECALL:
             case Op::SQRT:
             case Op::ROUND:
+            case Op::INPUT_STATE_FP32:
+            case Op::PREV_INPUT_STATE_FP32:
+            case Op::SIGN:
                 if (on_stack < 1) {
                     return false;
                 }
@@ -238,18 +243,26 @@ bool is_expr_valid(uint8_t expr) {
             case Op::BITWISE_OR:
             case Op::BITWISE_AND:
             case Op::ATAN2:
+            case Op::MIN:
+            case Op::MAX:
+            case Op::DIV:
+            case Op::SUB:
+            case Op::LT:
                 if (on_stack < 2) {
                     return false;
                 }
                 on_stack--;
                 break;
             case Op::CLAMP:
+            case Op::IFTE:
                 if (on_stack < 3) {
                     return false;
                 }
                 on_stack -= 2;
                 break;
             case Op::STORE:
+            case Op::MONITOR:
+            case Op::PRINT_IF:
                 if (on_stack < 2) {
                     return false;
                 }
@@ -267,6 +280,11 @@ bool is_expr_valid(uint8_t expr) {
                 }
                 on_stack -= 3;
                 break;
+            case Op::SWAP:
+                if (on_stack < 2) {
+                    return false;
+                }
+                break;
             default:
                 printf("unknown op in is_expr_valid()\n");
                 return false;
@@ -278,6 +296,9 @@ bool is_expr_valid(uint8_t expr) {
 void validate_expressions() {
     for (uint8_t i = 0; i < NEXPRESSIONS; i++) {
         expression_valid[i] = is_expr_valid(i);
+        if (!expression_valid[i]) {
+            printf("Expression %d invalid.\n", i + 1);
+        }
     }
 }
 
@@ -329,6 +350,61 @@ inline uint8_t* get_sticky_state_ptr(uint32_t usage, uint8_t hub_port, bool assi
     return NULL;
 }
 
+void optimize_expressions() {
+    int16_t current_port = 0;
+
+    for (uint8_t expr_i = 0; expr_i < NEXPRESSIONS; expr_i++) {
+        if (!expression_valid[expr_i]) {
+            continue;
+        }
+
+        expr_elem_t prev_elem;
+
+        for (auto& elem : expressions[expr_i]) {
+            switch (elem.op) {
+                case Op::PORT:
+                    if (prev_elem.op == Op::PUSH) {
+                        current_port = prev_elem.val / 1000;
+                    } else {
+                        current_port = -1;
+                    }
+                    break;
+                case Op::INPUT_STATE:
+                case Op::PREV_INPUT_STATE:
+                case Op::INPUT_STATE_BINARY:
+                case Op::PREV_INPUT_STATE_BINARY:
+                case Op::INPUT_STATE_FP32:
+                case Op::PREV_INPUT_STATE_FP32:
+                    if (prev_elem.op == Op::PUSH_USAGE) {
+                        if (current_port >= 0) {
+                            elem.state_ptr = get_state_ptr(prev_elem.val, current_port, true);
+                        }
+                    }
+                    break;
+                case Op::TAP_STATE:
+                case Op::HOLD_STATE:
+                    if (prev_elem.op == Op::PUSH_USAGE) {
+                        if (current_port >= 0) {
+                            elem.tap_hold_state_ptr = get_tap_hold_state_ptr(prev_elem.val, current_port, true);
+                        }
+                    }
+                    break;
+                case Op::STICKY_STATE:
+                    if (prev_elem.op == Op::PUSH_USAGE) {
+                        if (current_port >= 0) {
+                            elem.sticky_state_ptr = get_sticky_state_ptr(prev_elem.val, current_port, true);
+                        }
+                    }
+                    break;
+                default:
+                    break;
+            }
+
+            prev_elem = elem;
+        }
+    }
+}
+
 void set_mapping_from_config() {
     std::unordered_map<uint64_t, std::vector<map_source_t>> reverse_mapping_map;  // hub_port+target -> sources list
     std::unordered_map<uint64_t, uint8_t> sticky_usage_map;
@@ -350,6 +426,8 @@ void set_mapping_from_config() {
     memset(sticky_state, 0, sizeof(sticky_state));
     uint32_t gpio_in_mask_ = 0;
     uint32_t gpio_out_mask_ = 0;
+
+    optimize_expressions();
 
     for (auto const& mapping : config_mappings) {
         uint8_t layer_mask = mapping.layer_mask;
@@ -692,7 +770,7 @@ int32_t eval_expr(uint8_t expr, uint64_t now, bool auto_repeat) {
                 stack[++ptr] = elem.val;
                 break;
             case Op::INPUT_STATE: {
-                int32_t* state_ptr = get_state_ptr(stack[ptr], port_register, true);
+                int32_t* state_ptr = (elem.state_ptr != NULL) ? elem.state_ptr : get_state_ptr(stack[ptr], port_register, true);
                 stack[ptr] = (state_ptr != NULL) ? *state_ptr * 1000 : 0;
                 break;
             }
@@ -709,7 +787,7 @@ int32_t eval_expr(uint8_t expr, uint64_t now, bool auto_repeat) {
                 ptr--;
                 break;
             case Op::TIME:
-                stack[++ptr] = now & 0x7fffffff;
+                stack[++ptr] = (now * 1000) & 0x7fffffff;
                 break;
             case Op::MOD:
                 stack[ptr - 1] = stack[ptr - 1] % stack[ptr];
@@ -723,7 +801,7 @@ int32_t eval_expr(uint8_t expr, uint64_t now, bool auto_repeat) {
                 stack[ptr] = (!stack[ptr]) * 1000;
                 break;
             case Op::INPUT_STATE_BINARY: {
-                int32_t* state_ptr = get_state_ptr(stack[ptr], port_register, true);
+                int32_t* state_ptr = (elem.state_ptr != NULL) ? elem.state_ptr : get_state_ptr(stack[ptr], port_register, true);
                 stack[ptr] = (state_ptr != NULL) ? !!(*state_ptr) * 1000 : 0;
                 break;
             }
@@ -768,21 +846,21 @@ int32_t eval_expr(uint8_t expr, uint64_t now, bool auto_repeat) {
                 stack[++ptr] = layer_state_mask;
                 break;
             case Op::STICKY_STATE: {
-                uint8_t* sticky_state_ptr = get_sticky_state_ptr(stack[ptr], port_register, true);
+                uint8_t* sticky_state_ptr = (elem.sticky_state_ptr != NULL) ? elem.sticky_state_ptr : get_sticky_state_ptr(stack[ptr], port_register, true);
                 if (sticky_state_ptr != NULL) {
                     stack[ptr] = *sticky_state_ptr;
                 }
                 break;
             }
             case Op::TAP_STATE: {
-                tap_hold_state_t* tap_hold_state_ptr = get_tap_hold_state_ptr(stack[ptr], port_register, true);
+                tap_hold_state_t* tap_hold_state_ptr = (elem.tap_hold_state_ptr != NULL) ? elem.tap_hold_state_ptr : get_tap_hold_state_ptr(stack[ptr], port_register, true);
                 if (tap_hold_state_ptr != NULL) {
                     stack[ptr] = tap_hold_state_ptr->tap * 1000;
                 }
                 break;
             }
             case Op::HOLD_STATE: {
-                tap_hold_state_t* tap_hold_state_ptr = get_tap_hold_state_ptr(stack[ptr], port_register, true);
+                tap_hold_state_t* tap_hold_state_ptr = (elem.tap_hold_state_ptr != NULL) ? elem.tap_hold_state_ptr : get_tap_hold_state_ptr(stack[ptr], port_register, true);
                 if (tap_hold_state_ptr != NULL) {
                     stack[ptr] = tap_hold_state_ptr->hold * 1000;
                 }
@@ -800,12 +878,12 @@ int32_t eval_expr(uint8_t expr, uint64_t now, bool auto_repeat) {
                 stack[ptr] = ~stack[ptr];
                 break;
             case Op::PREV_INPUT_STATE: {
-                int32_t* state_ptr = get_state_ptr(stack[ptr], port_register, true);
+                int32_t* state_ptr = (elem.state_ptr != NULL) ? elem.state_ptr : get_state_ptr(stack[ptr], port_register, true);
                 stack[ptr] = (state_ptr != NULL) ? *(state_ptr + PREV_STATE_OFFSET) * 1000 : 0;
                 break;
             }
             case Op::PREV_INPUT_STATE_BINARY: {
-                int32_t* state_ptr = get_state_ptr(stack[ptr], port_register, true);
+                int32_t* state_ptr = (elem.state_ptr != NULL) ? elem.state_ptr : get_state_ptr(stack[ptr], port_register, true);
                 stack[ptr] = (state_ptr != NULL) ? !!(*(state_ptr + PREV_STATE_OFFSET)) * 1000 : 0;
                 break;
             }
@@ -849,6 +927,73 @@ int32_t eval_expr(uint8_t expr, uint64_t now, bool auto_repeat) {
                 ptr -= 3;
                 break;
             case Op::EOL:
+                break;
+            case Op::INPUT_STATE_FP32: {
+                int32_t* state_ptr = (elem.state_ptr != NULL) ? elem.state_ptr : get_state_ptr(stack[ptr], port_register, true);
+                stack[ptr] = (state_ptr != NULL) ? 1000.0f * *((float*) state_ptr) : 0;
+                break;
+            }
+            case Op::PREV_INPUT_STATE_FP32: {
+                int32_t* state_ptr = (elem.state_ptr != NULL) ? elem.state_ptr : get_state_ptr(stack[ptr], port_register, true);
+                stack[ptr] = (state_ptr != NULL) ? 1000.0f * *((float*) state_ptr + PREV_STATE_OFFSET) : 0;
+                break;
+            }
+            case Op::MIN:
+                stack[ptr - 1] = stack[ptr - 1] < stack[ptr] ? stack[ptr - 1] : stack[ptr];
+                ptr--;
+                break;
+            case Op::MAX:
+                stack[ptr - 1] = stack[ptr - 1] > stack[ptr] ? stack[ptr - 1] : stack[ptr];
+                ptr--;
+                break;
+            case Op::IFTE:
+                stack[ptr - 2] = (stack[ptr - 2] != 0) ? stack[ptr - 1] : stack[ptr];
+                ptr -= 2;
+                break;
+            case Op::DIV:
+                if (stack[ptr] != 0) {
+                    stack[ptr - 1] = (int64_t) 1000 * stack[ptr - 1] / stack[ptr];
+                } else {
+                    stack[ptr - 1] = 0;
+                }
+                ptr--;
+                break;
+            case Op::SWAP: {
+                int32_t tmp = stack[ptr - 1];
+                stack[ptr - 1] = stack[ptr];
+                stack[ptr] = tmp;
+                break;
+            }
+            case Op::MONITOR:
+                // The value will show up *1000, but that's okay, we don't
+                // want to lose the fractional part.
+                if (monitor_enabled) {
+                    if (stack[ptr - 1] != monitor_input_state[stack[ptr]]) {
+                        monitor_usage(stack[ptr], stack[ptr - 1], 0);
+                        monitor_input_state[stack[ptr]] = stack[ptr - 1];
+                    }
+                }
+                ptr -= 2;
+                break;
+            case Op::SIGN:
+                stack[ptr] = (stack[ptr] > 0) ? 1000 : ((stack[ptr]) < 0 ? -1000 : 0);
+                break;
+            case Op::SUB:
+                stack[ptr - 1] = stack[ptr - 1] - stack[ptr];
+                ptr--;
+                break;
+            case Op::PRINT_IF:
+                if (stack[ptr] != 0) {
+                    printf("%ld\n", stack[ptr - 1]);
+                }
+                ptr -= 2;
+                break;
+            case Op::TIME_SEC:
+                stack[++ptr] = now & 0x7fffffff;
+                break;
+            case Op::LT:
+                stack[ptr - 1] = (stack[ptr - 1] < stack[ptr]) * 1000;
+                ptr--;
                 break;
             default:
                 printf("unknown op!\n");
@@ -950,7 +1095,7 @@ void process_mapping(bool auto_repeat) {
     // XXX should we do this before or after tap-hold/sticky/layer logic?
     port_register = 0;
     for (uint8_t i = 0; i < NEXPRESSIONS; i++) {
-        int32_t result = eval_expr(i, frame_counter * 1000, auto_repeat);
+        int32_t result = eval_expr(i, frame_counter, auto_repeat);
         int32_t* state_ptr = get_state_ptr(EXPR_USAGE_PAGE | (i + 1), 0);
         if (state_ptr != NULL) {
             *state_ptr = result;
@@ -1175,6 +1320,8 @@ void process_mapping(bool auto_repeat) {
         }
         memset(report, 0, out_report_sizes[interface_report_id]);
     }
+
+    processing_time += get_time() - now;
 }
 
 bool send_report(send_report_t do_send_report) {
@@ -1691,9 +1838,10 @@ void parse_our_descriptor() {
 }
 
 void print_stats() {
-    printf("%lu %lu\n", reports_received, reports_sent);
+    printf("%lu %lu %lu\n", reports_received, reports_sent, processing_time);
     reports_received = 0;
     reports_sent = 0;
+    processing_time = 0;
 }
 
 void set_monitor_enabled(bool enabled) {
