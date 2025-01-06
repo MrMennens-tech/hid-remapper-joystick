@@ -46,6 +46,7 @@ struct usage_def_t {
     uint32_t usage_maximum;  // effective, for arrays/usage ranges
     int32_t* input_state_0 = NULL;
     int32_t* input_state_n = NULL;
+    uint8_t index_mask = 0;
 };
 
 struct usage_usage_def_t {
@@ -104,6 +105,7 @@ enum class Op : int8_t {
     PRINT_IF = 47,
     TIME_SEC = 48,
     LT = 49,
+    PLUGGED_IN = 50,
 };
 
 struct tap_hold_state_t {
@@ -130,6 +132,7 @@ struct map_source_t {
     bool hold = false;
     bool is_relative = false;
     bool is_binary = false;
+    uint8_t orig_source_port = 0;
     uint8_t layer_mask = 1;
     int32_t* input_state;
     tap_hold_state_t* tap_hold_state;

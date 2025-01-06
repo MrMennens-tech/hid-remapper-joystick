@@ -29,7 +29,15 @@
 #include "remapper.h"
 #include "tick.h"
 
+// RP2350 UF2s wipe the last sector of flash every time
+// because of RP2350-E10 errata mitigation. So we put
+// the config one sector down.
+#if PICO_RP2350
+#define CONFIG_OFFSET_IN_FLASH (PICO_FLASH_SIZE_BYTES - PERSISTED_CONFIG_SIZE - 4096)
+#else
 #define CONFIG_OFFSET_IN_FLASH (PICO_FLASH_SIZE_BYTES - PERSISTED_CONFIG_SIZE)
+#endif
+
 #define FLASH_CONFIG_IN_MEMORY (((uint8_t*) XIP_BASE) + CONFIG_OFFSET_IN_FLASH)
 
 #define ADC_USAGE_PAGE 0xFFF80000
@@ -276,6 +284,10 @@ int main() {
             parse_our_descriptor();
             boot_protocol_updated = false;
             config_updated = true;
+        }
+        if (resume_pending) {
+            resume_pending = false;
+            suspended = false;
         }
         if (config_updated) {
             set_mapping_from_config();

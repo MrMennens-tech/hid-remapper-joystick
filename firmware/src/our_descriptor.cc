@@ -547,6 +547,7 @@ void ps4_clear_report(uint8_t* report, uint8_t report_id, uint16_t len) {
     memset(report, 0, len);
     report[0] = report[1] = report[2] = report[3] = 0x80;
     report[4] = 0x08;
+    report[34] = report[38] = 0b10000000;  // touchpad, 1 means finger not touching
 }
 
 static const uint8_t stadia_neutral[] = { 0x08, 0x00, 0x00, 0x80, 0x80, 0x80, 0x80, 0x00, 0x00, 0x00 };
@@ -635,6 +636,8 @@ const our_descriptor_def_t our_descriptors[] = {
         .idx = 3,
         .descriptor = our_report_descriptor_ps4,
         .descriptor_length = sizeof(our_report_descriptor_ps4),
+        .vid = 0x054C,
+        .pid = 0x1234,
         .device_connected = ps4_device_connected,
         .device_disconnected = ps4_device_disconnected,
         .main_loop_task = ps4_main_loop_task,

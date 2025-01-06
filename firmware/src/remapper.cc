@@ -50,6 +50,8 @@ std::vector<reverse_mapping_t> reverse_mapping_layers;
 
 std::unordered_map<uint8_t, std::unordered_map<uint32_t, usage_def_t>> our_usages;  // report_id -> usage -> usage_def
 std::unordered_map<uint32_t, usage_def_t> our_usages_flat;
+bool have_dpad = false;
+usage_def_t our_dpad_usage;  // only valid if have_dpad is true
 
 std::unordered_map<uint16_t, std::unordered_map<uint8_t, std::vector<usage_usage_def_t>>> their_used_usages;  // dev_addr+interface -> report_id -> (usage, usage_def) vector
 std::unordered_map<uint16_t, std::unordered_map<uint8_t, std::vector<int32_t*>>> array_range_usages;          // dev_addr+interface -> report_id -> input_state ptr vector
@@ -119,6 +121,9 @@ uint64_t frame_counter = 0;
 #define HUB_PORT_NONE 255
 #define NPORTS 15
 std::unordered_map<uint8_t, uint8_t> hub_ports;  // dev_addr -> hub_port
+uint16_t active_ports_mask = 0;
+
+uint8_t dpad_state = 0;
 
 inline int32_t handle_scroll(map_source_t& map_source, uint32_t target_usage, int32_t movement, uint64_t now) {
     // movement is always non-zero
@@ -201,6 +206,7 @@ bool is_expr_valid(uint8_t expr) {
             case Op::SCALING:
             case Op::LAYER_STATE:
             case Op::TIME_SEC:
+            case Op::PLUGGED_IN:
                 if (on_stack >= STACK_SIZE) {
                     return false;
                 }
@@ -432,6 +438,7 @@ void set_mapping_from_config() {
     for (auto const& mapping : config_mappings) {
         uint8_t layer_mask = mapping.layer_mask;
         uint8_t source_port = mapping.hub_ports & 0x0F;
+        uint8_t orig_source_port = source_port;
         if (((mapping.source_usage & 0xFFFF0000) == EXPR_USAGE_PAGE) ||
             ((mapping.source_usage & 0xFFFF0000) == REGISTER_USAGE_PAGE) ||
             ((mapping.source_usage & 0xFFFF0000) == GPIO_USAGE_PAGE)) {
@@ -468,6 +475,7 @@ void set_mapping_from_config() {
                 .sticky = (mapping.flags & MAPPING_FLAG_STICKY) != 0,
                 .tap = (mapping.flags & MAPPING_FLAG_TAP) != 0,
                 .hold = (mapping.flags & MAPPING_FLAG_HOLD) != 0,
+                .orig_source_port = orig_source_port,
                 .layer_mask = layer_mask,
                 .input_state = get_state_ptr(mapping.source_usage, source_port),
                 .tap_hold_state = get_tap_hold_state_ptr(mapping.source_usage, source_port),
@@ -654,6 +662,17 @@ void set_mapping_from_config() {
                 }
             }
         }
+        if ((target == (DIGIPOT_USAGE_PAGE | 0)) ||
+            (target == (DIGIPOT_USAGE_PAGE | 1)) ||
+            (target == (DIGIPOT_USAGE_PAGE | 2)) ||
+            (target == (DIGIPOT_USAGE_PAGE | 3))) {
+            rev_map.default_value = 128;
+            for (auto const& source : sources) {
+                if (!source.sticky && !source.tap && !source.hold && (source.scaling == 1000)) {
+                    *(source.input_state) = 128;
+                }
+            }
+        }
         if ((target & 0xFFFF0000) == GPIO_USAGE_PAGE) {
             rev_map.our_usages.push_back((out_usage_def_t){
                 .data = gpio_out_state,
@@ -667,6 +686,13 @@ void set_mapping_from_config() {
                 .len = sizeof(digipot_state),
                 .size = 9,
                 .bitpos = (uint16_t) ((target & 0xFFFF) * 16),
+            });
+        } else if ((target & 0xFFFF0000) == DPAD_USAGE_PAGE) {
+            rev_map.our_usages.push_back((out_usage_def_t){
+                .data = &dpad_state,
+                .len = sizeof(dpad_state),
+                .size = 1,
+                .bitpos = (uint16_t) ((target & 0xFFFF) - 1) & 0x03,
             });
         } else {
             bool handled = false;
@@ -995,6 +1021,9 @@ int32_t eval_expr(uint8_t expr, uint64_t now, bool auto_repeat) {
                 stack[ptr - 1] = (stack[ptr - 1] < stack[ptr]) * 1000;
                 ptr--;
                 break;
+            case Op::PLUGGED_IN:
+                stack[++ptr] = 1000 * ((port_register == 0) || (active_ports_mask & (1 << port_register)));
+                break;
             default:
                 printf("unknown op!\n");
                 return 0;
@@ -1127,12 +1156,22 @@ void process_mapping(bool auto_repeat) {
     }
 
     memcpy(input_state + PREV_STATE_OFFSET, input_state, used_state_slots * sizeof(input_state[0]));
-    memset(digipot_state, 0, sizeof(digipot_state));
+    digipot_state[0] = 128;
+    digipot_state[1] = 128;
+    digipot_state[2] = 128;
+    digipot_state[3] = 128;
+    digipot_state[4] = 0;
+    digipot_state[5] = 0;
+    dpad_state = 0;
 
     for (auto& rev_map : reverse_mapping) {
         uint32_t target = rev_map.target;
         if (rev_map.is_relative) {
             for (auto& map_source : rev_map.sources) {
+                if ((map_source.orig_source_port != 0) &&
+                    !(active_ports_mask & (1 << map_source.orig_source_port))) {
+                    continue;
+                }
                 int32_t value = 0;
                 if (auto_repeat || map_source.is_relative) {
                     if (map_source.sticky) {
@@ -1162,20 +1201,24 @@ void process_mapping(bool auto_repeat) {
         } else {  // our_usage is absolute
             int32_t value = rev_map.default_value;
             for (auto const& map_source : rev_map.sources) {
+                if ((map_source.orig_source_port != 0) &&
+                    !(active_ports_mask & (1 << map_source.orig_source_port))) {
+                    continue;
+                }
                 if (map_source.sticky) {
                     if (*map_source.sticky_state & map_source.layer_mask) {
-                        value = 1 * map_source.scaling / 1000;
+                        value += 1 * map_source.scaling / 1000 - rev_map.default_value;
                     }
                 } else {
                     if ((layer_state_mask & map_source.layer_mask)) {
                         if ((map_source.tap && map_source.tap_hold_state->tap) ||
                             (map_source.hold && map_source.tap_hold_state->hold)) {
-                            value = 1 * map_source.scaling / 1000;
+                            value += 1 * map_source.scaling / 1000 - rev_map.default_value;
                         }
                         if (!map_source.tap && !map_source.hold) {
                             if (map_source.is_relative) {
                                 if (*map_source.input_state * map_source.scaling > 0) {
-                                    value = 1;
+                                    value += 1;
                                 }
                             } else {
                                 if ((*map_source.input_state != 0) || (rev_map.default_value != 0)) {
@@ -1183,13 +1226,15 @@ void process_mapping(bool auto_repeat) {
                                     if (map_source.is_binary) {
                                         candidate = !!candidate;
                                     }
-                                    candidate = (int64_t) candidate * map_source.scaling / 1000;
-                                    if (((map_source.usage & 0xFFFF0000) == EXPR_USAGE_PAGE) ||
-                                        ((map_source.usage & 0xFFFF0000) == REGISTER_USAGE_PAGE)) {
-                                        candidate /= 1000;
-                                    }
-                                    if (candidate != rev_map.default_value) {
-                                        value = candidate;
+                                    if ((candidate != 0) || !map_source.is_binary) {
+                                        candidate = (int64_t) candidate * map_source.scaling / 1000;
+                                        if (((map_source.usage & 0xFFFF0000) == EXPR_USAGE_PAGE) ||
+                                            ((map_source.usage & 0xFFFF0000) == REGISTER_USAGE_PAGE)) {
+                                            candidate /= 1000;
+                                        }
+                                        if (candidate != rev_map.default_value) {
+                                            value += candidate - rev_map.default_value;
+                                        }
                                     }
                                 }
                             }
@@ -1197,10 +1242,17 @@ void process_mapping(bool auto_repeat) {
                     }
                 }
             }
+            // we don't currently have any absolute usages that can be negative
+            if (value < 0) {
+                value = 0;
+            }
             if (value != rev_map.default_value) {
                 for (auto const& out_usage_def : rev_map.our_usages) {
                     if (out_usage_def.array_count == 0) {
-                        uint32_t effective_value = out_usage_def.size == 1 ? !!value : value;
+                        uint32_t effective_value = value;
+                        if ((out_usage_def.size < 32) && (effective_value > ((1 << out_usage_def.size) - 1))) {
+                            effective_value = (1 << out_usage_def.size) - 1;
+                        }
                         put_bits(out_usage_def.data, out_usage_def.len, out_usage_def.bitpos, out_usage_def.size, effective_value);
                     } else {  // array range
                         for (int i = 0; i < out_usage_def.array_count; i++) {
@@ -1223,6 +1275,8 @@ void process_mapping(bool auto_repeat) {
         for (uint32_t usage : macro_queue.front().items) {
             if ((usage & 0xFFFF0000) == GPIO_USAGE_PAGE) {
                 put_bits(gpio_out_state, sizeof(gpio_out_state), (uint16_t) (usage & 0xFFFF), 1, 1);
+            } else if ((usage & 0xFFFF0000) == DPAD_USAGE_PAGE) {
+                put_bits(&dpad_state, sizeof(dpad_state), (uint16_t) (usage & 0xFFFF) - 1, 1, 1);
             } else {
                 bool handled = false;
                 for (auto const& array_usage : our_array_range_usages) {
@@ -1257,6 +1311,11 @@ void process_mapping(bool auto_repeat) {
                 macro_queue.pop();
             }
         }
+    }
+
+    if (have_dpad) {
+        uint8_t dpad_val = dpad_table[dpad_state];
+        put_bits(reports[our_dpad_usage.report_id], report_sizes[our_dpad_usage.report_id], our_dpad_usage.bitpos, our_dpad_usage.size, dpad_val);
     }
 
     for (auto state : relative_usages) {
@@ -1374,7 +1433,9 @@ inline void read_input(const uint8_t* report, int len, uint32_t source_usage, co
     int32_t value = 0;
     if (their_usage.is_array) {
         for (unsigned int i = 0; i < their_usage.count; i++) {
-            if (get_bits(report, len, their_usage.bitpos + i * their_usage.size, their_usage.size) == their_usage.index) {
+            uint32_t bits = get_bits(report, len, their_usage.bitpos + i * their_usage.size, their_usage.size);
+            if (((their_usage.index_mask == 0) && (bits == their_usage.index)) ||
+                (their_usage.index_mask & (1 << bits))) {
                 value = 1;
                 break;
             }
@@ -1397,7 +1458,7 @@ inline void read_input(const uint8_t* report, int len, uint32_t source_usage, co
         }
     } else {
         if (their_usage.input_state_0 != NULL) {
-            if (their_usage.size == 1) {
+            if ((their_usage.size == 1) || their_usage.is_array) {
                 if (value) {
                     *(their_usage.input_state_0) |= 1 << interface_idx;
                 } else {
@@ -1439,7 +1500,9 @@ inline void monitor_read_input(const uint8_t* report, int len, uint32_t source_u
     int32_t value = 0;
     if (their_usage.is_array) {
         for (unsigned int i = 0; i < their_usage.count; i++) {
-            if (get_bits(report, len, their_usage.bitpos + i * their_usage.size, their_usage.size) == their_usage.index) {
+            uint32_t bits = get_bits(report, len, their_usage.bitpos + i * their_usage.size, their_usage.size);
+            if (((their_usage.index_mask == 0) && (bits == their_usage.index)) ||
+                (their_usage.index_mask & (1 << bits))) {
                 value = 1;
                 break;
             }
@@ -1458,7 +1521,7 @@ inline void monitor_read_input(const uint8_t* report, int len, uint32_t source_u
             monitor_usage(source_usage, value, hub_port);
         }
     } else {
-        if (their_usage.size == 1) {
+        if ((their_usage.size == 1) || their_usage.is_array) {
             if (value != (1 & (monitor_input_state[source_usage] >> interface_idx))) {
                 monitor_usage(source_usage, value, hub_port);
             }
@@ -1484,7 +1547,7 @@ inline void monitor_read_input_range(const uint8_t* report, int len, uint32_t so
         if ((bits >= their_usage.logical_minimum) &&
             (bits <= their_usage.logical_minimum + their_usage.usage_maximum - source_usage)) {
             uint32_t actual_usage = source_usage + bits - their_usage.logical_minimum;
-            // for array inputs, "key-up" events (value=0) don't show up in the monitor
+            // for array range inputs, "key-up" events (value=0) don't show up in the monitor
             if (monitor_enabled && ((actual_usage & 0xFFFF) != 0)) {
                 monitor_usage(actual_usage, 1, hub_port);
             }
@@ -1668,7 +1731,7 @@ void update_their_descriptor_derivates() {
                             relative_usage_set.insert(state_ptr_n);
                         }
                     }
-                    if (usage_def.size == 1) {
+                    if ((usage_def.size == 1) || usage_def.is_array) {
                         if (state_ptr_0 != NULL) {
                             binary_usage_set.insert(state_ptr_0);
                         }
@@ -1696,10 +1759,12 @@ void update_their_descriptor_derivates() {
                         if (state_ptr_0 != NULL) {
                             any_used = true;
                             array_range_usages[interface][report_id].push_back(state_ptr_0);
+                            binary_usage_set.insert(state_ptr_0);
                         }
                         if (state_ptr_n != NULL) {
                             any_used = true;
                             array_range_usages[interface][report_id].push_back(state_ptr_n);
+                            binary_usage_set.insert(state_ptr_n);
                         }
                         if (actual_usage == ROLLOVER_USAGE) {
                             rollover_usages[interface][report_id].push_back((usage_def_t){
@@ -1732,7 +1797,8 @@ void update_their_descriptor_derivates() {
     for (auto& rev_map : reverse_mapping) {
         for (auto& map_source : rev_map.sources) {
             map_source.is_relative = relative_usage_set.count(map_source.input_state) > 0;
-            map_source.is_binary = binary_usage_set.count(map_source.input_state) > 0;
+            map_source.is_binary = (binary_usage_set.count(map_source.input_state) > 0) ||
+                                   ((map_source.usage & 0xFFFF0000) == GPIO_USAGE_PAGE);
         }
         auto search = their_out_usages_flat.find(rev_map.target);
         if (search != their_out_usages_flat.end()) {
@@ -1773,6 +1839,7 @@ void parse_our_descriptor() {
     has_report_id_theirs.erase(OUR_OUT_INTERFACE);
     our_usages_flat.clear();
     our_array_range_usages.clear();
+    have_dpad = false;
 
     for (unsigned int i = 0; i < report_ids.size(); i++) {
         uint8_t report_id = report_ids[i];
@@ -1816,6 +1883,14 @@ void parse_our_descriptor() {
         for (auto const& [usage, usage_def] : usage_map) {
             if (usage_def.usage_maximum == 0) {
                 our_usages_flat[usage] = usage_def;
+                if (usage == DPAD_USAGE) {
+                    our_dpad_usage = usage_def;
+                    have_dpad = true;
+                    our_usages_flat[DPAD_USAGE_LEFT] = (usage_def_t){};
+                    our_usages_flat[DPAD_USAGE_RIGHT] = (usage_def_t){};
+                    our_usages_flat[DPAD_USAGE_UP] = (usage_def_t){};
+                    our_usages_flat[DPAD_USAGE_DOWN] = (usage_def_t){};
+                }
                 our_usage_ranges_set.insert(((uint64_t) usage << 32) | (usage_def.usage_maximum ? usage_def.usage_maximum : usage));
 
                 if (usage_def.is_relative) {
@@ -1844,6 +1919,13 @@ void print_stats() {
     processing_time = 0;
 }
 
+void reset_state() {
+    memset(registers, 0, sizeof(registers));
+    accumulated.clear();
+    layer_state_mask = 1;
+    frame_counter = 0;
+}
+
 void set_monitor_enabled(bool enabled) {
     if (monitor_enabled != enabled) {
         monitor_input_state.clear();
@@ -1853,6 +1935,9 @@ void set_monitor_enabled(bool enabled) {
 
 void device_connected_callback(uint16_t interface, uint16_t vid, uint16_t pid, uint8_t hub_port) {
     hub_ports[interface >> 8] = (hub_port != 0) ? hub_port : HUB_PORT_NONE;
+    if (hub_port != 0) {
+        active_ports_mask |= 1 << hub_port;
+    }
     if (our_descriptor->device_connected != nullptr) {
         our_descriptor->device_connected(interface, vid, pid);
     }
@@ -1863,6 +1948,10 @@ void device_disconnected_callback(uint8_t dev_addr) {
         our_descriptor->device_disconnected(dev_addr);
     }
     clear_descriptor_data(dev_addr);
+    uint8_t hub_port = hub_ports[dev_addr];
+    if ((hub_port != 0) && (hub_port != HUB_PORT_NONE)) {
+        active_ports_mask &= ~(1 << hub_port);
+    }
     hub_ports.erase(dev_addr);
 }
 

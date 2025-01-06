@@ -9,7 +9,7 @@
 #include "platform.h"
 #include "remapper.h"
 
-const uint8_t CONFIG_VERSION = 15;
+const uint8_t CONFIG_VERSION = 16;
 
 const uint8_t CONFIG_FLAG_UNMAPPED_PASSTHROUGH = 0x01;
 const uint8_t CONFIG_FLAG_UNMAPPED_PASSTHROUGH_MASK = 0b00001111;
@@ -528,6 +528,7 @@ void load_config(const uint8_t* persisted_config) {
 
     // v14 is same as v13, it just introduces a new emulated device type
     // v15 is same as v14, it just introduces some new expression ops
+    // v16 is same as v15, it just introduces a new expression op
 
     persist_config_v13_t* config = (persist_config_v13_t*) persisted_config;
     unmapped_passthrough_layer_mask = config->unmapped_passthrough_layer_mask;
@@ -845,19 +846,16 @@ void handle_set_report1(uint8_t report_id, uint8_t const* buffer, uint16_t bufsi
                         our_descriptor_number = 0;
                     }
                     macro_entry_duration = config->macro_entry_duration;
-                    config_updated = true;
                     break;
                 }
                 case ConfigCommand::GET_CONFIG:
                     break;
                 case ConfigCommand::CLEAR_MAPPING:
                     config_mappings.clear();
-                    config_updated = true;
                     break;
                 case ConfigCommand::ADD_MAPPING: {
                     mapping_config11_t* mapping_config = (mapping_config11_t*) config_buffer->data;
                     config_mappings.push_back(*mapping_config);
-                    config_updated = true;
                     break;
                 }
                 case ConfigCommand::GET_MAPPING:
@@ -875,8 +873,9 @@ void handle_set_report1(uint8_t report_id, uint8_t const* buffer, uint16_t bufsi
                     suspended = true;
                     break;
                 case ConfigCommand::RESUME:
-                    suspended = false;
-                    // XXX clear input_state, sticky_state, accumulated?
+                    resume_pending = true;
+                    config_updated = true;
+                    reset_state();
                     break;
                 case ConfigCommand::PAIR_NEW_DEVICE:
                     pair_new_device();
@@ -950,7 +949,6 @@ void handle_set_report1(uint8_t report_id, uint8_t const* buffer, uint16_t bufsi
                         }
                     }
                     my_mutex_exit(MutexId::EXPRESSIONS);
-                    config_updated = true;
                     break;
                 }
                 case ConfigCommand::GET_EXPRESSION: {

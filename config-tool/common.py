@@ -10,7 +10,7 @@ PRODUCT_ID = 0xBAF2
 CONFIG_USAGE_PAGE = 0xFF00
 CONFIG_USAGE = 0x0020
 
-CONFIG_VERSION = 15
+CONFIG_VERSION = 16
 CONFIG_SIZE = 32
 REPORT_ID_CONFIG = 100
 
@@ -116,6 +116,7 @@ ops = {
     "PRINT_IF": 47,
     "TIME_SEC": 48,
     "LT": 49,
+    "PLUGGED_IN": 50,
 }
 
 opcodes = {v: k for k, v in ops.items()}
