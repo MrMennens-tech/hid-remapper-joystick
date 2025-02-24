@@ -8,7 +8,7 @@ const STICKY_FLAG = 1 << 0;
 const TAP_FLAG = 1 << 1;
 const HOLD_FLAG = 1 << 2;
 const CONFIG_SIZE = 32;
-const CONFIG_VERSION = 16;
+const CONFIG_VERSION = 17;
 const VENDOR_ID = 0xCAFE;
 const PRODUCT_ID = 0xBAF2;
 const DEFAULT_PARTIAL_SCROLL_TIMEOUT = 1000000;
@@ -41,8 +41,8 @@ const CLEAR_MAPPING = 4;
 const ADD_MAPPING = 5;
 const GET_MAPPING = 6;
 const PERSIST_CONFIG = 7;
-const GET_OUR_USAGES = 8
-const GET_THEIR_USAGES = 9
+const GET_OUR_USAGES = 8;
+const GET_THEIR_USAGES = 9;
 const SUSPEND = 10;
 const RESUME = 11;
 const PAIR_NEW_DEVICE = 12;
@@ -59,6 +59,9 @@ const SET_MONITOR_ENABLED = 22;
 const CLEAR_QUIRKS = 23;
 const ADD_QUIRK = 24;
 const GET_QUIRK = 25;
+
+const PERSIST_CONFIG_SUCCESS = 1;
+const PERSIST_CONFIG_CONFIG_TOO_BIG = 2;
 
 const ops = {
     "PUSH": 0,
@@ -112,7 +115,11 @@ const ops = {
     "TIME_SEC": 48,
     "LT": 49,
     "PLUGGED_IN": 50,
-}
+    "INPUT_STATE_SCALED": 51,
+    "PREV_INPUT_STATE_SCALED": 52,
+    "DEADZONE": 53,
+    "DEADZONE2": 54,
+};
 
 const opcodes = Object.fromEntries(Object.entries(ops).map(([key, value]) => [value, key]));
 
@@ -530,13 +537,25 @@ async function save_to_device() {
         }
 
         await send_feature_command(PERSIST_CONFIG);
+
+        let [persist_config_return_code] = await read_config_feature([UINT8]);
+
         await send_feature_command(RESUME);
 
-        document.getElementById('save_to_device_checkmark').classList.remove('d-none');
-        save_to_device_checkmark_timeout_id = setTimeout(() => {
-            document.getElementById('save_to_device_checkmark').classList.add('d-none');
-            save_to_device_checkmark_timeout_id = null;
-        }, 3000);
+        switch (persist_config_return_code) {
+            case PERSIST_CONFIG_SUCCESS:
+                document.getElementById('save_to_device_checkmark').classList.remove('d-none');
+                save_to_device_checkmark_timeout_id = setTimeout(() => {
+                    document.getElementById('save_to_device_checkmark').classList.add('d-none');
+                    save_to_device_checkmark_timeout_id = null;
+                }, 3000);
+                break;
+            case PERSIST_CONFIG_CONFIG_TOO_BIG:
+                display_error('Configuration too big to persist.');
+                break;
+            default:
+                throw new Error('Unknown PERSIST_CONFIG return code (' + return_code + ').');
+        }
     } catch (e) {
         display_error(e);
     }
@@ -887,8 +906,23 @@ async function send_feature_command(command, fields = [], version = CONFIG_VERSI
 }
 
 async function read_config_feature(fields = []) {
-    const data_with_report_id = await device.receiveFeatureReport(REPORT_ID_CONFIG);
-    const data = new DataView(data_with_report_id.buffer, 1);
+    let attempts_left = 10;
+    let delay = 2;
+    let data;
+    while (true) {
+        const data_with_report_id = await device.receiveFeatureReport(REPORT_ID_CONFIG);
+        data = new DataView(data_with_report_id.buffer, 1);
+        if (data.byteLength > 0) {
+            break;
+        } else {
+            if ((--attempts_left) > 0) {
+                await (new Promise(resolve => setTimeout(resolve, delay)));
+                delay *= 2;
+                continue;
+            }
+            throw new Error('Error in read_config_feature (given up retrying).');
+        }
+    }
     check_crc(data);
     let ret = [];
     let pos = 0;
@@ -940,7 +974,7 @@ function add_crc(data) {
 }
 
 function check_json_version(config_version) {
-    if (!([3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16].includes(config_version))) {
+    if (!([3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17].includes(config_version))) {
         throw new Error("Incompatible version.");
     }
 }
@@ -956,7 +990,7 @@ async function check_device_version() {
     // device because it could be version X, ignore our GET_CONFIG call with version Y and
     // just happen to have Y at the right place in the buffer from some previous call done
     // by some other software.
-    for (const version of [CONFIG_VERSION, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2]) {
+    for (const version of [CONFIG_VERSION, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2]) {
         await send_feature_command(GET_CONFIG, [], version);
         const [received_version] = await read_config_feature([UINT8]);
         if (received_version == version) {

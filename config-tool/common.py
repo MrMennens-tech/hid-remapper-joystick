@@ -3,6 +3,7 @@ import binascii
 import struct
 import itertools
 import re
+import time
 
 VENDOR_ID = 0xCAFE
 PRODUCT_ID = 0xBAF2
@@ -10,7 +11,7 @@ PRODUCT_ID = 0xBAF2
 CONFIG_USAGE_PAGE = 0xFF00
 CONFIG_USAGE = 0x0020
 
-CONFIG_VERSION = 16
+CONFIG_VERSION = 17
 CONFIG_SIZE = 32
 REPORT_ID_CONFIG = 100
 
@@ -47,6 +48,9 @@ SET_MONITOR_ENABLED = 22
 CLEAR_QUIRKS = 23
 ADD_QUIRK = 24
 GET_QUIRK = 25
+
+PERSIST_CONFIG_SUCCESS = 1
+PERSIST_CONFIG_CONFIG_TOO_BIG = 2
 
 
 UNMAPPED_PASSTHROUGH_FLAG = 0x01
@@ -117,6 +121,10 @@ ops = {
     "TIME_SEC": 48,
     "LT": 49,
     "PLUGGED_IN": 50,
+    "INPUT_STATE_SCALED": 51,
+    "PREV_INPUT_STATE_SCALED": 52,
+    "DEADZONE": 53,
+    "DEADZONE2": 54,
 }
 
 opcodes = {v: k for k, v in ops.items()}
@@ -174,3 +182,18 @@ def convert_elem(elem):
 
 def expr_to_elems(expr):
     return [convert_elem(x) for x in re.sub(r"(?s)/\*.*?\*/", " ", expr).split()]
+
+
+def get_feature_report(device, report_id, size):
+    attempts_left = 10
+    delay = 0.002
+    while True:
+        data = device.get_feature_report(report_id, size)
+        if len(data) > 1:
+            return data
+        attempts_left -= 1
+        if attempts_left > 0:
+            time.sleep(delay)
+            delay *= 2
+            continue
+        raise Exception("Error in get_feature_report (given up retrying)")

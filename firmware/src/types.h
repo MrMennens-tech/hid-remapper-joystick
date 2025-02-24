@@ -40,7 +40,9 @@ struct usage_def_t {
     uint16_t bitpos;
     bool is_relative;
     bool is_array = false;
+    bool should_be_scaled = false;
     int32_t logical_minimum;
+    int32_t logical_maximum;
     uint32_t index = 0;      // for arrays
     uint32_t count = 0;      // for arrays
     uint32_t usage_maximum;  // effective, for arrays/usage ranges
@@ -106,6 +108,10 @@ enum class Op : int8_t {
     TIME_SEC = 48,
     LT = 49,
     PLUGGED_IN = 50,
+    INPUT_STATE_SCALED = 51,
+    PREV_INPUT_STATE_SCALED = 52,
+    DEADZONE = 53,
+    DEADZONE2 = 54,
 };
 
 struct tap_hold_state_t {
@@ -395,6 +401,16 @@ struct __attribute__((packed)) append_to_expr_t {
 struct __attribute__((packed)) get_expr_response_t {
     uint8_t nelems;
     uint8_t elem_data[27];
+};
+
+enum class PersistConfigReturnCode : int8_t {
+    UNKNOWN = 0,
+    SUCCESS = 1,
+    CONFIG_TOO_BIG = 2,
+};
+
+struct __attribute__((packed)) persist_config_response_t {
+    PersistConfigReturnCode return_code;
 };
 
 struct __attribute__((packed)) monitor_t {

@@ -1,3 +1,4 @@
+#include <cstdio>
 #include <cstring>
 #include <unordered_set>
 
@@ -9,7 +10,7 @@
 #include "platform.h"
 #include "remapper.h"
 
-const uint8_t CONFIG_VERSION = 16;
+const uint8_t CONFIG_VERSION = 17;
 
 const uint8_t CONFIG_FLAG_UNMAPPED_PASSTHROUGH = 0x01;
 const uint8_t CONFIG_FLAG_UNMAPPED_PASSTHROUGH_MASK = 0b00001111;
@@ -529,6 +530,7 @@ void load_config(const uint8_t* persisted_config) {
     // v14 is same as v13, it just introduces a new emulated device type
     // v15 is same as v14, it just introduces some new expression ops
     // v16 is same as v15, it just introduces a new expression op
+    // v17 is same as v16, it introduces new expression ops and GET_FEATURE retry behavior
 
     persist_config_v13_t* config = (persist_config_v13_t*) persisted_config;
     unmapped_passthrough_layer_mask = config->unmapped_passthrough_layer_mask;
@@ -635,13 +637,46 @@ void fill_persist_config(persist_config_t* config) {
     my_mutex_exit(MutexId::QUIRKS);
 }
 
-void persist_config() {
+PersistConfigReturnCode persist_config() {
     // stack size is 2KB
     static uint8_t buffer[PERSISTED_CONFIG_SIZE];
     memset(buffer, 0, sizeof(buffer));
 
     persist_config_t* config = (persist_config_t*) buffer;
     fill_persist_config(config);
+
+    // check if persisted config will fit in the space we have reserved for it in flash
+    int32_t real_persisted_config_size = 0;
+    real_persisted_config_size += sizeof(persist_config_t);
+    real_persisted_config_size += config->mapping_count * sizeof(mapping_config11_t);
+    my_mutex_enter(MutexId::MACROS);
+    for (int i = 0; i < NMACROS; i++) {
+        real_persisted_config_size += 1;
+        for (auto const& entries : macros[i]) {
+            real_persisted_config_size += 1 + entries.size() * sizeof(macro_item_t);
+        }
+    }
+    my_mutex_exit(MutexId::MACROS);
+    my_mutex_enter(MutexId::EXPRESSIONS);
+    for (int i = 0; i < NEXPRESSIONS; i++) {
+        real_persisted_config_size += 2;
+        for (auto const& elem : expressions[i]) {
+            real_persisted_config_size += 1;
+            if ((elem.op == Op::PUSH) || (elem.op == Op::PUSH_USAGE)) {
+                real_persisted_config_size += sizeof(expr_val_t);
+            }
+        }
+    }
+    my_mutex_exit(MutexId::EXPRESSIONS);
+    my_mutex_enter(MutexId::QUIRKS);
+    real_persisted_config_size += quirks.size() * sizeof(quirk_t);
+    my_mutex_exit(MutexId::QUIRKS);
+    real_persisted_config_size += 4;  // CRC32
+    if (real_persisted_config_size > PERSISTED_CONFIG_SIZE) {
+        printf("config too large to be persisted!\n");
+        return PersistConfigReturnCode::CONFIG_TOO_BIG;
+    }
+
     mapping_config11_t* buffer_mappings = (mapping_config11_t*) (buffer + sizeof(persist_config_t));
     for (uint32_t i = 0; i < config->mapping_count; i++) {
         buffer_mappings[i] = config_mappings[i];
@@ -689,7 +724,13 @@ void persist_config() {
 
     ((crc32_t*) (buffer + PERSISTED_CONFIG_SIZE - 4))->crc32 = crc32(buffer, PERSISTED_CONFIG_SIZE - 4);
 
+    if (real_persisted_config_size != 4 + ((uint8_t*) quirk_config_ptr) - buffer) {
+        printf("we calculated real persisted config size wrong!\n");
+    }
+
     do_persist_config(buffer);
+
+    return PersistConfigReturnCode::SUCCESS;
 }
 
 void reset_resolution_multiplier() {
@@ -806,8 +847,17 @@ uint16_t handle_get_report1(uint8_t report_id, uint8_t* buffer, uint16_t reqlen)
                 my_mutex_exit(MutexId::QUIRKS);
                 break;
             }
-            default:
+            case ConfigCommand::PERSIST_CONFIG: {
+                persist_config_response_t* returned = (persist_config_response_t*) config_buffer;
+                if (persist_config_return_code == PersistConfigReturnCode::UNKNOWN) {
+                    // persist_config() wasn't called yet
+                    return 0;
+                }
+                returned->return_code = persist_config_return_code;
                 break;
+            }
+            default:
+                return 0;
         }
         config_buffer->crc32 = crc32((uint8_t*) config_buffer, CONFIG_SIZE - 4);
         last_config_command = ConfigCommand::NO_COMMAND;
@@ -868,6 +918,7 @@ void handle_set_report1(uint8_t report_id, uint8_t const* buffer, uint16_t bufsi
                 }
                 case ConfigCommand::PERSIST_CONFIG:
                     need_to_persist_config = true;
+                    persist_config_return_code = PersistConfigReturnCode::UNKNOWN;
                     break;
                 case ConfigCommand::SUSPEND:
                     suspended = true;
