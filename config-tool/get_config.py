@@ -43,6 +43,8 @@ config = {
     "ignore_auth_dev_inputs": bool(flags & IGNORE_AUTH_DEV_INPUTS_FLAG),
     "macro_entry_duration": macro_entry_duration + 1,
     "gpio_output_mode": 1 if (flags & GPIO_OUTPUT_MODE_FLAG) else 0,
+    "input_labels": 0,
+    "normalize_gamepad_inputs": bool(flags & NORMALIZE_GAMEPAD_INPUTS_FLAG),
     "mappings": [],
     "macros": [],
     "expressions": [],

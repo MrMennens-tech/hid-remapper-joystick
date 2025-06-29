@@ -322,6 +322,14 @@ void validate_expressions() {
     }
 }
 
+void invalidate_expr_state_ptr_cache() {
+    for (uint8_t i = 0; i < NEXPRESSIONS; i++) {
+        for (auto& elem : expressions[i]) {
+            elem.state_ptr = NULL;
+        }
+    }
+}
+
 bool assign_state_slot(uint32_t usage, uint8_t hub_port, bool raw) {
     uint64_t key = (raw ? ((uint64_t) 1 << 40) : 0) | ((uint64_t) hub_port << 32) | usage;
     if (usage_state_ptr.count(key) == 0) {
@@ -379,6 +387,7 @@ void set_mapping_from_config() {
     std::unordered_map<uint32_t, uint8_t> mapped_on_layers;  // usage -> layer mask
 
     validate_expressions();
+    invalidate_expr_state_ptr_cache();
 
     reverse_mapping.clear();
     reverse_mapping_macros.clear();
@@ -642,6 +651,13 @@ void set_mapping_from_config() {
                 .len = sizeof(dpad_state),
                 .size = 1,
                 .bitpos = (uint16_t) ((target & 0xFFFF) - 1) & 0x03,
+            });
+        } else if ((target & 0xFFFF0000) == REGISTER_USAGE_PAGE) {
+            rev_map.our_usages.push_back((out_usage_def_t){
+                .data = (uint8_t*) registers,
+                .len = sizeof(registers),
+                .size = 8 * sizeof(registers[0]),
+                .bitpos = (uint16_t) (((target & 0xFFFF) - 1) * 8 * sizeof(registers[0])),
             });
         } else {
             bool handled = false;
@@ -1195,6 +1211,7 @@ void process_mapping(bool auto_repeat) {
 
     for (auto& rev_map : reverse_mapping) {
         uint32_t target = rev_map.target;
+        bool register_target = (target & 0xFFFF0000) == REGISTER_USAGE_PAGE;
         if (rev_map.is_relative) {
             for (auto& map_source : rev_map.sources) {
                 if ((map_source.orig_source_port != 0) &&
@@ -1245,7 +1262,7 @@ void process_mapping(bool auto_repeat) {
                             value += 1 * map_source.scaling / 1000 - rev_map.default_value;
                         }
                         if (!map_source.tap && !map_source.hold) {
-                            if (map_source.is_relative) {
+                            if (map_source.is_relative && !register_target) {
                                 if (*map_source.input_state * map_source.scaling > 0) {
                                     value += 1;
                                 }
@@ -1272,10 +1289,13 @@ void process_mapping(bool auto_repeat) {
                 }
             }
             // we don't currently have any absolute usages that can be negative
-            if (value < 0) {
+            if ((value < 0) && !register_target) {
                 value = 0;
             }
-            if (value != rev_map.default_value) {
+            if (register_target) {
+                value *= 1000;
+            }
+            if ((value != rev_map.default_value) || register_target) {
                 for (auto const& out_usage_def : rev_map.our_usages) {
                     if (out_usage_def.array_count == 0) {
                         uint32_t effective_value = value;

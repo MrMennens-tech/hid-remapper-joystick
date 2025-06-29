@@ -52,11 +52,11 @@
                     <div style="min-width: 720px; width: 100%;">
                         <div class="row my-2 align-items-end">
                             <div class="col-1"></div>
-                            <div class="col-3 text-center">Input</div>
-                            <div class="col-3 text-center">Output</div>
+                            <div class="col-3 text-center"><a href="#" id="input-column-header" class="text-decoration-none text-reset d-block">Input</a></div>
+                            <div class="col-3 text-center"><a href="#" id="output-column-header" class="text-decoration-none text-reset d-block">Output</a></div>
                             <div class="col-3">
                                 <div class="d-flex align-items-end">
-                                    <div class="flex-fill text-center">Layer</div>
+                                    <div class="flex-fill text-center"><a href="#" id="layer-column-header" class="text-decoration-none text-reset d-block">Layer</a></div>
                                     <div class="text-start pt-1" style="writing-mode: vertical-rl; transform: rotate(180deg); line-height: 1.2em;">Sticky<br>Tap<br>Hold</div>
                                 </div>
                             </div>
@@ -220,7 +220,16 @@
                     </div>
                 </div>
                 <div class="row mt-3">
-                    <em>Changes to the emulated device type become active after disconnecting and reconnecting HID Remapper.</em>
+                    <div class="col-4 text-end">
+                        <label for="normalize_gamepad_inputs_checkbox" class="col-form-label">Normalize gamepad inputs</label>
+                    </div>
+                    <div class="col-auto">
+                        <input type="checkbox" id="normalize_gamepad_inputs_checkbox" class="form-check-input align-middle">
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <p><em>Changes to the emulated device type become active after disconnecting and reconnecting HID Remapper.</em></p>
+                    <p><em>Changes to gamepad input normalization are applied after re-plugging the device or HID Remapper.</em></p>
                 </div>
 
                 <h5 class="mt-4">Custom usages</h5>
@@ -322,7 +331,7 @@
         </div>
 
         <div class="text-center text-muted mt-4 mb-4">
-            For more information, see <a class="text-reset" href="https://github.com/jfedor2/hid-remapper">github.com/jfedor2/hid-remapper</a>.
+            For more information, see <a class="text-reset" href="https://www.remapper.org/">remapper.org</a>.
         </div>
 
     </div>
@@ -527,13 +536,13 @@
     </template>
 
     <div id="source_usage_modal" class="modal fade" tabindex="-1">
-        <div class="modal-dialog modal-lg modal-dialog-scrollable modal-dialog-centered">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title usage_modal_title">Select input</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body" style="overflow-y: scroll;">
                     <div class="row hub_port_container">
                         <div class="col-auto">
                             <label for="source_port_dropdown" class="col-form-label">Port</label>
@@ -558,7 +567,8 @@
                                 <option value="15">15</option>
                             </select>
                         </div>
-                        <div class="col"></div>
+                        <div class="col">
+                        </div>
                         <div class="col-auto">
                             <label for="input_labels_modal_dropdown" class="col-form-label">Input labels</label>
                         </div>
@@ -567,6 +577,12 @@
                                 <option value="0">mouse</option>
                                 <option value="1">gamepad</option>
                             </select>
+                        </div>
+                        <div class="col">
+                        </div>
+                        <div class="col-3 position-relative">
+                            <span class="position-absolute top-50 start-100 badge bg-success rounded-pill have_preferred_result_checkmark d-none" style="translate: -100% -50%">&check;</span>
+                            <input type="text" class="form-control usage_search_box" placeholder="Search">
                         </div>
                     </div>
                     <div class="col mouse_usages mt-3">
@@ -587,18 +603,18 @@
     </div>
 
     <div id="target_usage_modal" class="modal fade" tabindex="-1">
-        <div class="modal-dialog modal-lg modal-dialog-scrollable modal-dialog-centered">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title usage_modal_title">Select output</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body" style="overflow-y: scroll;">
                     <div class="row hub_port_container">
-                        <div class="col-auto">
+                        <div class="col-auto hub_port_inputs">
                             <label for="target_port_dropdown" class="col-form-label">Port</label>
                         </div>
-                        <div class="col-auto">
+                        <div class="col-auto hub_port_inputs">
                             <select class="form-select hub_port_dropdown" id="target_port_dropdown">
                                 <option value="0">all</option>
                                 <option value="1">1</option>
@@ -617,6 +633,12 @@
                                 <option value="14">14</option>
                                 <option value="15">15</option>
                             </select>
+                        </div>
+                        <div class="col">
+                        </div>
+                        <div class="col-3 position-relative">
+                            <span class="position-absolute top-50 start-100 badge bg-success rounded-pill have_preferred_result_checkmark d-none" style="translate: -100% -50%">&check;</span>
+                            <input type="text" class="form-control usage_search_box" placeholder="Search">
                         </div>
                     </div>
                     <div class="col mouse_usages mt-3">

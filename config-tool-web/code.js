@@ -8,7 +8,7 @@ const STICKY_FLAG = 1 << 0;
 const TAP_FLAG = 1 << 1;
 const HOLD_FLAG = 1 << 2;
 const CONFIG_SIZE = 32;
-const CONFIG_VERSION = 17;
+const CONFIG_VERSION = 18;
 const VENDOR_ID = 0xCAFE;
 const PRODUCT_ID = 0xBAF2;
 const DEFAULT_PARTIAL_SCROLL_TIMEOUT = 1000000;
@@ -23,6 +23,7 @@ const NEXPRESSIONS = 8;
 const MACRO_ITEMS_IN_PACKET = 6;
 const IGNORE_AUTH_DEV_INPUTS_FLAG = 1 << 4;
 const GPIO_OUTPUT_MODE_FLAG = 1 << 5;
+const NORMALIZE_GAMEPAD_INPUTS_FLAG = 1 << 6;
 const HUB_PORT_NONE = 255;
 
 const QUIRK_FLAG_RELATIVE_MASK = 0b10000000;
@@ -146,6 +147,7 @@ let config = {
     'macro_entry_duration': DEFAULT_MACRO_ENTRY_DURATION,
     'gpio_output_mode': 0,
     'input_labels': 0,
+    'normalize_gamepad_inputs': true,
     mappings: [{
         'source_usage': '0x00000000',
         'target_usage': '0x00000000',
@@ -207,9 +209,14 @@ document.addEventListener("DOMContentLoaded", function () {
     document.getElementById("input_labels_dropdown").addEventListener("change", input_labels_onchange("input_labels_dropdown"));
     document.getElementById("input_labels_modal_dropdown").addEventListener("change", input_labels_onchange("input_labels_modal_dropdown"));
     document.getElementById("ignore_auth_dev_inputs_checkbox").addEventListener("change", ignore_auth_dev_inputs_onchange);
+    document.getElementById("normalize_gamepad_inputs_checkbox").addEventListener("change", normalize_gamepad_inputs_onchange);
 
     document.getElementById("nav-monitor-tab").addEventListener("shown.bs.tab", monitor_tab_shown);
     document.getElementById("nav-monitor-tab").addEventListener("hide.bs.tab", monitor_tab_hide);
+
+    document.getElementById("input-column-header").addEventListener("click", sort_by(['source_port', 'source_usage', 'target_usage', 'layers']));
+    document.getElementById("output-column-header").addEventListener("click", sort_by(['target_usage', 'source_port', 'source_usage', 'layers']));
+    document.getElementById("layer-column-header").addEventListener("click", sort_by(['layers', 'source_port', 'source_usage', 'target_usage']));
 
     if ("hid" in navigator) {
         navigator.hid.addEventListener('disconnect', hid_on_disconnect);
@@ -296,6 +303,7 @@ async function load_from_device() {
         config['our_descriptor_number'] = our_descriptor_number;
         config['ignore_auth_dev_inputs'] = !!(flags & IGNORE_AUTH_DEV_INPUTS_FLAG);
         config['gpio_output_mode'] = (flags & GPIO_OUTPUT_MODE_FLAG) ? 1 : 0;
+        config['normalize_gamepad_inputs'] = !!(flags & NORMALIZE_GAMEPAD_INPUTS_FLAG);
         config['macro_entry_duration'] = macro_entry_duration + 1;
         config['mappings'] = [];
 
@@ -433,7 +441,8 @@ async function save_to_device() {
     try {
         await send_feature_command(SUSPEND);
         const flags = (config['ignore_auth_dev_inputs'] ? IGNORE_AUTH_DEV_INPUTS_FLAG : 0) |
-            (config['gpio_output_mode'] ? GPIO_OUTPUT_MODE_FLAG : 0);
+            (config['gpio_output_mode'] ? GPIO_OUTPUT_MODE_FLAG : 0) |
+            (config['normalize_gamepad_inputs'] ? NORMALIZE_GAMEPAD_INPUTS_FLAG : 0);
         await send_feature_command(SET_CONFIG, [
             [UINT8, flags],
             [UINT8, layer_list_to_mask(config['unmapped_passthrough_layers'])],
@@ -622,6 +631,7 @@ function set_config_ui_state() {
     document.getElementById('gpio_output_mode_dropdown').value = config['gpio_output_mode'];
     document.getElementById('input_labels_dropdown').value = config['input_labels'];
     document.getElementById('input_labels_modal_dropdown').value = config['input_labels'];
+    document.getElementById('normalize_gamepad_inputs_checkbox').checked = config['normalize_gamepad_inputs'];
 }
 
 function set_mappings_ui_state() {
@@ -692,7 +702,7 @@ function set_expressions_ui_state() {
         }
 
         const expression_input = document.getElementById('expression_' + expr_i).querySelector('.expression_input');
-        const expression_text = [...expr.matchAll(expr_re).map(x => x[1]+x[2].split(/\s+/).map(json_to_ui).join(' ').replace(/( )?\n /g, '\n'))].join('');
+        const expression_text = [...expr.matchAll(expr_re).map(x => x[1] + x[2].split(/\s+/).map(json_to_ui).join(' ').replace(/( )?\n /g, '\n'))].join('');
         expression_input.value = expression_text;
 
         const eols = expression_text.match(/\n/g);
@@ -748,6 +758,11 @@ function set_ui_state() {
     }
     if (config['version'] < 16) {
         config['input_labels'] = 0;
+    }
+    if (config['version'] < 18) {
+        // Normalize gamepad inputs defaults to true, but if we're loading a <18 config,
+        // set it to false to preserve previous behavior.
+        config['normalize_gamepad_inputs'] = false;
     }
     if (config['version'] < CONFIG_VERSION) {
         config['version'] = CONFIG_VERSION;
@@ -974,7 +989,7 @@ function add_crc(data) {
 }
 
 function check_json_version(config_version) {
-    if (!([3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17].includes(config_version))) {
+    if (!([3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18].includes(config_version))) {
         throw new Error("Incompatible version.");
     }
 }
@@ -990,7 +1005,7 @@ async function check_device_version() {
     // device because it could be version X, ignore our GET_CONFIG call with version Y and
     // just happen to have Y at the right place in the buffer from some previous call done
     // by some other software.
-    for (const version of [CONFIG_VERSION, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2]) {
+    for (const version of [CONFIG_VERSION, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2]) {
         await send_feature_command(GET_CONFIG, [], version);
         const [received_version] = await read_config_feature([UINT8]);
         if (received_version == version) {
@@ -1144,10 +1159,10 @@ function show_usage_modal(mapping_, source_or_target, element_) {
         });
         const hub_port_container = modal_element.querySelector('.hub_port_container');
         if (source_or_target == "macro_item") {
-            hub_port_container.classList.add('d-none');
+            hub_port_container.querySelectorAll('.hub_port_inputs').forEach((x) => x.classList.add('d-none'));
         } else {
             if (source_or_target == "target") {
-                hub_port_container.classList.remove('d-none');
+                hub_port_container.querySelectorAll('.hub_port_inputs').forEach((x) => x.classList.remove('d-none'));
             }
             const hub_port_dropdown = hub_port_container.querySelector('.hub_port_dropdown');
             const clone = hub_port_dropdown.cloneNode(true);
@@ -1196,6 +1211,7 @@ function map_this_onclick(usage) {
 function set_label_groups_visibility() {
     document.getElementById('source_usage_modal').querySelector('.mouse_usages').classList.toggle('d-none', config['input_labels'] != 0);
     document.getElementById('source_usage_modal').querySelector('.gamepad_usages').classList.toggle('d-none', config['input_labels'] != 1);
+    usage_search_onchange(document.getElementById('source_usage_modal').querySelector('.usage_search_box'))();
 }
 
 function setup_usages_modals() {
@@ -1248,6 +1264,25 @@ function setup_usage_modal(source_or_target) {
             usage_classes['extra'].appendChild(clone);
         }
     }
+
+    const search_box = modal_element.querySelector('.usage_search_box');
+    search_box.addEventListener("keyup", usage_search_onchange(search_box));
+    search_box.addEventListener("keydown", (e) => {
+        if (e.key == 'Enter') {
+            modal_element.querySelectorAll('.usage_button').forEach((usage_button) => {
+                if (usage_button.hasAttribute('data-preferred-result')) {
+                    usage_button.click();
+                }
+            });
+        }
+    });
+    modal_element.addEventListener('show.bs.modal', () => {
+        search_box.value = "";
+        usage_search_onchange(search_box)();
+    });
+    modal_element.addEventListener('shown.bs.modal', () => {
+        search_box.focus();
+    });
 }
 
 function setup_macros() {
@@ -1386,6 +1421,10 @@ function gpio_output_mode_onchange() {
 
 function ignore_auth_dev_inputs_onchange() {
     config['ignore_auth_dev_inputs'] = document.getElementById("ignore_auth_dev_inputs_checkbox").checked;
+}
+
+function normalize_gamepad_inputs_onchange() {
+    config['normalize_gamepad_inputs'] = document.getElementById("normalize_gamepad_inputs_checkbox").checked;
 }
 
 function macro_entry_duration_onchange() {
@@ -1750,5 +1789,60 @@ function set_quirks_ui_state() {
     clear_children(document.getElementById('quirks_container'));
     for (const quirk of config['quirks']) {
         add_quirk(quirk);
+    }
+}
+
+function comparison_function(fields) {
+    return (a, b) => {
+        for (const field of fields) {
+            if (a[field] < b[field]) {
+                return -1;
+            }
+            if (a[field] > b[field]) {
+                return 1;
+            }
+        }
+        return 0;
+    };
+}
+
+function sort_by(fields) {
+    return (e) => {
+        e.preventDefault();
+        config['mappings'].sort(comparison_function(fields));
+        set_mappings_ui_state();
+    };
+}
+
+function usage_search_onchange(element) {
+    return () => {
+        const query = element.value.toLowerCase().replaceAll(" ", "");
+        const modal_element = element.closest('.modal');
+        let exact_match = null;
+        let last_match = null;
+        let hits = 0;
+        modal_element.querySelectorAll('.usage_button').forEach((usage_button) => {
+            const label = usage_button.innerText.toLowerCase().replaceAll(" ", "");
+            usage_button.classList.toggle('d-none', !label.includes(query));
+            usage_button.removeAttribute('data-preferred-result');
+            if (label.includes(query)) {
+                hits++;
+                last_match = usage_button;
+            }
+            if (label == query) {
+                exact_match = usage_button;
+            }
+        });
+        let have_preferred_result = false;
+        if (exact_match) {
+            exact_match.setAttribute('data-preferred-result', "1");
+            have_preferred_result = true;
+        } else {
+            if (hits == 1) {
+                last_match.setAttribute('data-preferred-result', "1");
+                have_preferred_result = true;
+            }
+        }
+        element.closest('div').querySelector('.have_preferred_result_checkmark').classList.toggle('d-none', !have_preferred_result);
     }
 }
