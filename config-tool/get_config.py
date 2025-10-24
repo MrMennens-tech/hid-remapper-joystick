@@ -10,7 +10,7 @@ device = get_device()
 data = struct.pack("<BBB26B", REPORT_ID_CONFIG, CONFIG_VERSION, GET_CONFIG, *([0] * 26))
 device.send_feature_report(add_crc(data))
 
-data = device.get_feature_report(REPORT_ID_CONFIG, CONFIG_SIZE + 1)
+data = get_feature_report(device, REPORT_ID_CONFIG, CONFIG_SIZE + 1)
 
 (
     report_id,
@@ -43,6 +43,8 @@ config = {
     "ignore_auth_dev_inputs": bool(flags & IGNORE_AUTH_DEV_INPUTS_FLAG),
     "macro_entry_duration": macro_entry_duration + 1,
     "gpio_output_mode": 1 if (flags & GPIO_OUTPUT_MODE_FLAG) else 0,
+    "input_labels": 0,
+    "normalize_gamepad_inputs": bool(flags & NORMALIZE_GAMEPAD_INPUTS_FLAG),
     "mappings": [],
     "macros": [],
     "expressions": [],
@@ -54,7 +56,7 @@ for i in range(mapping_count):
         "<BBBL22B", REPORT_ID_CONFIG, CONFIG_VERSION, GET_MAPPING, i, *([0] * 22)
     )
     device.send_feature_report(add_crc(data))
-    data = device.get_feature_report(REPORT_ID_CONFIG, CONFIG_SIZE + 1)
+    data = get_feature_report(device, REPORT_ID_CONFIG, CONFIG_SIZE + 1)
     (
         report_id,
         target_usage,
@@ -96,7 +98,7 @@ for macro_i in range(NMACROS):
             *([0] * 18)
         )
         device.send_feature_report(add_crc(data))
-        data = device.get_feature_report(REPORT_ID_CONFIG, CONFIG_SIZE + 1)
+        data = get_feature_report(device, REPORT_ID_CONFIG, CONFIG_SIZE + 1)
         (
             report_id,
             nitems,
@@ -130,7 +132,7 @@ for expression_i in range(NEXPRESSIONS):
             *([0] * 18)
         )
         device.send_feature_report(add_crc(data))
-        data = device.get_feature_report(REPORT_ID_CONFIG, CONFIG_SIZE + 1)
+        data = get_feature_report(device, REPORT_ID_CONFIG, CONFIG_SIZE + 1)
         (
             report_id,
             nelems,
@@ -162,7 +164,7 @@ for quirk_i in range(quirk_count):
         "<BBBL22B", REPORT_ID_CONFIG, CONFIG_VERSION, GET_QUIRK, quirk_i, *([0] * 22)
     )
     device.send_feature_report(add_crc(data))
-    data = device.get_feature_report(REPORT_ID_CONFIG, CONFIG_SIZE + 1)
+    data = get_feature_report(device, REPORT_ID_CONFIG, CONFIG_SIZE + 1)
     (
         report_id_,
         vendor_id,

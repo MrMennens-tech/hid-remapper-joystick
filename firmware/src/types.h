@@ -40,12 +40,15 @@ struct usage_def_t {
     uint16_t bitpos;
     bool is_relative;
     bool is_array = false;
+    bool should_be_scaled = false;
     int32_t logical_minimum;
+    int32_t logical_maximum;
     uint32_t index = 0;      // for arrays
     uint32_t count = 0;      // for arrays
     uint32_t usage_maximum;  // effective, for arrays/usage ranges
     int32_t* input_state_0 = NULL;
     int32_t* input_state_n = NULL;
+    uint8_t index_mask = 0;
 };
 
 struct usage_usage_def_t {
@@ -104,6 +107,11 @@ enum class Op : int8_t {
     PRINT_IF = 47,
     TIME_SEC = 48,
     LT = 49,
+    PLUGGED_IN = 50,
+    INPUT_STATE_SCALED = 51,
+    PREV_INPUT_STATE_SCALED = 52,
+    DEADZONE = 53,
+    DEADZONE2 = 54,
 };
 
 struct tap_hold_state_t {
@@ -130,6 +138,7 @@ struct map_source_t {
     bool hold = false;
     bool is_relative = false;
     bool is_binary = false;
+    uint8_t orig_source_port = 0;
     uint8_t layer_mask = 1;
     int32_t* input_state;
     tap_hold_state_t* tap_hold_state;
@@ -301,7 +310,9 @@ struct __attribute__((packed)) persist_config_v12_t {
 
 typedef persist_config_v12_t persist_config_v13_t;
 
-typedef persist_config_v13_t persist_config_t;
+typedef persist_config_v13_t persist_config_v18_t;
+
+typedef persist_config_v18_t persist_config_t;
 
 struct __attribute__((packed)) get_config_t {
     uint8_t version;
@@ -392,6 +403,16 @@ struct __attribute__((packed)) append_to_expr_t {
 struct __attribute__((packed)) get_expr_response_t {
     uint8_t nelems;
     uint8_t elem_data[27];
+};
+
+enum class PersistConfigReturnCode : int8_t {
+    UNKNOWN = 0,
+    SUCCESS = 1,
+    CONFIG_TOO_BIG = 2,
+};
+
+struct __attribute__((packed)) persist_config_response_t {
+    PersistConfigReturnCode return_code;
 };
 
 struct __attribute__((packed)) monitor_t {

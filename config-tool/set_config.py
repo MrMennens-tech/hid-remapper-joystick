@@ -34,10 +34,14 @@ our_descriptor_number = config.get("our_descriptor_number", 0)
 ignore_auth_dev_inputs = config.get("ignore_auth_dev_inputs", False)
 macro_entry_duration = config.get("macro_entry_duration", 1) - 1
 gpio_output_mode = config.get("gpio_output_mode", 0)
+normalize_gamepad_inputs = (
+    config.get("normalize_gamepad_inputs", True) if version >= 18 else False
+)
 
 flags = 0
 flags |= IGNORE_AUTH_DEV_INPUTS_FLAG if ignore_auth_dev_inputs else 0
 flags |= GPIO_OUTPUT_MODE_FLAG if gpio_output_mode == 1 else 0
+flags |= NORMALIZE_GAMEPAD_INPUTS_FLAG if normalize_gamepad_inputs else 0
 
 data = struct.pack(
     "<BBBBBLBLBBB12B",
@@ -191,5 +195,23 @@ data = struct.pack(
 )
 device.send_feature_report(add_crc(data))
 
+data = get_feature_report(device, REPORT_ID_CONFIG, CONFIG_SIZE + 1)
+(
+    report_id,
+    persist_config_return_code,
+    *_,
+    crc,
+) = struct.unpack("<BB27BL", data)
+check_crc(data, crc)
+
 data = struct.pack("<BBB26B", REPORT_ID_CONFIG, CONFIG_VERSION, RESUME, *([0] * 26))
 device.send_feature_report(add_crc(data))
+
+if persist_config_return_code == PERSIST_CONFIG_SUCCESS:
+    pass
+elif persist_config_return_code == PERSIST_CONFIG_CONFIG_TOO_BIG:
+    raise Exception("Configuration too big to persist.")
+else:
+    raise Exception(
+        "Unknown PERSIST_CONFIG return code ({}).".format(persist_config_return_code)
+    )

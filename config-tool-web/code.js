@@ -8,7 +8,7 @@ const STICKY_FLAG = 1 << 0;
 const TAP_FLAG = 1 << 1;
 const HOLD_FLAG = 1 << 2;
 const CONFIG_SIZE = 32;
-const CONFIG_VERSION = 15;
+const CONFIG_VERSION = 18;
 const VENDOR_ID = 0xCAFE;
 const PRODUCT_ID = 0xBAF2;
 const DEFAULT_PARTIAL_SCROLL_TIMEOUT = 1000000;
@@ -23,6 +23,7 @@ const NEXPRESSIONS = 8;
 const MACRO_ITEMS_IN_PACKET = 6;
 const IGNORE_AUTH_DEV_INPUTS_FLAG = 1 << 4;
 const GPIO_OUTPUT_MODE_FLAG = 1 << 5;
+const NORMALIZE_GAMEPAD_INPUTS_FLAG = 1 << 6;
 const HUB_PORT_NONE = 255;
 
 const QUIRK_FLAG_RELATIVE_MASK = 0b10000000;
@@ -32,6 +33,7 @@ const QUIRK_SIZE_MASK = 0b00111111;
 const LAYERS_USAGE_PAGE = 0xFFF10000;
 const EXPR_USAGE_PAGE = 0xFFF30000;
 const MIDI_USAGE_PAGE = 0xFFF70000;
+const BUTTON_USAGE_PAGE = 0x00090000;
 
 const RESET_INTO_BOOTSEL = 1;
 const SET_CONFIG = 2;
@@ -40,8 +42,8 @@ const CLEAR_MAPPING = 4;
 const ADD_MAPPING = 5;
 const GET_MAPPING = 6;
 const PERSIST_CONFIG = 7;
-const GET_OUR_USAGES = 8
-const GET_THEIR_USAGES = 9
+const GET_OUR_USAGES = 8;
+const GET_THEIR_USAGES = 9;
 const SUSPEND = 10;
 const RESUME = 11;
 const PAIR_NEW_DEVICE = 12;
@@ -58,6 +60,9 @@ const SET_MONITOR_ENABLED = 22;
 const CLEAR_QUIRKS = 23;
 const ADD_QUIRK = 24;
 const GET_QUIRK = 25;
+
+const PERSIST_CONFIG_SUCCESS = 1;
+const PERSIST_CONFIG_CONFIG_TOO_BIG = 2;
 
 const ops = {
     "PUSH": 0,
@@ -110,7 +115,12 @@ const ops = {
     "PRINT_IF": 47,
     "TIME_SEC": 48,
     "LT": 49,
-}
+    "PLUGGED_IN": 50,
+    "INPUT_STATE_SCALED": 51,
+    "PREV_INPUT_STATE_SCALED": 52,
+    "DEADZONE": 53,
+    "DEADZONE2": 54,
+};
 
 const opcodes = Object.fromEntries(Object.entries(ops).map(([key, value]) => [value, key]));
 
@@ -136,6 +146,8 @@ let config = {
     'ignore_auth_dev_inputs': false,
     'macro_entry_duration': DEFAULT_MACRO_ENTRY_DURATION,
     'gpio_output_mode': 0,
+    'input_labels': 0,
+    'normalize_gamepad_inputs': true,
     mappings: [{
         'source_usage': '0x00000000',
         'target_usage': '0x00000000',
@@ -164,6 +176,8 @@ let save_to_device_checkmark_timeout_id = null;
 let busy = false;
 const ignored_usages = new Set([
 ]);
+let modal_return_mapping = null;
+let modal_return_element = null;
 
 document.addEventListener("DOMContentLoaded", function () {
     document.getElementById("open_device").addEventListener("click", open_device);
@@ -192,10 +206,17 @@ document.addEventListener("DOMContentLoaded", function () {
     document.getElementById("interval_override_dropdown").addEventListener("change", interval_override_onchange);
     document.getElementById("our_descriptor_number_dropdown").addEventListener("change", our_descriptor_number_onchange);
     document.getElementById("gpio_output_mode_dropdown").addEventListener("change", gpio_output_mode_onchange);
+    document.getElementById("input_labels_dropdown").addEventListener("change", input_labels_onchange("input_labels_dropdown"));
+    document.getElementById("input_labels_modal_dropdown").addEventListener("change", input_labels_onchange("input_labels_modal_dropdown"));
     document.getElementById("ignore_auth_dev_inputs_checkbox").addEventListener("change", ignore_auth_dev_inputs_onchange);
+    document.getElementById("normalize_gamepad_inputs_checkbox").addEventListener("change", normalize_gamepad_inputs_onchange);
 
     document.getElementById("nav-monitor-tab").addEventListener("shown.bs.tab", monitor_tab_shown);
     document.getElementById("nav-monitor-tab").addEventListener("hide.bs.tab", monitor_tab_hide);
+
+    document.getElementById("input-column-header").addEventListener("click", sort_by(['source_port', 'source_usage', 'target_usage', 'layers']));
+    document.getElementById("output-column-header").addEventListener("click", sort_by(['target_usage', 'source_port', 'source_usage', 'layers']));
+    document.getElementById("layer-column-header").addEventListener("click", sort_by(['layers', 'source_port', 'source_usage', 'target_usage']));
 
     if ("hid" in navigator) {
         navigator.hid.addEventListener('disconnect', hid_on_disconnect);
@@ -282,6 +303,7 @@ async function load_from_device() {
         config['our_descriptor_number'] = our_descriptor_number;
         config['ignore_auth_dev_inputs'] = !!(flags & IGNORE_AUTH_DEV_INPUTS_FLAG);
         config['gpio_output_mode'] = (flags & GPIO_OUTPUT_MODE_FLAG) ? 1 : 0;
+        config['normalize_gamepad_inputs'] = !!(flags & NORMALIZE_GAMEPAD_INPUTS_FLAG);
         config['macro_entry_duration'] = macro_entry_duration + 1;
         config['mappings'] = [];
 
@@ -419,7 +441,8 @@ async function save_to_device() {
     try {
         await send_feature_command(SUSPEND);
         const flags = (config['ignore_auth_dev_inputs'] ? IGNORE_AUTH_DEV_INPUTS_FLAG : 0) |
-            (config['gpio_output_mode'] ? GPIO_OUTPUT_MODE_FLAG : 0);
+            (config['gpio_output_mode'] ? GPIO_OUTPUT_MODE_FLAG : 0) |
+            (config['normalize_gamepad_inputs'] ? NORMALIZE_GAMEPAD_INPUTS_FLAG : 0);
         await send_feature_command(SET_CONFIG, [
             [UINT8, flags],
             [UINT8, layer_list_to_mask(config['unmapped_passthrough_layers'])],
@@ -523,13 +546,25 @@ async function save_to_device() {
         }
 
         await send_feature_command(PERSIST_CONFIG);
+
+        let [persist_config_return_code] = await read_config_feature([UINT8]);
+
         await send_feature_command(RESUME);
 
-        document.getElementById('save_to_device_checkmark').classList.remove('d-none');
-        save_to_device_checkmark_timeout_id = setTimeout(() => {
-            document.getElementById('save_to_device_checkmark').classList.add('d-none');
-            save_to_device_checkmark_timeout_id = null;
-        }, 3000);
+        switch (persist_config_return_code) {
+            case PERSIST_CONFIG_SUCCESS:
+                document.getElementById('save_to_device_checkmark').classList.remove('d-none');
+                save_to_device_checkmark_timeout_id = setTimeout(() => {
+                    document.getElementById('save_to_device_checkmark').classList.add('d-none');
+                    save_to_device_checkmark_timeout_id = null;
+                }, 3000);
+                break;
+            case PERSIST_CONFIG_CONFIG_TOO_BIG:
+                display_error('Configuration too big to persist.');
+                break;
+            default:
+                throw new Error('Unknown PERSIST_CONFIG return code (' + return_code + ').');
+        }
     } catch (e) {
         display_error(e);
     }
@@ -594,6 +629,9 @@ function set_config_ui_state() {
     document.getElementById('ignore_auth_dev_inputs_checkbox').checked = config['ignore_auth_dev_inputs'];
     document.getElementById('macro_entry_duration_input').value = config['macro_entry_duration'];
     document.getElementById('gpio_output_mode_dropdown').value = config['gpio_output_mode'];
+    document.getElementById('input_labels_dropdown').value = config['input_labels'];
+    document.getElementById('input_labels_modal_dropdown').value = config['input_labels'];
+    document.getElementById('normalize_gamepad_inputs_checkbox').checked = config['normalize_gamepad_inputs'];
 }
 
 function set_mappings_ui_state() {
@@ -664,7 +702,7 @@ function set_expressions_ui_state() {
         }
 
         const expression_input = document.getElementById('expression_' + expr_i).querySelector('.expression_input');
-        const expression_text = [...expr.matchAll(expr_re).map(x => x[1]+x[2].split(/\s+/).map(json_to_ui).join(' ').replace(/( )?\n /g, '\n'))].join('');
+        const expression_text = [...expr.matchAll(expr_re).map(x => x[1] + x[2].split(/\s+/).map(json_to_ui).join(' ').replace(/( )?\n /g, '\n'))].join('');
         expression_input.value = expression_text;
 
         const eols = expression_text.match(/\n/g);
@@ -718,6 +756,14 @@ function set_ui_state() {
     if (config['version'] < 12) {
         config['quirks'] = [];
     }
+    if (config['version'] < 16) {
+        config['input_labels'] = 0;
+    }
+    if (config['version'] < 18) {
+        // Normalize gamepad inputs defaults to true, but if we're loading a <18 config,
+        // set it to false to preserve previous behavior.
+        config['normalize_gamepad_inputs'] = false;
+    }
     if (config['version'] < CONFIG_VERSION) {
         config['version'] = CONFIG_VERSION;
     }
@@ -767,17 +813,20 @@ function add_mapping(mapping) {
         'source_name' in mapping ? mapping['source_name'] : readable_usage_name(mapping['source_usage']);
     source_button.setAttribute('data-hid-usage', mapping['source_usage']);
     source_button.title = mapping['source_usage'];
-    source_button.addEventListener("click", show_usage_modal(mapping, 'source', source_button));
+    source_button.addEventListener("click", show_usage_modal(mapping, 'source', clone));
     set_port_badge(source_button, mapping['source_port']);
     const target_button = clone.querySelector(".target_button");
     target_button.querySelector('.button_label').innerText = readable_target_usage_name(mapping['target_usage']);
     target_button.setAttribute('data-hid-usage', mapping['target_usage']);
     target_button.title = mapping['target_usage'];
-    target_button.addEventListener("click", show_usage_modal(mapping, 'target', target_button));
+    target_button.addEventListener("click", show_usage_modal(mapping, 'target', clone));
     set_port_badge(target_button, mapping['target_port']);
     container.appendChild(clone);
     set_forced_layers(mapping, clone);
     set_forced_flags(mapping, clone);
+    if (modal_return_mapping === mapping) {
+        modal_return_element = clone;
+    }
 }
 
 function download_json() {
@@ -872,8 +921,23 @@ async function send_feature_command(command, fields = [], version = CONFIG_VERSI
 }
 
 async function read_config_feature(fields = []) {
-    const data_with_report_id = await device.receiveFeatureReport(REPORT_ID_CONFIG);
-    const data = new DataView(data_with_report_id.buffer, 1);
+    let attempts_left = 10;
+    let delay = 2;
+    let data;
+    while (true) {
+        const data_with_report_id = await device.receiveFeatureReport(REPORT_ID_CONFIG);
+        data = new DataView(data_with_report_id.buffer, 1);
+        if (data.byteLength > 0) {
+            break;
+        } else {
+            if ((--attempts_left) > 0) {
+                await (new Promise(resolve => setTimeout(resolve, delay)));
+                delay *= 2;
+                continue;
+            }
+            throw new Error('Error in read_config_feature (given up retrying).');
+        }
+    }
     check_crc(data);
     let ret = [];
     let pos = 0;
@@ -925,7 +989,7 @@ function add_crc(data) {
 }
 
 function check_json_version(config_version) {
-    if (!([3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].includes(config_version))) {
+    if (!([3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18].includes(config_version))) {
         throw new Error("Incompatible version.");
     }
 }
@@ -941,7 +1005,7 @@ async function check_device_version() {
     // device because it could be version X, ignore our GET_CONFIG call with version Y and
     // just happen to have Y at the right place in the buffer from some previous call done
     // by some other software.
-    for (const version of [CONFIG_VERSION, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2]) {
+    for (const version of [CONFIG_VERSION, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2]) {
         await send_feature_command(GET_CONFIG, [], version);
         const [received_version] = await read_config_feature([UINT8]);
         if (received_version == version) {
@@ -1051,8 +1115,12 @@ function expression_onchange(i) {
     }
 }
 
-function show_usage_modal(mapping, source_or_target, element) {
+function show_usage_modal(mapping_, source_or_target, element_) {
     return function () {
+        // When set_mappings_ui_state() recreates the elements, it will update modal_return_element to
+        // the correct element for the mapping we save in modal_return_mapping here.
+        modal_return_mapping = mapping_;
+        modal_return_element = element_;
         // XXX it would be better not to do this every time we show the modal
         const modal_element = document.getElementById(
             (source_or_target == 'source' ? 'source' : 'target') + '_usage_modal');
@@ -1061,6 +1129,9 @@ function show_usage_modal(mapping, source_or_target, element) {
             let clone = button.cloneNode(true);
             button.parentNode.replaceChild(clone, button); // to clear existing event listeners
             clone.addEventListener("click", function () {
+                const mapping = modal_return_mapping;
+                const element = (source_or_target == 'macro_item') ? modal_return_element :
+                    modal_return_element.querySelector('.' + source_or_target + '_button');
                 let usage = clone.getAttribute('data-hid-usage');
                 if (mapping !== null) {
                     mapping[source_or_target + '_usage'] = usage;
@@ -1088,17 +1159,19 @@ function show_usage_modal(mapping, source_or_target, element) {
         });
         const hub_port_container = modal_element.querySelector('.hub_port_container');
         if (source_or_target == "macro_item") {
-            hub_port_container.classList.add('d-none');
+            hub_port_container.querySelectorAll('.hub_port_inputs').forEach((x) => x.classList.add('d-none'));
         } else {
-            let clone = hub_port_container.cloneNode(true);
-            hub_port_container.parentElement.replaceChild(clone, hub_port_container); // to clear existing event listeners
             if (source_or_target == "target") {
-                clone.classList.remove('d-none');
+                hub_port_container.querySelectorAll('.hub_port_inputs').forEach((x) => x.classList.remove('d-none'));
             }
-            const hub_port_dropdown = clone.querySelector('.hub_port_dropdown');
-            hub_port_dropdown.value = mapping[source_or_target + '_port'];
-            hub_port_dropdown.addEventListener("change", function () {
-                const hub_port = parseInt(hub_port_dropdown.value, 10)
+            const hub_port_dropdown = hub_port_container.querySelector('.hub_port_dropdown');
+            const clone = hub_port_dropdown.cloneNode(true);
+            hub_port_dropdown.parentElement.replaceChild(clone, hub_port_dropdown); // to clear existing event listeners
+            clone.value = mapping_[source_or_target + '_port'];
+            clone.addEventListener("change", function () {
+                const mapping = modal_return_mapping;
+                const element = modal_return_element.querySelector('.' + source_or_target + '_button');
+                const hub_port = parseInt(clone.value, 10)
                 set_port_badge(element, hub_port);
                 mapping[source_or_target + '_port'] = hub_port;
             });
@@ -1135,15 +1208,23 @@ function map_this_onclick(usage) {
     }
 }
 
+function set_label_groups_visibility() {
+    document.getElementById('source_usage_modal').querySelector('.mouse_usages').classList.toggle('d-none', config['input_labels'] != 0);
+    document.getElementById('source_usage_modal').querySelector('.gamepad_usages').classList.toggle('d-none', config['input_labels'] != 1);
+    usage_search_onchange(document.getElementById('source_usage_modal').querySelector('.usage_search_box'))();
+}
+
 function setup_usages_modals() {
     setup_usage_modal('source');
     setup_usage_modal('target');
+    set_label_groups_visibility();
 }
 
 function setup_usage_modal(source_or_target) {
     const modal_element = document.getElementById(source_or_target + '_usage_modal');
     let usage_classes = {
         'mouse': modal_element.querySelector('.mouse_usages'),
+        'gamepad': modal_element.querySelector('.gamepad_usages'),
         'keyboard': modal_element.querySelector('.keyboard_usages'),
         'media': modal_element.querySelector('.media_usages'),
         'other': modal_element.querySelector('.other_usages'),
@@ -1153,23 +1234,55 @@ function setup_usage_modal(source_or_target) {
         clear_children(element);
     }
     let template = document.getElementById('usage_button_template');
-    const relevant_usages = usages[source_or_target == 'source' ? 'source' : config['our_descriptor_number']];
-    for (const [usage, usage_def] of Object.entries(relevant_usages)) {
-        let clone = template.content.cloneNode(true).firstElementChild;
-        clone.innerText = usage_def['name'];
-        clone.title = usage;
-        clone.setAttribute('data-hid-usage', usage);
-        usage_classes[usage_def['class']].appendChild(clone);
-    }
-    for (const usage_ of extra_usages[source_or_target]) {
-        if (!(usage_ in relevant_usages)) {
+    const add_usage_buttons = (relevant_usages) => {
+        for (const [usage, usage_def] of Object.entries(relevant_usages)) {
             let clone = template.content.cloneNode(true).firstElementChild;
-            clone.innerText = usage_;
+            clone.innerText = usage_def['name'];
+            clone.title = usage;
+            clone.setAttribute('data-hid-usage', usage);
+            usage_classes[usage_def['class']].appendChild(clone);
+        }
+    }
+
+    let known_usages;
+    if (source_or_target == 'source') {
+        add_usage_buttons(usages['source_0']);
+        add_usage_buttons(usages['source_1']);
+        add_usage_buttons(usages['source']);
+        known_usages = { ...usages['source_0'], ...usages['source_1'], ...usages['source'] };
+    } else {
+        add_usage_buttons(usages[config['our_descriptor_number']]);
+        known_usages = usages[config['our_descriptor_number']];
+    }
+
+    for (const usage_ of extra_usages[source_or_target]) {
+        if (!(usage_ in known_usages)) {
+            let clone = template.content.cloneNode(true).firstElementChild;
+            clone.innerText = readable_usage_name(usage_);
             clone.title = usage_;
             clone.setAttribute('data-hid-usage', usage_);
             usage_classes['extra'].appendChild(clone);
         }
     }
+
+    const search_box = modal_element.querySelector('.usage_search_box');
+    search_box.addEventListener("keyup", usage_search_onchange(search_box));
+    search_box.addEventListener("keydown", (e) => {
+        if (e.key == 'Enter') {
+            modal_element.querySelectorAll('.usage_button').forEach((usage_button) => {
+                if (usage_button.hasAttribute('data-preferred-result')) {
+                    usage_button.click();
+                }
+            });
+        }
+    });
+    modal_element.addEventListener('show.bs.modal', () => {
+        search_box.value = "";
+        usage_search_onchange(search_box)();
+    });
+    modal_element.addEventListener('shown.bs.modal', () => {
+        search_box.focus();
+    });
 }
 
 function setup_macros() {
@@ -1310,6 +1423,10 @@ function ignore_auth_dev_inputs_onchange() {
     config['ignore_auth_dev_inputs'] = document.getElementById("ignore_auth_dev_inputs_checkbox").checked;
 }
 
+function normalize_gamepad_inputs_onchange() {
+    config['normalize_gamepad_inputs'] = document.getElementById("normalize_gamepad_inputs_checkbox").checked;
+}
+
 function macro_entry_duration_onchange() {
     let value = parseInt(document.getElementById("macro_entry_duration_input").value, 10);
     if (isNaN(value)) {
@@ -1322,6 +1439,16 @@ function macro_entry_duration_onchange() {
         value = 256;
     }
     config['macro_entry_duration'] = value;
+}
+
+function input_labels_onchange(element_id) {
+    return function () {
+        config['input_labels'] = parseInt(document.getElementById(element_id).value, 10);
+        document.getElementById("input_labels_dropdown").value = config['input_labels'];
+        document.getElementById("input_labels_modal_dropdown").value = config['input_labels'];
+        set_mappings_ui_state();
+        set_label_groups_visibility();
+    }
 }
 
 function load_example(n) {
@@ -1386,6 +1513,18 @@ function layer_list_to_mask(layers) {
 }
 
 function readable_usage_name(usage, default_to_hex = true) {
+    if (usage in usages['source_' + config['input_labels']]) {
+        return usages['source_' + config['input_labels']][usage]['name'];
+    }
+    if (usage in usages['source']) {
+        return usages['source'][usage]['name'];
+    }
+    if (usage in usages['source_extra']) {
+        return usages['source_extra'][usage]['name'];
+    }
+    if (((usage & 0xFFFF0000) >>> 0) == BUTTON_USAGE_PAGE) {
+        return 'Button ' + (usage & 0xFFFF);
+    }
     if (((usage & 0xFFFF0000) >>> 0) == MIDI_USAGE_PAGE) {
         const status = (usage >> 8) & 0xF0;
         const channel = (usage >> 8) & 0x0F;
@@ -1405,7 +1544,7 @@ function readable_usage_name(usage, default_to_hex = true) {
                 return prefix + ' PB';
         }
     }
-    return (usage in usages['source']) ? usages['source'][usage]['name'] : (default_to_hex ? usage : '');
+    return default_to_hex ? usage : '';
 }
 
 function readable_target_usage_name(usage) {
@@ -1650,5 +1789,60 @@ function set_quirks_ui_state() {
     clear_children(document.getElementById('quirks_container'));
     for (const quirk of config['quirks']) {
         add_quirk(quirk);
+    }
+}
+
+function comparison_function(fields) {
+    return (a, b) => {
+        for (const field of fields) {
+            if (a[field] < b[field]) {
+                return -1;
+            }
+            if (a[field] > b[field]) {
+                return 1;
+            }
+        }
+        return 0;
+    };
+}
+
+function sort_by(fields) {
+    return (e) => {
+        e.preventDefault();
+        config['mappings'].sort(comparison_function(fields));
+        set_mappings_ui_state();
+    };
+}
+
+function usage_search_onchange(element) {
+    return () => {
+        const query = element.value.toLowerCase().replaceAll(" ", "");
+        const modal_element = element.closest('.modal');
+        let exact_match = null;
+        let last_match = null;
+        let hits = 0;
+        modal_element.querySelectorAll('.usage_button').forEach((usage_button) => {
+            const label = usage_button.innerText.toLowerCase().replaceAll(" ", "");
+            usage_button.classList.toggle('d-none', !label.includes(query));
+            usage_button.removeAttribute('data-preferred-result');
+            if (label.includes(query)) {
+                hits++;
+                last_match = usage_button;
+            }
+            if (label == query) {
+                exact_match = usage_button;
+            }
+        });
+        let have_preferred_result = false;
+        if (exact_match) {
+            exact_match.setAttribute('data-preferred-result', "1");
+            have_preferred_result = true;
+        } else {
+            if (hits == 1) {
+                last_match.setAttribute('data-preferred-result', "1");
+                have_preferred_result = true;
+            }
+        }
+        element.closest('div').querySelector('.have_preferred_result_checkmark').classList.toggle('d-none', !have_preferred_result);
     }
 }

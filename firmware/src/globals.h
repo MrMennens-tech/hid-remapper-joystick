@@ -27,6 +27,7 @@ extern std::vector<usage_rle_t> their_usages_rle;
 extern volatile bool need_to_persist_config;
 extern volatile bool their_descriptor_updated;
 extern volatile bool suspended;
+extern volatile bool resume_pending;
 extern volatile bool config_updated;
 
 extern uint8_t unmapped_passthrough_layer_mask;
@@ -37,6 +38,7 @@ extern uint8_t our_descriptor_number;
 extern bool ignore_auth_dev_inputs;
 extern uint8_t macro_entry_duration;
 extern uint8_t gpio_output_mode;
+extern bool normalize_gamepad_inputs;
 
 extern std::vector<mapping_config11_t> config_mappings;
 
@@ -64,5 +66,7 @@ extern std::vector<quirk_t> quirks;
 
 extern bool boot_protocol_keyboard;
 extern bool boot_protocol_updated;
+
+extern volatile PersistConfigReturnCode persist_config_return_code;
 
 #endif

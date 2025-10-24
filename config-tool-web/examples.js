@@ -1734,7 +1734,7 @@ const examples = [
     {
         'description': 'keyboard adapter for Switch with 15 degree nudges and tilt',
         'config': {
-            "version": 9,
+            "version": 16,
             "unmapped_passthrough_layers": [],
             "partial_scroll_timeout": 1000000,
             "tap_hold_threshold": 200000,
@@ -1742,18 +1742,8 @@ const examples = [
             "interval_override": 0,
             "our_descriptor_number": 2,
             "ignore_auth_dev_inputs": false,
+            "input_labels": 0,
             "mappings": [
-                {
-                    "target_usage": "0x00010039",
-                    "source_usage": "0xfff30001",
-                    "scaling": 1000,
-                    "layers": [
-                        0
-                    ],
-                    "sticky": false,
-                    "tap": false,
-                    "hold": false
-                },
                 {
                     "target_usage": "0x00010032",
                     "source_usage": "0xfff30007",
@@ -1763,7 +1753,9 @@ const examples = [
                     ],
                     "sticky": false,
                     "tap": false,
-                    "hold": false
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
                 },
                 {
                     "target_usage": "0x00010035",
@@ -1774,7 +1766,9 @@ const examples = [
                     ],
                     "sticky": false,
                     "tap": false,
-                    "hold": false
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
                 },
                 {
                     "target_usage": "0x00010030",
@@ -1785,7 +1779,9 @@ const examples = [
                     ],
                     "sticky": false,
                     "tap": false,
-                    "hold": false
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
                 },
                 {
                     "target_usage": "0x00010031",
@@ -1796,7 +1792,9 @@ const examples = [
                     ],
                     "sticky": false,
                     "tap": false,
-                    "hold": false
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
                 },
                 {
                     "target_usage": "0x00090003",
@@ -1807,7 +1805,9 @@ const examples = [
                     ],
                     "sticky": false,
                     "tap": false,
-                    "hold": false
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
                 },
                 {
                     "target_usage": "0x00090002",
@@ -1818,7 +1818,9 @@ const examples = [
                     ],
                     "sticky": false,
                     "tap": false,
-                    "hold": false
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
                 },
                 {
                     "target_usage": "0x00090006",
@@ -1829,7 +1831,9 @@ const examples = [
                     ],
                     "sticky": false,
                     "tap": false,
-                    "hold": false
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
                 },
                 {
                     "target_usage": "0x00090008",
@@ -1840,7 +1844,9 @@ const examples = [
                     ],
                     "sticky": false,
                     "tap": false,
-                    "hold": false
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
                 },
                 {
                     "target_usage": "0x00090005",
@@ -1851,7 +1857,9 @@ const examples = [
                     ],
                     "sticky": false,
                     "tap": false,
-                    "hold": false
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
                 },
                 {
                     "target_usage": "0x00090007",
@@ -1862,7 +1870,9 @@ const examples = [
                     ],
                     "sticky": false,
                     "tap": false,
-                    "hold": false
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
                 },
                 {
                     "target_usage": "0x00090004",
@@ -1873,7 +1883,9 @@ const examples = [
                     ],
                     "sticky": false,
                     "tap": false,
-                    "hold": false
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
                 },
                 {
                     "target_usage": "0x0009000a",
@@ -1884,7 +1896,9 @@ const examples = [
                     ],
                     "sticky": false,
                     "tap": false,
-                    "hold": false
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
                 },
                 {
                     "target_usage": "0x0009000a",
@@ -1895,7 +1909,9 @@ const examples = [
                     ],
                     "sticky": false,
                     "tap": false,
-                    "hold": false
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
                 },
                 {
                     "target_usage": "0x00090009",
@@ -1906,7 +1922,9 @@ const examples = [
                     ],
                     "sticky": false,
                     "tap": false,
-                    "hold": false
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
                 },
                 {
                     "target_usage": "0x0009000d",
@@ -1917,7 +1935,9 @@ const examples = [
                     ],
                     "sticky": false,
                     "tap": false,
-                    "hold": false
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
                 },
                 {
                     "target_usage": "0x0009000b",
@@ -1928,7 +1948,9 @@ const examples = [
                     ],
                     "sticky": false,
                     "tap": false,
-                    "hold": false
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
                 },
                 {
                     "target_usage": "0x0009000c",
@@ -1939,7 +1961,9 @@ const examples = [
                     ],
                     "sticky": false,
                     "tap": false,
-                    "hold": false
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
                 },
                 {
                     "target_usage": "0x00090001",
@@ -1950,7 +1974,9 @@ const examples = [
                     ],
                     "sticky": false,
                     "tap": false,
-                    "hold": false
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
                 },
                 {
                     "target_usage": "0x00090004",
@@ -1961,7 +1987,9 @@ const examples = [
                     ],
                     "sticky": false,
                     "tap": false,
-                    "hold": false
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
                 },
                 {
                     "target_usage": "0x0009000e",
@@ -1972,7 +2000,9 @@ const examples = [
                     ],
                     "sticky": false,
                     "tap": false,
-                    "hold": false
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
                 },
                 {
                     "target_usage": "0x00090003",
@@ -1983,7 +2013,9 @@ const examples = [
                     ],
                     "sticky": false,
                     "tap": false,
-                    "hold": false
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
                 },
                 {
                     "target_usage": "0x00090002",
@@ -1994,7 +2026,9 @@ const examples = [
                     ],
                     "sticky": false,
                     "tap": false,
-                    "hold": false
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
                 },
                 {
                     "target_usage": "0x00090006",
@@ -2005,7 +2039,9 @@ const examples = [
                     ],
                     "sticky": false,
                     "tap": false,
-                    "hold": false
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
                 },
                 {
                     "target_usage": "0x00090008",
@@ -2016,7 +2052,9 @@ const examples = [
                     ],
                     "sticky": false,
                     "tap": false,
-                    "hold": false
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
                 },
                 {
                     "target_usage": "0x00090005",
@@ -2027,7 +2065,9 @@ const examples = [
                     ],
                     "sticky": false,
                     "tap": false,
-                    "hold": false
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
                 },
                 {
                     "target_usage": "0x00090007",
@@ -2038,7 +2078,9 @@ const examples = [
                     ],
                     "sticky": false,
                     "tap": false,
-                    "hold": false
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
                 },
                 {
                     "target_usage": "0x0009000c",
@@ -2049,7 +2091,9 @@ const examples = [
                     ],
                     "sticky": false,
                     "tap": false,
-                    "hold": false
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
                 }
             ],
             "macros": [
@@ -2087,7 +2131,7 @@ const examples = [
                 []
             ],
             "expressions": [
-                "8000",
+                "",
                 "",
                 "0x00070004 input_state_binary 1 mul 0x00070007 input_state_binary 2 mul bitwise_or 0x0007001a input_state_binary 4 mul bitwise_or 0x00070016 input_state_binary 8 mul bitwise_or 1000 store -1000 1000 recall 1 eq 7000 mul add 1000 recall 2 eq 3000 mul add 1000 recall 4 eq 1000 mul add 1000 recall 8 eq 5000 mul add 1000 recall 5 eq 8000 mul add 1000 recall 6 eq 2000 mul add 1000 recall 10 eq 4000 mul add 1000 recall 9 eq 6000 mul add 1000 recall 7 eq 1000 mul add 1000 recall 11 eq 5000 mul add 1000 recall 13 eq 7000 mul add 1000 recall 14 eq 3000 mul add 45000 mul dup dup dup dup 135000 gt 2000 mul -1000 add 4000 store 315000 add 360000 mod 135000 gt 2000 mul -1000 add 5000 store -45000 eq not dup 7000 store 0 0x00070014 input_state_binary 15000 mul 4000 recall mul add 0x00070008 input_state_binary 15000 mul 5000 recall mul add 0x0007001d input_state_binary -15000 mul 5000 recall mul add 0x00070006 input_state_binary -15000 mul 4000 recall mul add mul add 3000 store 0x000700e1 input_state_binary -500 mul 1000 add 6000 store",
                 "3000 recall sin 127000 mul 6000 recall mul 7000 recall mul 128000 add",
@@ -2095,13 +2139,16 @@ const examples = [
                 "0x00070018 input_state_binary 0x00070059 input_state_binary bitwise_or 1 mul 0x00070012 input_state_binary 0x0007005b input_state_binary bitwise_or 2 mul bitwise_or 0x00070013 input_state_binary 0x00070058 input_state_binary bitwise_or 4 mul bitwise_or 0x0007000c input_state_binary 0x0007005a input_state_binary bitwise_or 8 mul bitwise_or 10000 store -1000 10000 recall 1 eq 7000 mul add 10000 recall 2 eq 3000 mul add 10000 recall 4 eq 1000 mul add 10000 recall 8 eq 5000 mul add 10000 recall 5 eq 8000 mul add 10000 recall 6 eq 2000 mul add 10000 recall 10 eq 4000 mul add 10000 recall 9 eq 6000 mul add 10000 recall 7 eq 1000 mul add 10000 recall 11 eq 5000 mul add 10000 recall 13 eq 7000 mul add 10000 recall 14 eq 3000 mul add 45000 mul dup -45000 eq not 8000 store 9000 store",
                 "9000 recall sin 127000 mul 8000 recall mul 128000 add",
                 "9000 recall cos -127000 mul 8000 recall mul 128000 add"
-            ]
+            ],
+            "macro_entry_duration": 1,
+            "gpio_output_mode": 0,
+            "quirks": []
         }
     },
     {
         'description': 'Stadia controller adapter for PS4',
         'config': {
-            "version": 11,
+            "version": 16,
             "unmapped_passthrough_layers": [],
             "partial_scroll_timeout": 1000000,
             "tap_hold_threshold": 200000,
@@ -2109,6 +2156,7 @@ const examples = [
             "interval_override": 0,
             "our_descriptor_number": 3,
             "ignore_auth_dev_inputs": true,
+            "input_labels": 0,
             "mappings": [
                 {
                     "target_usage": "0x00010030",
@@ -2167,9 +2215,47 @@ const examples = [
                     "target_port": 0
                 },
                 {
-                    "target_usage": "0x00010039",
-                    "source_usage": "0x00010039",
-                    "source_name": "D-pad",
+                    "target_usage": "0xfff90001",
+                    "source_usage": "0xfff90001",
+                    "scaling": 1000,
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "target_usage": "0xfff90002",
+                    "source_usage": "0xfff90002",
+                    "scaling": 1000,
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "target_usage": "0xfff90003",
+                    "source_usage": "0xfff90003",
+                    "scaling": 1000,
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "target_usage": "0xfff90004",
+                    "source_usage": "0xfff90004",
                     "scaling": 1000,
                     "layers": [
                         0
@@ -2464,13 +2550,14 @@ const examples = [
                 ""
             ],
             "macro_entry_duration": 1,
-            "gpio_output_mode": 0
+            "gpio_output_mode": 0,
+            "quirks": []
         }
     },
     {
         'description': 'keyboard adapter for PS4: arrows=D-pad, WASD=left stick, numpad=right stick',
         'config': {
-            "version": 14,
+            "version": 16,
             "unmapped_passthrough_layers": [
                 0,
                 1,
@@ -2485,10 +2572,50 @@ const examples = [
             "ignore_auth_dev_inputs": true,
             "macro_entry_duration": 1,
             "gpio_output_mode": 0,
+            "input_labels": 0,
             "mappings": [
                 {
-                    "target_usage": "0x00010039",
-                    "source_usage": "0xfff30001",
+                    "target_usage": "0xfff90001",
+                    "source_usage": "0x00070050",
+                    "scaling": 1000,
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "target_usage": "0xfff90002",
+                    "source_usage": "0x0007004f",
+                    "scaling": 1000,
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "target_usage": "0xfff90003",
+                    "source_usage": "0x00070052",
+                    "scaling": 1000,
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "target_usage": "0xfff90004",
+                    "source_usage": "0x00070051",
                     "scaling": 1000,
                     "layers": [
                         0
@@ -2795,7 +2922,7 @@ const examples = [
                 []
             ],
             "expressions": [
-                "0x00070050 input_state_binary /* left arrow */ eol 0x0007004f input_state_binary /* right arrow */ eol 0x00070052 input_state_binary /* up arrow */ eol 0x00070051 input_state_binary /* down arrow */ eol dpad /* 0=up, 1=up+right, 2=right, ..., 8=neutral */",
+                "",
                 "0x00070004 input_state_binary /* A */ eol 0x00070007 input_state_binary /* D */ eol 0x0007001a input_state_binary /* W */ eol 0x00070016 input_state_binary /* S */ eol dpad /* 0=up, 1=up+right, 2=right, ..., 8=neutral */ eol 45000 mul /* angle in degrees */ eol dup eol 360000 eq not 3000 store /* is any of the keys pressed? */ eol 4000 store /* 0..360 angle */",
                 "4000 recall /* 0..360 angle */ eol sin eol 127000 mul eol 3000 recall /* is any of the keys pressed? */ eol mul eol 128000 add eol /* used as left stick X */",
                 "4000 recall /* 0..360 angle */ eol cos eol -127000 eol mul eol 3000 recall /* is any of the keys pressed? */ eol mul eol 128000 add eol /* used as left stick Y */",
@@ -2810,7 +2937,7 @@ const examples = [
     {
         'description': 'mouse to analog stick',
         'config': {
-            "version": 9,
+            "version": 16,
             "unmapped_passthrough_layers": [],
             "partial_scroll_timeout": 1000000,
             "tap_hold_threshold": 200000,
@@ -2818,6 +2945,7 @@ const examples = [
             "interval_override": 0,
             "our_descriptor_number": 2,
             "ignore_auth_dev_inputs": false,
+            "input_labels": 0,
             "mappings": [
                 {
                     "target_usage": "0x00010030",
@@ -2828,7 +2956,9 @@ const examples = [
                     ],
                     "sticky": false,
                     "tap": false,
-                    "hold": false
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
                 },
                 {
                     "target_usage": "0x00010031",
@@ -2839,40 +2969,9 @@ const examples = [
                     ],
                     "sticky": false,
                     "tap": false,
-                    "hold": false
-                },
-                {
-                    "target_usage": "0x00010032",
-                    "source_usage": "0xfff30003",
-                    "scaling": 1000,
-                    "layers": [
-                        0
-                    ],
-                    "sticky": false,
-                    "tap": false,
-                    "hold": false
-                },
-                {
-                    "target_usage": "0x00010035",
-                    "source_usage": "0xfff30003",
-                    "scaling": 1000,
-                    "layers": [
-                        0
-                    ],
-                    "sticky": false,
-                    "tap": false,
-                    "hold": false
-                },
-                {
-                    "target_usage": "0x00010039",
-                    "source_usage": "0xfff30004",
-                    "scaling": 1000,
-                    "layers": [
-                        0
-                    ],
-                    "sticky": false,
-                    "tap": false,
-                    "hold": false
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
                 }
             ],
             "macros": [
@@ -2910,15 +3009,18 @@ const examples = [
                 []
             ],
             "expressions": [
-                "0x00010030 input_state 1000 recall add -127000 127000 clamp 980 mul dup 1000 store 128000 add",
-                "0x00010031 input_state 2000 recall add -127000 127000 clamp 980 mul dup 2000 store 128000 add",
-                "128000",
-                "8000",
+                "0x00010030 input_state eol 1000 recall eol add eol -127000 127000 clamp eol 980 mul eol dup eol 1000 store eol 128000 add",
+                "0x00010031 input_state eol 2000 recall eol add eol -127000 127000 clamp eol 980 mul eol dup eol 2000 store eol 128000 add",
+                "",
+                "",
                 "",
                 "",
                 "",
                 ""
-            ]
+            ],
+            "macro_entry_duration": 1,
+            "gpio_output_mode": 0,
+            "quirks": []
         }
     },
     {
@@ -3005,7 +3107,7 @@ const examples = [
     {
         'description': 'Xbox controller (Bluetooth) adapter for Switch',
         'config': {
-            "version": 15,
+            "version": 17,
             "unmapped_passthrough_layers": [],
             "partial_scroll_timeout": 1000000,
             "tap_hold_threshold": 200000,
@@ -3013,10 +3115,50 @@ const examples = [
             "interval_override": 0,
             "our_descriptor_number": 2,
             "ignore_auth_dev_inputs": false,
+            "input_labels": 1,
             "mappings": [
                 {
-                    "target_usage": "0x00010039",
-                    "source_usage": "0xfff30001",
+                    "target_usage": "0xfff90001",
+                    "source_usage": "0xfff50001",
+                    "scaling": 1000,
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "target_usage": "0xfff90002",
+                    "source_usage": "0xfff50002",
+                    "scaling": 1000,
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "target_usage": "0xfff90003",
+                    "source_usage": "0xfff50003",
+                    "scaling": 1000,
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "target_usage": "0xfff90004",
+                    "source_usage": "0xfff50004",
                     "scaling": 1000,
                     "layers": [
                         0
@@ -3029,7 +3171,7 @@ const examples = [
                 },
                 {
                     "target_usage": "0x00010030",
-                    "source_usage": "0xfff30002",
+                    "source_usage": "0x00010030",
                     "scaling": 1000,
                     "layers": [
                         0
@@ -3042,7 +3184,7 @@ const examples = [
                 },
                 {
                     "target_usage": "0x00010031",
-                    "source_usage": "0xfff30003",
+                    "source_usage": "0x00010031",
                     "scaling": 1000,
                     "layers": [
                         0
@@ -3055,7 +3197,7 @@ const examples = [
                 },
                 {
                     "target_usage": "0x00010032",
-                    "source_usage": "0xfff30004",
+                    "source_usage": "0x00010032",
                     "scaling": 1000,
                     "layers": [
                         0
@@ -3068,7 +3210,7 @@ const examples = [
                 },
                 {
                     "target_usage": "0x00010035",
-                    "source_usage": "0xfff30005",
+                    "source_usage": "0x00010035",
                     "scaling": 1000,
                     "layers": [
                         0
@@ -3165,7 +3307,7 @@ const examples = [
                 },
                 {
                     "target_usage": "0x00090007",
-                    "source_usage": "0xfff30006",
+                    "source_usage": "0xfff30002",
                     "scaling": 1000,
                     "layers": [
                         0
@@ -3178,7 +3320,7 @@ const examples = [
                 },
                 {
                     "target_usage": "0x00090008",
-                    "source_usage": "0xfff30007",
+                    "source_usage": "0xfff30003",
                     "scaling": 1000,
                     "layers": [
                         0
@@ -3295,13 +3437,13 @@ const examples = [
                 []
             ],
             "expressions": [
-                "/*\nXbox controllers in Bluetooth mode report dpad directions as 1..8\n(N, NE, E, SE, S, SW, W, NW) with 0 as neutral.\nWe want 0..7 so we subtract 1.\n-1 gets sent as 0x0F, which happens to be what we want for neutral.\n(Any value outside legal range is technically okay.)\n*/ eol eol 0x00010039 input_state eol 1000 sub",
-                "0x00010030 input_state eol 256000 div eol round eol 0 255000 clamp",
-                "0x00010031 input_state eol 256000 div eol round eol 0 255000 clamp",
-                "0x00010032 input_state eol 256000 div eol round eol 0 255000 clamp",
-                "0x00010035 input_state eol 256000 div eol round eol 0 255000 clamp",
-                "/* trigger range is 0..1023 */ eol 0x000200c5 input_state eol 255000 gt",
-                "/* trigger range is 0..1023 */ eol 0x000200c4 input_state eol 255000 gt",
+                "/*\nXbox controllers in Bluetooth mode report dpad directions as 1..8\n(N, NE, E, SE, S, SW, W, NW) with 0 as neutral.\n*/ eol eol 0x00010039 input_state 6000 eq eol 0x00010039 input_state 7000 eq bitwise_or eol 0x00010039 input_state 8000 eq bitwise_or eol 1000 store /* left */ eol eol 0x00010039 input_state 2000 eq eol 0x00010039 input_state 3000 eq bitwise_or eol 0x00010039 input_state 4000 eq bitwise_or eol 2000 store /* right */ eol eol 0x00010039 input_state 8000 eq eol 0x00010039 input_state 1000 eq bitwise_or eol 0x00010039 input_state 2000 eq bitwise_or eol 3000 store /* up */ eol eol 0x00010039 input_state 4000 eq eol 0x00010039 input_state 5000 eq bitwise_or eol 0x00010039 input_state 6000 eq bitwise_or eol 4000 store /* down */",
+                "0x000200c5 input_state_scaled eol 63000 gt",
+                "0x000200c4 input_state_scaled eol 63000 gt",
+                "",
+                "",
+                "",
+                "",
                 ""
             ],
             "macro_entry_duration": 1,
@@ -3312,7 +3454,7 @@ const examples = [
     {
         'description': 'Xbox controller (USB) adapter for Switch',
         'config': {
-            "version": 15,
+            "version": 17,
             "unmapped_passthrough_layers": [],
             "partial_scroll_timeout": 1000000,
             "tap_hold_threshold": 200000,
@@ -3320,10 +3462,50 @@ const examples = [
             "interval_override": 0,
             "our_descriptor_number": 2,
             "ignore_auth_dev_inputs": false,
+            "input_labels": 1,
             "mappings": [
                 {
-                    "target_usage": "0x00010039",
-                    "source_usage": "0xfff30001",
+                    "target_usage": "0xfff90001",
+                    "source_usage": "0x0009000b",
+                    "scaling": 1000,
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "target_usage": "0xfff90002",
+                    "source_usage": "0x0009000c",
+                    "scaling": 1000,
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "target_usage": "0xfff90003",
+                    "source_usage": "0x00090009",
+                    "scaling": 1000,
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "target_usage": "0xfff90004",
+                    "source_usage": "0x0009000a",
                     "scaling": 1000,
                     "layers": [
                         0
@@ -3336,7 +3518,7 @@ const examples = [
                 },
                 {
                     "target_usage": "0x00010030",
-                    "source_usage": "0xfff30002",
+                    "source_usage": "0x00010030",
                     "scaling": 1000,
                     "layers": [
                         0
@@ -3349,7 +3531,7 @@ const examples = [
                 },
                 {
                     "target_usage": "0x00010031",
-                    "source_usage": "0xfff30003",
+                    "source_usage": "0x00010031",
                     "scaling": 1000,
                     "layers": [
                         0
@@ -3362,7 +3544,7 @@ const examples = [
                 },
                 {
                     "target_usage": "0x00010032",
-                    "source_usage": "0xfff30004",
+                    "source_usage": "0x00010032",
                     "scaling": 1000,
                     "layers": [
                         0
@@ -3375,7 +3557,7 @@ const examples = [
                 },
                 {
                     "target_usage": "0x00010035",
-                    "source_usage": "0xfff30005",
+                    "source_usage": "0x00010035",
                     "scaling": 1000,
                     "layers": [
                         0
@@ -3472,7 +3654,7 @@ const examples = [
                 },
                 {
                     "target_usage": "0x00090007",
-                    "source_usage": "0xfff30006",
+                    "source_usage": "0xfff30001",
                     "scaling": 1000,
                     "layers": [
                         0
@@ -3485,7 +3667,7 @@ const examples = [
                 },
                 {
                     "target_usage": "0x00090008",
-                    "source_usage": "0xfff30007",
+                    "source_usage": "0xfff30002",
                     "scaling": 1000,
                     "layers": [
                         0
@@ -3602,13 +3784,13 @@ const examples = [
                 []
             ],
             "expressions": [
-                "0x0009000b input_state_binary eol 0x0009000c input_state_binary eol 0x00090009 input_state_binary eol 0x0009000a input_state_binary eol dpad",
-                "0x00010030 input_state eol 256000 div eol round eol 128000 add eol 0 255000 clamp",
-                "0x00010031 input_state eol -256000 div eol round eol 128000 add eol 0 255000 clamp",
-                "0x00010032 input_state eol 256000 div eol round eol 128000 add eol 0 255000 clamp",
-                "0x00010035 input_state eol -256000 div eol round eol 128000 add eol 0 255000 clamp",
-                "/* trigger range is 0..1023 */ eol 0x000200c5 input_state eol 255000 gt",
-                "/* trigger range is 0..1023 */ eol 0x000200c4 input_state eol 255000 gt",
+                "0x000200c5 input_state_scaled eol 63000 gt",
+                "0x000200c4 input_state_scaled eol 63000 gt",
+                "",
+                "",
+                "",
+                "",
+                "",
                 ""
             ],
             "macro_entry_duration": 1,
@@ -5670,7 +5852,7 @@ const examples = [
     {
         'description': 'DualSense to XAC adapter',
         'config': {
-            "version": 14,
+            "version": 16,
             "unmapped_passthrough_layers": [
                 4,
                 5,
@@ -5685,6 +5867,7 @@ const examples = [
             "ignore_auth_dev_inputs": false,
             "macro_entry_duration": 1,
             "gpio_output_mode": 0,
+            "input_labels": 0,
             "mappings": [
                 {
                     "target_usage": "0x00010030",
@@ -5739,8 +5922,47 @@ const examples = [
                     "target_port": 0
                 },
                 {
-                    "target_usage": "0x00010039",
-                    "source_usage": "0x00010039",
+                    "target_usage": "0xfff90001",
+                    "source_usage": "0xfff90001",
+                    "scaling": 1000,
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "target_usage": "0xfff90002",
+                    "source_usage": "0xfff90002",
+                    "scaling": 1000,
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "target_usage": "0xfff90003",
+                    "source_usage": "0xfff90003",
+                    "scaling": 1000,
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "target_usage": "0xfff90004",
+                    "source_usage": "0xfff90004",
                     "scaling": 1000,
                     "layers": [
                         0
@@ -6135,7 +6357,7 @@ const examples = [
     {
         'description': 'Stadia controller to XAC adapter',
         'config': {
-            "version": 14,
+            "version": 16,
             "unmapped_passthrough_layers": [
                 4,
                 5,
@@ -6150,6 +6372,7 @@ const examples = [
             "ignore_auth_dev_inputs": false,
             "macro_entry_duration": 1,
             "gpio_output_mode": 0,
+            "input_labels": 0,
             "mappings": [
                 {
                     "target_usage": "0x00010030",
@@ -6204,8 +6427,47 @@ const examples = [
                     "target_port": 0
                 },
                 {
-                    "target_usage": "0x00010039",
-                    "source_usage": "0x00010039",
+                    "target_usage": "0xfff90001",
+                    "source_usage": "0xfff90001",
+                    "scaling": 1000,
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "target_usage": "0xfff90002",
+                    "source_usage": "0xfff90002",
+                    "scaling": 1000,
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "target_usage": "0xfff90003",
+                    "source_usage": "0xfff90003",
+                    "scaling": 1000,
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "target_usage": "0xfff90004",
+                    "source_usage": "0xfff90004",
                     "scaling": 1000,
                     "layers": [
                         0
@@ -6423,7 +6685,7 @@ const examples = [
     {
         'description': 'keyboard to XAC adapter: arrows=D-pad, WASD=left stick, numpad=right stick',
         'config': {
-            "version": 14,
+            "version": 16,
             "unmapped_passthrough_layers": [],
             "partial_scroll_timeout": 1000000,
             "tap_hold_threshold": 200000,
@@ -6433,10 +6695,50 @@ const examples = [
             "ignore_auth_dev_inputs": false,
             "macro_entry_duration": 1,
             "gpio_output_mode": 0,
+            "input_labels": 0,
             "mappings": [
                 {
-                    "target_usage": "0x00010039",
-                    "source_usage": "0xfff30001",
+                    "target_usage": "0xfff90001",
+                    "source_usage": "0x00070050",
+                    "scaling": 1000,
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "target_usage": "0xfff90002",
+                    "source_usage": "0x0007004f",
+                    "scaling": 1000,
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "target_usage": "0xfff90003",
+                    "source_usage": "0x00070052",
+                    "scaling": 1000,
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "target_usage": "0xfff90004",
+                    "source_usage": "0x00070051",
                     "scaling": 1000,
                     "layers": [
                         0
@@ -6691,7 +6993,7 @@ const examples = [
                 []
             ],
             "expressions": [
-                "0x00070050 input_state_binary /* left arrow */ eol 0x0007004f input_state_binary /* right arrow */ eol 0x00070052 input_state_binary /* up arrow */ eol 0x00070051 input_state_binary /* down arrow */ eol dpad /* 0=up, 1=up+right, 2=right, ..., 8=neutral */",
+                "",
                 "0x00070004 input_state_binary /* A */ eol 0x00070007 input_state_binary /* D */ eol 0x0007001a input_state_binary /* W */ eol 0x00070016 input_state_binary /* S */ eol dpad /* 0=up, 1=up+right, 2=right, ..., 8=neutral */ eol 45000 mul /* angle in degrees */ eol dup eol 360000 eq not 3000 store /* is any of the keys pressed? */ eol 4000 store /* 0..360 angle */",
                 "4000 recall /* 0..360 angle */ eol sin eol 127000 mul eol 3000 recall /* is any of the keys pressed? */ eol mul eol 128000 add eol /* used as left stick X */",
                 "4000 recall /* 0..360 angle */ eol cos eol -127000 eol mul eol 3000 recall /* is any of the keys pressed? */ eol mul eol 128000 add eol /* used as left stick Y */",
@@ -7708,7 +8010,7 @@ const examples = [
     {
         'description': 'Flatbox rev5',
         'config': {
-            "version": 14,
+            "version": 16,
             "unmapped_passthrough_layers": [
                 0,
                 1,
@@ -7727,10 +8029,50 @@ const examples = [
             "ignore_auth_dev_inputs": false,
             "macro_entry_duration": 1,
             "gpio_output_mode": 0,
+            "input_labels": 0,
             "mappings": [
                 {
-                    "source_usage": "0xfff30001",
-                    "target_usage": "0x00010039",
+                    "source_usage": "0xfff4000d",
+                    "target_usage": "0xfff90001",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff4000b",
+                    "target_usage": "0xfff90002",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff4000a",
+                    "target_usage": "0xfff90003",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff4000c",
+                    "target_usage": "0xfff90004",
                     "layers": [
                         0
                     ],
@@ -7946,7 +8288,313 @@ const examples = [
                 []
             ],
             "expressions": [
-                "0xfff4000d input_state_binary eol 0xfff4000b input_state_binary eol 0xfff4000a input_state_binary eol 0xfff4000c input_state_binary eol dpad",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                ""
+            ],
+            "quirks": []
+        }
+    },
+    {
+        'description': 'Flatbox rev4/rev8',
+        'config': {
+            "version": 17,
+            "unmapped_passthrough_layers": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7
+            ],
+            "partial_scroll_timeout": 1000000,
+            "tap_hold_threshold": 200000,
+            "gpio_debounce_time_ms": 5,
+            "interval_override": 0,
+            "our_descriptor_number": 2,
+            "ignore_auth_dev_inputs": false,
+            "macro_entry_duration": 1,
+            "gpio_output_mode": 0,
+            "input_labels": 0,
+            "mappings": [
+                {
+                    "source_usage": "0xfff40009",
+                    "target_usage": "0xfff90001",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff4000b",
+                    "target_usage": "0xfff90002",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff40010",
+                    "target_usage": "0xfff90003",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff4000a",
+                    "target_usage": "0xfff90004",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff40013",
+                    "target_usage": "0x00090002",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff40018",
+                    "target_usage": "0x00090003",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff40012",
+                    "target_usage": "0x00090001",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff40019",
+                    "target_usage": "0x00090004",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff4001b",
+                    "target_usage": "0x00090006",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff4001a",
+                    "target_usage": "0x00090008",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff4001d",
+                    "target_usage": "0x00090005",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff4001c",
+                    "target_usage": "0x00090007",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff40006",
+                    "target_usage": "0x0009000a",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff40005",
+                    "target_usage": "0x00090009",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff40004",
+                    "target_usage": "0x0009000d",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff40003",
+                    "target_usage": "0x0009000e",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff40002",
+                    "target_usage": "0x0009000b",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff40001",
+                    "target_usage": "0x0009000c",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                }
+            ],
+            "macros": [
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                []
+            ],
+            "expressions": [
+                "",
                 "",
                 "",
                 "",
@@ -8262,6 +8910,1161 @@ const examples = [
                     "signed": false
                 }
             ]
+        }
+    },
+    {
+        'description': 'touchpad as analog sticks on a PS4 fightstick',
+        'config': {
+            "version": 17,
+            "unmapped_passthrough_layers": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7
+            ],
+            "partial_scroll_timeout": 1000000,
+            "tap_hold_threshold": 200000,
+            "gpio_debounce_time_ms": 5,
+            "interval_override": 0,
+            "our_descriptor_number": 3,
+            "ignore_auth_dev_inputs": false,
+            "macro_entry_duration": 1,
+            "gpio_output_mode": 0,
+            "input_labels": 1,
+            "mappings": [
+                {
+                    "target_usage": "0x00010030",
+                    "source_usage": "0xfff50001",
+                    "scaling": 1000,
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "target_usage": "0x00010031",
+                    "source_usage": "0xfff50002",
+                    "scaling": 1000,
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "target_usage": "0x00010032",
+                    "source_usage": "0xfff50003",
+                    "scaling": 1000,
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "target_usage": "0x00010035",
+                    "source_usage": "0xfff50004",
+                    "scaling": 1000,
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "target_usage": "0x0009000b",
+                    "source_usage": "0xfff50009",
+                    "scaling": 1000,
+                    "layers": [],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "target_usage": "0x0009000c",
+                    "source_usage": "0xfff5000a",
+                    "scaling": 1000,
+                    "layers": [],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "source_port": 0,
+                    "target_port": 0
+                }
+            ],
+            "macros": [
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                []
+            ],
+            "expressions": [
+                "600 11000 store /* X sensitivity */ eol 600 12000 store /* Y sensitivity */ eol eol /* first finger=left stick? */ eol 0xfffa0002 prev_input_state_binary eol 0xfffa0002 input_state_binary not eol mul /* first finger started touching */ eol 960000 0xfffa0003 input_state gt mul /* on left side */ eol dup eol 0xfffa0003 input_state eol 13000 recall ifte 13000 store /* left stick center X */ eol dup eol 0xfffa0004 input_state eol 14000 recall ifte 14000 store /* left stick center Y */ eol 5000 recall bitwise_or eol 0xfffa0002 input_state_binary not mul eol 5000 store /* first finger controls left stick */ eol eol /* first finger=right stick? */ eol 0xfffa0002 prev_input_state_binary eol 0xfffa0002 input_state_binary not eol mul /* first finger started touching */ eol 0xfffa0003 input_state 960000 gt mul /* on right side */ eol dup eol 0xfffa0003 input_state eol 15000 recall ifte 15000 store /* right stick center X */ eol dup eol 0xfffa0004 input_state eol 16000 recall ifte 16000 store /* right stick center Y */ eol 6000 recall bitwise_or eol 0xfffa0002 input_state_binary not mul eol 6000 store /* first finger controls right stick */ eol eol /* second finger=left stick? */ eol 0xfffa0006 prev_input_state_binary eol 0xfffa0006 input_state_binary not eol mul /* second finger started touching */ eol 960000 0xfffa0007 input_state gt mul /* on left side */ eol dup eol 0xfffa0007 input_state eol 13000 recall ifte 13000 store /* left stick center X */ eol dup eol 0xfffa0008 input_state eol 14000 recall ifte 14000 store /* left stick center Y */ eol 7000 recall bitwise_or eol 0xfffa0006 input_state_binary not mul eol 7000 store /* second finger controls left stick */ eol eol /* second finger=right stick? */ eol 0xfffa0006 prev_input_state_binary eol 0xfffa0006 input_state_binary not eol mul /* second finger started touching */ eol 0xfffa0007 input_state 960000 gt mul /* on right side */ eol dup eol 0xfffa0007 input_state eol 15000 recall ifte 15000 store /* right stick center X */ eol dup eol 0xfffa0008 input_state eol 16000 recall ifte 16000 store /* right stick center Y */ eol 8000 recall bitwise_or eol 0xfffa0006 input_state_binary not mul eol 8000 store /* second finger controls right stick */ eol eol 0xfffa0003 input_state /* first finger X */ eol 13000 recall -1000 mul add /* left stick center X */ eol 5000 recall mul /* first finger controls left stick? */ eol 0xfffa0007 input_state /* second finger X */ eol 13000 recall -1000 mul add /* left stick center X */ eol 7000 recall mul /* second finger controls left stick? */ eol add eol 11000 recall mul /* X sensitivity */ eol 128000 add 0 255000 clamp 1000 store /* left stick X */ eol eol 0xfffa0004 input_state /* first finger Y */ eol 14000 recall -1000 mul add /* left stick center Y */ eol 5000 recall mul /* first finger controls left stick? */ eol 0xfffa0008 input_state /* second finger Y */ eol 14000 recall -1000 mul add /* left stick center Y */ eol 7000 recall mul /* second finger controls left stick? */ eol add eol 12000 recall mul /* Y sensitivity */ eol 128000 add 0 255000 clamp 2000 store /* left stick Y */ eol eol 0xfffa0003 input_state /* first finger X */ eol 15000 recall -1000 mul add /* right stick center X */ eol 6000 recall mul /* first finger controls right stick? */ eol 0xfffa0007 input_state /* second finger X */ eol 15000 recall -1000 mul add /* right stick center X */ eol 8000 recall mul /* second finger controls right stick? */ eol add eol 11000 recall mul /* X sensitivity */ eol 128000 add 0 255000 clamp 3000 store /* right stick X */ eol eol 0xfffa0004 input_state /* first finger Y */ eol 16000 recall -1000 mul add /* right stick center Y */ eol 6000 recall mul /* first finger controls right stick? */ eol 0xfffa0008 input_state /* second finger Y */ eol 16000 recall -1000 mul add /* right stick center Y */ eol 8000 recall mul /* second finger controls right stick? */ eol add eol 12000 recall mul /* Y sensitivity */ eol 128000 add 0 255000 clamp 4000 store /* right stick Y */ eol eol 0x0009000e input_state_binary /* touchpad click */ eol 5000 recall /* first finger touching on left side? */ eol 7000 recall bitwise_or /* second finger touching on left side? */ eol mul eol 6000 recall not mul /* first finger NOT touching on right side */ eol 8000 recall not mul /* second finger NOT touching on right side */ eol 9000 store /* L3 */ eol eol 0x0009000e input_state_binary /* touchpad click */ eol 6000 recall /* first finger touching on right side? */ eol 8000 recall bitwise_or /* second finger touching on right side? */ eol mul eol 5000 recall not mul /* first finger NOT touching on left side */ eol 7000 recall not mul /* second finger NOT touching on left side */ eol 10000 store /* R3 */",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                ""
+            ],
+            "quirks": [
+                {
+                    "vendor_id": "0x0000",
+                    "product_id": "0x0000",
+                    "interface": 0,
+                    "report_id": 1,
+                    "usage": "0xfffa0001",
+                    "bitpos": 272,
+                    "size": 7,
+                    "relative": false,
+                    "signed": false
+                },
+                {
+                    "vendor_id": "0x0000",
+                    "product_id": "0x0000",
+                    "interface": 0,
+                    "report_id": 1,
+                    "usage": "0xfffa0002",
+                    "bitpos": 279,
+                    "size": 1,
+                    "relative": false,
+                    "signed": false
+                },
+                {
+                    "vendor_id": "0x0000",
+                    "product_id": "0x0000",
+                    "interface": 0,
+                    "report_id": 1,
+                    "usage": "0xfffa0003",
+                    "bitpos": 280,
+                    "size": 12,
+                    "relative": false,
+                    "signed": false
+                },
+                {
+                    "vendor_id": "0x0000",
+                    "product_id": "0x0000",
+                    "interface": 0,
+                    "report_id": 1,
+                    "usage": "0xfffa0004",
+                    "bitpos": 292,
+                    "size": 12,
+                    "relative": false,
+                    "signed": false
+                },
+                {
+                    "vendor_id": "0x0000",
+                    "product_id": "0x0000",
+                    "interface": 0,
+                    "report_id": 1,
+                    "usage": "0xfffa0005",
+                    "bitpos": 304,
+                    "size": 7,
+                    "relative": false,
+                    "signed": false
+                },
+                {
+                    "vendor_id": "0x0000",
+                    "product_id": "0x0000",
+                    "interface": 0,
+                    "report_id": 1,
+                    "usage": "0xfffa0006",
+                    "bitpos": 311,
+                    "size": 1,
+                    "relative": false,
+                    "signed": false
+                },
+                {
+                    "vendor_id": "0x0000",
+                    "product_id": "0x0000",
+                    "interface": 0,
+                    "report_id": 1,
+                    "usage": "0xfffa0007",
+                    "bitpos": 312,
+                    "size": 12,
+                    "relative": false,
+                    "signed": false
+                },
+                {
+                    "vendor_id": "0x0000",
+                    "product_id": "0x0000",
+                    "interface": 0,
+                    "report_id": 1,
+                    "usage": "0xfffa0008",
+                    "bitpos": 324,
+                    "size": 12,
+                    "relative": false,
+                    "signed": false
+                }
+            ]
+        }
+    },
+    {
+        'description': 'analog stick cardinal directions to D-pad',
+        'config': {
+            "version": 17,
+            "unmapped_passthrough_layers": [
+                4,
+                5,
+                6,
+                7
+            ],
+            "partial_scroll_timeout": 1000000,
+            "tap_hold_threshold": 200000,
+            "gpio_debounce_time_ms": 5,
+            "interval_override": 0,
+            "our_descriptor_number": 2,
+            "ignore_auth_dev_inputs": false,
+            "macro_entry_duration": 1,
+            "gpio_output_mode": 0,
+            "input_labels": 1,
+            "mappings": [
+                {
+                    "source_usage": "0xfff5000b",
+                    "target_usage": "0xfff90003",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff5000c",
+                    "target_usage": "0xfff90004",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff5000d",
+                    "target_usage": "0xfff90001",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff5000e",
+                    "target_usage": "0xfff90002",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                }
+            ],
+            "macros": [
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                []
+            ],
+            "expressions": [
+                "0x00010030 input_state_scaled eol 128000 sub eol dup mul eol eol 0x00010031 input_state_scaled eol 128000 sub eol dup mul eol eol add sqrt /* sqrt(x^2 + y^2) */ eol 64000 gt eol 7000 store /* stick outside deadzone? */ eol eol 0x00010030 input_state_scaled eol 128000 sub eol 0x00010031 input_state_scaled eol 128000 sub eol atan2 eol 8000 store /* stick angle */ eol eol /* overlapping (d-pad) */ eol /* up */ eol 8000 recall 112500 gt eol 8000 recall -112500 lt eol bitwise_or eol 7000 recall mul /* deadzone */ eol 11000 store eol eol /* down */ eol 8000 recall -67500 gt eol 8000 recall 67500 lt eol mul eol 7000 recall mul /* deadzone */ eol 12000 store eol eol /* left */ eol 8000 recall -157500 gt eol 8000 recall -22500 lt eol mul eol 7000 recall mul /* deadzone */ eol 13000 store eol eol /* right */ eol 8000 recall 22500 gt eol 8000 recall 157500 lt eol mul eol 7000 recall mul /* deadzone */ eol 14000 store",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                ""
+            ],
+            "quirks": []
+        }
+    },
+    {
+        'description': 'analog stick cardinal directions to buttons',
+        'config': {
+            "version": 17,
+            "unmapped_passthrough_layers": [
+                4,
+                5,
+                6,
+                7
+            ],
+            "partial_scroll_timeout": 1000000,
+            "tap_hold_threshold": 200000,
+            "gpio_debounce_time_ms": 5,
+            "interval_override": 0,
+            "our_descriptor_number": 2,
+            "ignore_auth_dev_inputs": false,
+            "macro_entry_duration": 1,
+            "gpio_output_mode": 0,
+            "input_labels": 1,
+            "mappings": [
+                {
+                    "source_usage": "0xfff50015",
+                    "target_usage": "0x00090004",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff50016",
+                    "target_usage": "0x00090002",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff50017",
+                    "target_usage": "0x00090001",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff50018",
+                    "target_usage": "0x00090003",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                }
+            ],
+            "macros": [
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                []
+            ],
+            "expressions": [
+                "0x00010030 input_state_scaled eol 128000 sub eol dup mul eol eol 0x00010031 input_state_scaled eol 128000 sub eol dup mul eol eol add sqrt /* sqrt(x^2 + y^2) */ eol 64000 gt eol 7000 store /* stick outside deadzone? */ eol eol 0x00010030 input_state_scaled eol 128000 sub eol 0x00010031 input_state_scaled eol 128000 sub eol atan2 eol 8000 store /* stick angle */ eol eol /* non-overlapping (buttons) */ eol /* up */ eol 8000 recall 135000 gt eol 8000 recall -135000 lt eol bitwise_or eol 7000 recall mul /* deadzone */ eol 21000 store eol eol /* down */ eol 8000 recall -45000 gt eol 8000 recall 45000 lt eol mul eol 7000 recall mul /* deadzone */ eol 22000 store eol eol /* left */ eol 8000 recall -135000 gt eol 8000 recall -45000 lt eol mul eol 7000 recall mul /* deadzone */ eol 23000 store eol eol /* right */ eol 8000 recall 45000 gt eol 8000 recall 135000 lt eol mul eol 7000 recall mul /* deadzone */ eol 24000 store",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                ""
+            ],
+            "quirks": []
+        }
+    },
+    {
+        'description': 'analog stick to L2/R2',
+        'config': {
+            "version": 17,
+            "unmapped_passthrough_layers": [
+                4,
+                5,
+                6,
+                7
+            ],
+            "partial_scroll_timeout": 1000000,
+            "tap_hold_threshold": 200000,
+            "gpio_debounce_time_ms": 5,
+            "interval_override": 0,
+            "our_descriptor_number": 4,
+            "ignore_auth_dev_inputs": false,
+            "macro_entry_duration": 1,
+            "gpio_output_mode": 0,
+            "input_labels": 1,
+            "mappings": [
+                {
+                    "source_usage": "0xfff50001",
+                    "target_usage": "0x000200c5",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff50002",
+                    "target_usage": "0x00090014",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff50003",
+                    "target_usage": "0x000200c4",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff50004",
+                    "target_usage": "0x00090013",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                }
+            ],
+            "macros": [
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                []
+            ],
+            "expressions": [
+                "0x00010031 input_state_scaled eol 127000 sub eol dup abs 8000 gt mul /* deadzone */ eol 2000 mul eol 0 255000 clamp eol dup eol 1000 store /* L2 axis */ eol 64000 gt eol 2000 store /* L2 button */ eol eol 0x00010031 input_state_scaled eol 128000 sub eol dup abs 8000 gt mul /* deadzone */ eol -2000 mul eol 0 255000 clamp eol dup eol 3000 store /* R2 axis */ eol 64000 gt eol 4000 store /* R2 button */",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                ""
+            ],
+            "quirks": []
+        }
+    },
+    {
+        'description': 'ROT13 keyboard',
+        'config': {
+            "version": 17,
+            "unmapped_passthrough_layers": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7
+            ],
+            "partial_scroll_timeout": 1000000,
+            "tap_hold_threshold": 200000,
+            "gpio_debounce_time_ms": 5,
+            "interval_override": 0,
+            "our_descriptor_number": 0,
+            "ignore_auth_dev_inputs": false,
+            "macro_entry_duration": 1,
+            "gpio_output_mode": 0,
+            "input_labels": 0,
+            "mappings": [
+                {
+                    "source_usage": "0x00070039",
+                    "target_usage": "0xfff10001",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": true,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff30001",
+                    "target_usage": "0x00080002",
+                    "layers": [
+                        1
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0x00070004",
+                    "target_usage": "0x00070011",
+                    "layers": [
+                        1
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0x00070005",
+                    "target_usage": "0x00070012",
+                    "layers": [
+                        1
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0x00070006",
+                    "target_usage": "0x00070013",
+                    "layers": [
+                        1
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0x00070007",
+                    "target_usage": "0x00070014",
+                    "layers": [
+                        1
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0x00070008",
+                    "target_usage": "0x00070015",
+                    "layers": [
+                        1
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0x00070009",
+                    "target_usage": "0x00070016",
+                    "layers": [
+                        1
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0x0007000a",
+                    "target_usage": "0x00070017",
+                    "layers": [
+                        1
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0x0007000b",
+                    "target_usage": "0x00070018",
+                    "layers": [
+                        1
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0x0007000c",
+                    "target_usage": "0x00070019",
+                    "layers": [
+                        1
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0x0007000d",
+                    "target_usage": "0x0007001a",
+                    "layers": [
+                        1
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0x0007000e",
+                    "target_usage": "0x0007001b",
+                    "layers": [
+                        1
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0x0007000f",
+                    "target_usage": "0x0007001c",
+                    "layers": [
+                        1
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0x00070010",
+                    "target_usage": "0x0007001d",
+                    "layers": [
+                        1
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0x00070011",
+                    "target_usage": "0x00070004",
+                    "layers": [
+                        1
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0x00070012",
+                    "target_usage": "0x00070005",
+                    "layers": [
+                        1
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0x00070013",
+                    "target_usage": "0x00070006",
+                    "layers": [
+                        1
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0x00070014",
+                    "target_usage": "0x00070007",
+                    "layers": [
+                        1
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0x00070015",
+                    "target_usage": "0x00070008",
+                    "layers": [
+                        1
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0x00070016",
+                    "target_usage": "0x00070009",
+                    "layers": [
+                        1
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0x00070017",
+                    "target_usage": "0x0007000a",
+                    "layers": [
+                        1
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0x00070018",
+                    "target_usage": "0x0007000b",
+                    "layers": [
+                        1
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0x00070019",
+                    "target_usage": "0x0007000c",
+                    "layers": [
+                        1
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0x0007001a",
+                    "target_usage": "0x0007000d",
+                    "layers": [
+                        1
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0x0007001b",
+                    "target_usage": "0x0007000e",
+                    "layers": [
+                        1
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0x0007001c",
+                    "target_usage": "0x0007000f",
+                    "layers": [
+                        1
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0x0007001d",
+                    "target_usage": "0x00070010",
+                    "layers": [
+                        1
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 1000,
+                    "source_port": 0,
+                    "target_port": 0
+                }
+            ],
+            "macros": [
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                []
+            ],
+            "expressions": [
+                "1000",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                ""
+            ],
+            "quirks": []
+        }
+    },
+    {
+        'description': 'D-pad (hat switch) as analog stick',
+        'config': {
+            "version": 17,
+            "unmapped_passthrough_layers": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7
+            ],
+            "partial_scroll_timeout": 1000000,
+            "tap_hold_threshold": 200000,
+            "gpio_debounce_time_ms": 5,
+            "interval_override": 0,
+            "our_descriptor_number": 2,
+            "ignore_auth_dev_inputs": false,
+            "macro_entry_duration": 1,
+            "gpio_output_mode": 0,
+            "input_labels": 1,
+            "mappings": [
+                {
+                    "source_usage": "0xfff90001",
+                    "target_usage": "0x00010032",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 0,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff90002",
+                    "target_usage": "0x00010032",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 255000,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff90003",
+                    "target_usage": "0x00010035",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 0,
+                    "source_port": 0,
+                    "target_port": 0
+                },
+                {
+                    "source_usage": "0xfff90004",
+                    "target_usage": "0x00010035",
+                    "layers": [
+                        0
+                    ],
+                    "sticky": false,
+                    "tap": false,
+                    "hold": false,
+                    "scaling": 255000,
+                    "source_port": 0,
+                    "target_port": 0
+                }
+            ],
+            "macros": [
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                []
+            ],
+            "expressions": [
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                ""
+            ],
+            "quirks": []
         }
     }
 ];
