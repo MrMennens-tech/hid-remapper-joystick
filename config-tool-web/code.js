@@ -135,7 +135,8 @@ let device = null;
 let source_modal = null;
 let target_modal = null;
 let extra_usages = { 'source': [], 'target': [] };
-let config = {
+// Make config globally available for easy-setup.js
+let config = window.config = {
     'version': CONFIG_VERSION,
     'unmapped_passthrough_layers': [0, 1, 2, 3, 4, 5, 6, 7],
     'partial_scroll_timeout': DEFAULT_PARTIAL_SCROLL_TIMEOUT,
@@ -169,6 +170,8 @@ let config = {
     quirks: [],
 };
 let monitor_enabled = false;
+// Make monitor_enabled globally available for easy-setup.js
+window.monitor_enabled = monitor_enabled;
 let monitor_min_val = {};
 let monitor_max_val = {};
 let unique_id_counter = 0;
@@ -221,7 +224,36 @@ document.addEventListener("DOMContentLoaded", function () {
     if ("hid" in navigator) {
         navigator.hid.addEventListener('disconnect', hid_on_disconnect);
     } else {
-        display_error("Your browser doesn't support WebHID. Try Chrome (desktop version) or a Chrome-based browser.");
+        const userAgent = navigator.userAgent.toLowerCase();
+        let browserName = "deze browser";
+        let suggestion = "";
+        
+        if (userAgent.includes("firefox")) {
+            browserName = "Firefox";
+            suggestion = "<p><strong>Oplossing:</strong> Gebruik Google Chrome of Microsoft Edge (desktop versie). Firefox ondersteunt WebHID nog niet.</p>";
+        } else if (userAgent.includes("safari") && !userAgent.includes("chrome")) {
+            browserName = "Safari";
+            suggestion = "<p><strong>Oplossing:</strong> Gebruik Google Chrome of Microsoft Edge (desktop versie). Safari ondersteunt WebHID nog niet.</p>";
+        } else if (userAgent.includes("mobile") || userAgent.includes("android")) {
+            suggestion = "<p><strong>Oplossing:</strong> WebHID werkt alleen op desktop browsers. Gebruik Google Chrome of Microsoft Edge op Windows, Mac of Linux.</p>";
+        } else {
+            suggestion = "<p><strong>Oplossing:</strong> Download en installeer <a href='https://www.google.com/chrome/' target='_blank'>Google Chrome</a> of <a href='https://www.microsoft.com/edge' target='_blank'>Microsoft Edge</a> (desktop versie).</p>";
+        }
+        
+        // Check if not using HTTPS or localhost
+        const isSecureContext = window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        let secureContextWarning = "";
+        if (!isSecureContext) {
+            secureContextWarning = "<div class='alert alert-warning mt-2'><strong>Belangrijk:</strong> WebHID werkt alleen via HTTPS of localhost. Je gebruikt momenteel: <code>" + window.location.protocol + "//" + window.location.hostname + "</code></div>";
+        }
+        
+        display_error_html(
+            "<h5>WebHID niet ondersteund in " + browserName + "</h5>" +
+            "<p>Het HID Remapper configuratie tool heeft WebHID nodig om met je apparaat te communiceren.</p>" +
+            secureContextWarning +
+            suggestion +
+            "<p class='mb-0'><strong>Ondersteunde browsers:</strong> Google Chrome 89+, Microsoft Edge 89+, Opera 75+, of andere Chromium-gebaseerde browsers.</p>"
+        );
     }
 
     setup_examples();
@@ -230,6 +262,11 @@ document.addEventListener("DOMContentLoaded", function () {
     setup_macros();
     setup_expressions();
     set_ui_state();
+    
+    // Initialize easy setup
+    if (typeof easy_setup_init === 'function') {
+        easy_setup_init();
+    }
 });
 
 async function open_device() {
@@ -239,6 +276,19 @@ async function open_device() {
     busy = true;
 
     clear_error();
+    
+    // Check if WebHID is supported
+    if (!("hid" in navigator) || !navigator.hid) {
+        const isSecureContext = window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        let errorMsg = "WebHID wordt niet ondersteund in deze browser. Gebruik Chrome of Edge (desktop versie).";
+        if (!isSecureContext) {
+            errorMsg += "\n\nLet op: WebHID werkt alleen via HTTPS of localhost. Je gebruikt momenteel: " + window.location.protocol + "//" + window.location.hostname;
+        }
+        display_error(errorMsg);
+        busy = false;
+        return;
+    }
+    
     let success = false;
 
     try {
@@ -774,6 +824,11 @@ function set_ui_state() {
     set_expressions_ui_state();
     set_quirks_ui_state();
     setup_usages_modals();
+    
+    // Re-render easy setup controller if it exists
+    if (typeof render_controller === 'function') {
+        render_controller();
+    }
 }
 
 function set_port_badge(button_element, port) {
@@ -1413,6 +1468,10 @@ function interval_override_onchange() {
 function our_descriptor_number_onchange() {
     config['our_descriptor_number'] = parseInt(document.getElementById("our_descriptor_number_dropdown").value, 10);
     set_ui_state();
+    // Re-render easy setup controller if it exists
+    if (typeof render_controller === 'function') {
+        render_controller();
+    }
 }
 
 function gpio_output_mode_onchange() {
@@ -1620,6 +1679,26 @@ function validate_ui_expressions() {
 
 function input_report_received(event) {
     if (event.reportId == REPORT_ID_MONITOR) {
+        // Check if easy setup is listening for input
+        if (typeof window !== 'undefined' && window.easy_setup_listening && window.easy_setup_mapping_target) {
+            for (let i = 0; i < 7; i++) {
+                const usage = "0x" + event.data.getUint32(i * 9, true).toString(16).padStart(8, "0");
+                const value = event.data.getInt32(i * 9 + 4, true);
+                
+                // Check if this is a button press or axis movement (non-zero value)
+                // For buttons, value should be > 0, for axes any non-zero is movement
+                if (usage !== '0x00000000' && value != 0) {
+                    // Found input! Complete the mapping via easy setup
+                    if (typeof easy_setup_complete_mapping === 'function') {
+                        easy_setup_complete_mapping(usage);
+                    } else if (typeof window.easy_setup_complete_mapping === 'function') {
+                        window.easy_setup_complete_mapping(usage);
+                    }
+                    return; // Exit early, don't update monitor UI
+                }
+            }
+        }
+        
         document.querySelectorAll('.monitor_row').forEach((element) => {
             element.classList.remove('bg-light');
         });
@@ -1679,6 +1758,7 @@ function monitor_clear() {
 
 async function set_monitor_enabled(enabled) {
     monitor_enabled = enabled;
+    window.monitor_enabled = enabled;
     if (device != null) {
         await send_feature_command(SET_MONITOR_ENABLED, [[UINT8, monitor_enabled ? 1 : 0]]);
     }

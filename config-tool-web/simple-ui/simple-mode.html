@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HID Remapper - Simpele Modus</title>
+    <link rel="stylesheet" href="simple-mode.css">
+</head>
+<body>
+    <!-- Header met Mode Toggle -->
+    <header class="app-header">
+        <div class="header-left">
+            <h1>🕹️ HID Remapper</h1>
+            <span class="status-badge" id="connection-status">Niet verbonden</span>
+        </div>
+        <div class="header-right">
+            <button class="btn btn-primary" id="connect-device-btn">🔌 Verbind Apparaat</button>
+            <button class="btn btn-success" id="save-device-btn" disabled>💾 Opslaan</button>
+            <button class="btn btn-secondary" id="toggle-advanced-btn">⚙️ Geavanceerde Modus</button>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="app-main">
+        <!-- Device Selector -->
+        <section class="device-selector-section">
+            <label for="device-type-selector">Controller Type:</label>
+            <select id="device-type-selector" class="device-selector">
+                <option value="2">Nintendo Switch Pro Controller</option>
+                <option value="4">Google Stadia Controller</option>
+                <option value="3">PS4 Arcade Stick</option>
+                <option value="5">Xbox Adaptive Controller (XAC)</option>
+                <option value="0">Generic Keyboard/Mouse</option>
+            </select>
+        </section>
+
+        <!-- Controller View Panel -->
+        <section class="controller-panel">
+            <h2>Klik op een knop om te mappen</h2>
+            <div id="controller-view-container" class="controller-container">
+                <!-- ControllerView component wordt hier geladen -->
+            </div>
+            <div id="listening-status" class="listening-status hidden">
+                <div class="listening-indicator">
+                    <div class="pulse-animation"></div>
+                    <span id="listening-message">Wachten op invoer...</span>
+                </div>
+                <div class="progress-bar">
+                    <div id="listening-progress" class="progress-fill"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Behavior Template Selector -->
+        <section class="behavior-section">
+            <h3>Gedrag Type</h3>
+            <select id="behavior-type-selector" class="behavior-selector">
+                <option value="direct">Direct (1-op-1)</option>
+                <option value="toggle">Toggle (Aan/Uit)</option>
+                <option value="turbo">Turbo/Rapid Fire</option>
+                <option value="hold">Hold to Trigger</option>
+            </select>
+            <div id="behavior-params" class="behavior-params hidden">
+                <!-- Dynamische parameters op basis van gedrag type -->
+            </div>
+        </section>
+
+        <!-- Mappings List -->
+        <section class="mappings-section">
+            <h3>Actieve Toewijzingen</h3>
+            <div id="mappings-list" class="mappings-list">
+                <div class="empty-state">Nog geen mappings aangemaakt. Klik op een knop in de controller om te beginnen.</div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Scripts -->
+    <!-- Laad eerst code.js voor globale functies -->
+    <script src="../code.js" type="module"></script>
+    <script src="../usages.js" type="module"></script>
+    <!-- Wacht even zodat code.js geladen is -->
+    <script>
+        // Wacht tot code.js geladen is voordat we simple-mode.js laden
+        window.addEventListener('load', () => {
+            // Geef code.js even tijd om te initialiseren
+            setTimeout(() => {
+                const script = document.createElement('script');
+                script.type = 'module';
+                script.src = 'simple-mode.js';
+                document.body.appendChild(script);
+            }, 100);
+        });
+    </script>
+</body>
+</html>
+
