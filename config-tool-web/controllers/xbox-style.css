@@ -1,0 +1,361 @@
+/* Xbox Controller Styles - Adapted from GamepadViewer for HID Remapper */
+
+.controller.xbox {
+    background: url(xbox-assets/base.svg) no-repeat center;
+    height: 630px;
+    width: 750px;
+    position: relative;
+    transform-origin: center center;
+    margin: 0 auto;
+    z-index: 1; /* Base layer */
+}
+
+.xbox .triggers {
+    width: 446px;
+    height: 121px;
+    position: absolute;
+    left: 92px; /* 152px - 60px */
+    top: 0;
+}
+
+.xbox .trigger {
+    width: 88px;
+    height: 121px;
+    background: url(xbox-assets/trigger.svg);
+    opacity: 0;
+    transition: opacity 0.1s;
+    cursor: pointer;
+}
+
+.xbox .trigger:hover {
+    opacity: 0.5;
+}
+
+.xbox .trigger.pressed,
+.xbox .trigger.selected {
+    opacity: 1;
+}
+
+.xbox .trigger.left {
+    float: left;
+    background-position: 0 0;
+}
+
+.xbox .trigger.right {
+    float: right;
+    transform: rotateY(180deg);
+}
+
+.xbox .bumpers {
+    position: absolute;
+    width: 536px;
+    height: 61px;
+    left: 47px; /* 107px - 60px */
+    top: 129px;
+}
+
+.xbox .bumper {
+    width: 170px;
+    height: 61px;
+    background: url(xbox-assets/bumper.svg);
+    opacity: 0;
+    transition: opacity 0.1s;
+    cursor: pointer;
+}
+
+.xbox .bumper:hover {
+    opacity: 0.5;
+}
+
+.xbox .bumper.pressed,
+.xbox .bumper.selected {
+    opacity: 1;
+}
+
+.xbox .bumper.left {
+    float: left;
+}
+
+.xbox .bumper.right {
+    float: right;
+    transform: rotateY(180deg);
+}
+
+.xbox .quadrant {
+    position: absolute;
+    background: url(xbox-assets/quadrant.svg);
+    height: 45px;
+    width: 45px;
+    top: 258px;
+    left: 294px; /* 354px - 60px */
+    z-index: 0;
+}
+
+/* Xbox Home Button (Xbox logo in center top) */
+.xbox .xbox-home {
+    position: absolute;
+    width: 66px;
+    height: 66px;
+    top: 163px;
+    left: 282px; /* Center of 750px width (375px) minus half button width (33px) = 342px, then -60px offset = 282px */
+    border-radius: 50%;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    background: rgba(0, 166, 81, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.xbox .xbox-home:hover {
+    opacity: 0.7;
+    background: rgba(0, 166, 81, 0.5);
+}
+
+.xbox .xbox-home.waiting,
+.xbox .xbox-home.selected {
+    opacity: 1;
+    background: rgba(0, 166, 81, 0.8);
+    box-shadow: 0 0 10px rgba(0, 166, 81, 0.6);
+}
+
+.xbox .xbox-home.mapped {
+    opacity: 1;
+    background: rgba(0, 217, 165, 0.8);
+    box-shadow: 0 0 10px rgba(0, 217, 165, 0.6);
+}
+
+.xbox .arrows {
+    position: absolute;
+    width: 141px;
+    height: 33px;
+    top: 263px; /* Nog 1 pixel omhoog voor correcte positionering */
+    left: 247px; /* 306px - 60px */
+    pointer-events: none; /* Allow clicks to pass through to children */
+    z-index: 10; /* Above sticks container */
+}
+
+.xbox .back,
+.xbox .start {
+    background: url(xbox-assets/start-select.svg);
+    width: 34px;
+    height: 34px;
+    opacity: 0.2;
+    transition: opacity 0.2s ease, background-color 0.2s ease;
+    cursor: pointer !important;
+    /* Ensure background image is visible and cropped correctly */
+    background-size: 67px 34px; /* Full sprite width, single row height */
+    background-repeat: no-repeat;
+    background-color: rgba(150, 150, 150, 0.2); /* Add background for clickable area */
+    pointer-events: auto !important; /* Ensure clicks are captured */
+    z-index: 20 !important; /* Above sticks (z-index 2) and arrows container (z-index 10) */
+    display: block; /* Ensure they're block elements */
+    border-radius: 25px; /* Slight rounding for better visibility */
+}
+
+.xbox .back:hover,
+.xbox .start:hover {
+    opacity: 0.8;
+    background-color: rgba(150, 150, 150, 0.6);
+    filter: brightness(1.2);
+}
+
+.xbox .back.pressed,
+.xbox .start.pressed,
+.xbox .back.selected,
+.xbox .start.selected,
+.xbox .back.waiting {
+    opacity: 1;
+    background-color: rgba(150, 150, 150, 0.8);
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+}
+
+.xbox .back.mapped,
+.xbox .start.mapped {
+    opacity: 1;
+    background-color: rgba(0, 217, 165, 0.8);
+    box-shadow: 0 0 8px rgba(0, 217, 165, 0.6);
+}
+
+.xbox .back {
+    position: absolute;
+    left: 0;
+    top: 0;
+    background-position: 0 0; /* Left button (Switcher/PIP) from sprite - show left half */
+}
+
+.xbox .start {
+    position: absolute;
+    right: 0;
+    top: 0;
+    background-position: -34px 0; /* Right button (Menu/Start) from sprite - show right half (offset by ~34px) */
+}
+
+.xbox .abxy {
+    position: absolute;
+    width: 153px;
+    height: 156px;
+    top: 192px;
+    left: 428px; /* 488px - 60px */
+    border-radius: 25px
+}
+
+.xbox .button {
+    position: absolute;
+    background: url(xbox-assets/abxy.svg);
+    width: 48px;
+    height: 48px;
+    cursor: pointer;
+    border-radius: 25px;
+}
+
+/* Modified hover/active states for better visibility */
+.xbox .button:hover {
+    filter: brightness(1.3);
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.6), 0 0 25px rgba(255, 255, 255, 0.4);
+    transform: scale(1.05);
+    transition: all 0.2s ease;  
+}
+
+.xbox .button.pressed,
+.xbox .button.selected {
+    background-position-y: -48px;
+    margin-top: 5px;
+    opacity: 1;
+    filter: brightness(1.2) drop-shadow(0 0 5px rgba(255, 255, 255, 0.5));
+}
+
+.xbox .a {
+    background-position: 0 0;
+    top: 108px;
+    left: 55px;
+}
+
+.xbox .b {
+    background-position: -49px 0;
+    top: 58px;
+    right: 0px;
+}
+
+.xbox .x {
+    background-position: -98px 0;
+    top: 58px;
+    left: 4px;
+}
+
+.xbox .y {
+    background-position: 48px 0;
+    left: 55px;
+    top: 7px;
+}
+
+.xbox .sticks {
+    position: absolute;
+    width: 371px;
+    height: 196px;
+    top: 239px;
+    left: 84px; /* 144px - 60px */
+    z-index: 1; /* Below arrows/back/start buttons */
+    pointer-events: none; /* Allow clicks to pass through to children */
+}
+
+.xbox .stick {
+    position: absolute;
+    background: url(xbox-assets/stick.svg);
+    background-position: -85px 0;
+    height: 83px;
+    width: 83px;
+    cursor: pointer;
+    pointer-events: auto; /* Re-enable clicks for stick elements */
+    z-index: 2; /* Above sticks container but below arrows */
+}
+
+.xbox .stick:hover {
+    filter: brightness(1.3);
+    transform: scale(1.05);
+    transition: all 0.15s ease;
+}
+
+/* Mapped stick state - subtle indicator */
+.xbox .stick.mapped {
+    filter: brightness(1.1);
+    box-shadow: 0 0 10px rgba(0, 217, 165, 0.4);
+    border-radius: 50%;
+}
+
+.xbox .stick.pressed,
+.xbox .stick.selected {
+    background-position: 0 0;
+}
+
+.xbox .stick.left {
+    top: 0;
+    left: 0;
+}
+
+.xbox .stick.right {
+    top: 113px;
+    left: 288px;
+}
+
+.xbox .dpad {
+    position: absolute;
+    width: 110px;
+    height: 111px;
+    top: 345px;
+    left: 163px; /* 223px - 60px */
+}
+
+.xbox .face {
+    background: url(xbox-assets/dpad.svg);
+    position: absolute;
+    opacity: 0;
+    transition: opacity 0.1s;
+    cursor: pointer;
+}
+
+.xbox .face:hover {
+    opacity: 0.5;
+}
+
+.xbox .face.pressed,
+.xbox .face.selected {
+    opacity: 1;
+}
+
+.xbox .face.up {
+    background-position: 34px 0;
+    left: 38px; /* Relative to dpad container, no offset needed */
+    top: 0px;
+    width: 34px;
+    height: 56px;
+}
+
+.xbox .face.down {
+    left: 38px; /* Relative to dpad container, no offset needed */
+    bottom: 0;
+    width: 34px;
+    height: 56px;
+}
+
+.xbox .face.left {
+    background-position: 0 -93px;
+    width: 55px;
+    height: 35px;
+    top: 38px;
+    left: 0; /* Relative to dpad container, no offset needed */
+}
+
+.xbox .face.right {
+    background-position: 0 -57px;
+    width: 55px;
+    height: 35px;
+    top: 38px;
+    right: 0;
+}
+
+/* Mapping Overlay on top if needed */
+.mapping-highlight {
+    outline: 2px solid #00ff00;
+    box-shadow: 0 0 10px #00ff00;
+    z-index: 100;
+}

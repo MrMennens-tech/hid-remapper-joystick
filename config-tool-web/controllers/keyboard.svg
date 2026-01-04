@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 700 220" xmlns="http://www.w3.org/2000/svg" class="controller-svg" id="svg-keyboard" style="display:none;">
+  <defs>
+    <linearGradient id="keyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#4a4a4a"/>
+      <stop offset="100%" style="stop-color:#2a2a2a"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Keyboard Base -->
+  <rect x="10" y="10" width="680" height="200" rx="8" fill="#1a1a1a" stroke="#3a3a3a" stroke-width="2"/>
+  
+  <!-- Function Keys Row -->
+  <g id="function-keys" transform="translate(20, 20)">
+    <rect data-btn-id="key-esc" class="btn-region" x="0" y="0" width="35" height="25" rx="3" fill="url(#keyGrad)" stroke="#555"/>
+    <text x="17" y="17" text-anchor="middle" fill="#aaa" font-size="8" font-family="Arial">ESC</text>
+    
+    <rect data-btn-id="key-f1" class="btn-region" x="50" y="0" width="30" height="25" rx="3" fill="url(#keyGrad)" stroke="#555"/>
+    <text x="65" y="17" text-anchor="middle" fill="#aaa" font-size="8" font-family="Arial">F1</text>
+    
+    <rect data-btn-id="key-f2" class="btn-region" x="85" y="0" width="30" height="25" rx="3" fill="url(#keyGrad)" stroke="#555"/>
+    <text x="100" y="17" text-anchor="middle" fill="#aaa" font-size="8" font-family="Arial">F2</text>
+    
+    <rect data-btn-id="key-f3" class="btn-region" x="120" y="0" width="30" height="25" rx="3" fill="url(#keyGrad)" stroke="#555"/>
+    <text x="135" y="17" text-anchor="middle" fill="#aaa" font-size="8" font-family="Arial">F3</text>
+    
+    <rect data-btn-id="key-f4" class="btn-region" x="155" y="0" width="30" height="25" rx="3" fill="url(#keyGrad)" stroke="#555"/>
+    <text x="170" y="17" text-anchor="middle" fill="#aaa" font-size="8" font-family="Arial">F4</text>
+  </g>
+  
+  <!-- WASD and surrounding keys -->
+  <g id="wasd-keys" transform="translate(20, 80)">
+    <!-- Tab -->
+    <rect data-btn-id="key-tab" class="btn-region" x="0" y="0" width="45" height="30" rx="3" fill="url(#keyGrad)" stroke="#555"/>
+    <text x="22" y="20" text-anchor="middle" fill="#aaa" font-size="9" font-family="Arial">TAB</text>
+    
+    <!-- Q -->
+    <rect data-btn-id="key-q" class="btn-region" x="50" y="0" width="30" height="30" rx="3" fill="url(#keyGrad)" stroke="#555"/>
+    <text x="65" y="20" text-anchor="middle" fill="#aaa" font-size="12" font-family="Arial">Q</text>
+    
+    <!-- W -->
+    <rect data-btn-id="key-w" class="btn-region" x="85" y="0" width="30" height="30" rx="3" fill="#3a5a7a" stroke="#4a6a8a"/>
+    <text x="100" y="20" text-anchor="middle" fill="#fff" font-size="12" font-family="Arial">W</text>
+    
+    <!-- E -->
+    <rect data-btn-id="key-e" class="btn-region" x="120" y="0" width="30" height="30" rx="3" fill="url(#keyGrad)" stroke="#555"/>
+    <text x="135" y="20" text-anchor="middle" fill="#aaa" font-size="12" font-family="Arial">E</text>
+    
+    <!-- R -->
+    <rect data-btn-id="key-r" class="btn-region" x="155" y="0" width="30" height="30" rx="3" fill="url(#keyGrad)" stroke="#555"/>
+    <text x="170" y="20" text-anchor="middle" fill="#aaa" font-size="12" font-family="Arial">R</text>
+  </g>
+  
+  <g id="home-row" transform="translate(20, 115)">
+    <!-- Caps Lock -->
+    <rect data-btn-id="key-caps" class="btn-region" x="0" y="0" width="52" height="30" rx="3" fill="url(#keyGrad)" stroke="#555"/>
+    <text x="26" y="20" text-anchor="middle" fill="#aaa" font-size="8" font-family="Arial">CAPS</text>
+    
+    <!-- A -->
+    <rect data-btn-id="key-a" class="btn-region" x="57" y="0" width="30" height="30" rx="3" fill="#3a5a7a" stroke="#4a6a8a"/>
+    <text x="72" y="20" text-anchor="middle" fill="#fff" font-size="12" font-family="Arial">A</text>
+    
+    <!-- S -->
+    <rect data-btn-id="key-s" class="btn-region" x="92" y="0" width="30" height="30" rx="3" fill="#3a5a7a" stroke="#4a6a8a"/>
+    <text x="107" y="20" text-anchor="middle" fill="#fff" font-size="12" font-family="Arial">S</text>
+    
+    <!-- D -->
+    <rect data-btn-id="key-d" class="btn-region" x="127" y="0" width="30" height="30" rx="3" fill="#3a5a7a" stroke="#4a6a8a"/>
+    <text x="142" y="20" text-anchor="middle" fill="#fff" font-size="12" font-family="Arial">D</text>
+    
+    <!-- F -->
+    <rect data-btn-id="key-f" class="btn-region" x="162" y="0" width="30" height="30" rx="3" fill="url(#keyGrad)" stroke="#555"/>
+    <text x="177" y="20" text-anchor="middle" fill="#aaa" font-size="12" font-family="Arial">F</text>
+  </g>
+  
+  <!-- Modifier Keys -->
+  <g id="modifiers" transform="translate(20, 150)">
+    <!-- Left Shift -->
+    <rect data-btn-id="key-lshift" class="btn-region" x="0" y="0" width="70" height="30" rx="3" fill="url(#keyGrad)" stroke="#555"/>
+    <text x="35" y="20" text-anchor="middle" fill="#aaa" font-size="9" font-family="Arial">SHIFT</text>
+    
+    <!-- Left Ctrl -->
+    <rect data-btn-id="key-lctrl" class="btn-region" x="0" y="35" width="40" height="30" rx="3" fill="url(#keyGrad)" stroke="#555"/>
+    <text x="20" y="55" text-anchor="middle" fill="#aaa" font-size="8" font-family="Arial">CTRL</text>
+    
+    <!-- Left Alt -->
+    <rect data-btn-id="key-lalt" class="btn-region" x="85" y="35" width="35" height="30" rx="3" fill="url(#keyGrad)" stroke="#555"/>
+    <text x="102" y="55" text-anchor="middle" fill="#aaa" font-size="8" font-family="Arial">ALT</text>
+    
+    <!-- Space -->
+    <rect data-btn-id="key-space" class="btn-region" x="125" y="35" width="180" height="30" rx="3" fill="url(#keyGrad)" stroke="#555"/>
+    <text x="215" y="55" text-anchor="middle" fill="#aaa" font-size="10" font-family="Arial">SPACE</text>
+  </g>
+  
+  <!-- Arrow Keys -->
+  <g id="arrow-keys" transform="translate(580, 130)">
+    <rect data-btn-id="key-up" class="btn-region" x="35" y="0" width="30" height="25" rx="3" fill="url(#keyGrad)" stroke="#555"/>
+    <text x="50" y="17" text-anchor="middle" fill="#aaa" font-size="12" font-family="Arial">↑</text>
+    
+    <rect data-btn-id="key-left" class="btn-region" x="0" y="30" width="30" height="25" rx="3" fill="url(#keyGrad)" stroke="#555"/>
+    <text x="15" y="47" text-anchor="middle" fill="#aaa" font-size="12" font-family="Arial">←</text>
+    
+    <rect data-btn-id="key-down" class="btn-region" x="35" y="30" width="30" height="25" rx="3" fill="url(#keyGrad)" stroke="#555"/>
+    <text x="50" y="47" text-anchor="middle" fill="#aaa" font-size="12" font-family="Arial">↓</text>
+    
+    <rect data-btn-id="key-right" class="btn-region" x="70" y="30" width="30" height="25" rx="3" fill="url(#keyGrad)" stroke="#555"/>
+    <text x="85" y="47" text-anchor="middle" fill="#aaa" font-size="12" font-family="Arial">→</text>
+  </g>
+  
+  <!-- Enter Key -->
+  <g id="enter-key" transform="translate(450, 80)">
+    <rect data-btn-id="key-enter" class="btn-region" x="0" y="0" width="60" height="65" rx="3" fill="url(#keyGrad)" stroke="#555"/>
+    <text x="30" y="37" text-anchor="middle" fill="#aaa" font-size="10" font-family="Arial">ENTER</text>
+  </g>
+</svg>

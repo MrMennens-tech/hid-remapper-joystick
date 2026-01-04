@@ -1,822 +1,1869 @@
-// Easy Setup functionality for HID Remapper
+// Easy Setup UI for HID Remapper
 // Provides visual controller mapping interface
 
-// Extract and adapt stick visualization from joypad.ai style SVG
-// Based on the exact structure from the provided SVG
-// isLeftStick: true for left stick (green), false for right stick (grey/white)
-function create_joypad_style_stick(cx, cy, radius, hasMapping, clickHandler, isLeftStick = true) {
-    const svgNS = 'http://www.w3.org/2000/svg';
-    const group = document.createElementNS(svgNS, 'g');
+import usages from './usages.js';
+
+// Controller output types and their corresponding SVG files
+const CONTROLLER_TYPES = {
+    'xac': { name: 'Xbox/XAC', descriptorIdx: 5, svgId: 'svg-xac' },
+    'switch': { name: 'Switch Pro', descriptorIdx: 2, svgId: 'svg-switch' },
+    'mouse': { name: 'Mouse', descriptorIdx: 0, svgId: 'svg-mouse' },
+    'keyboard': { name: 'Keyboard', descriptorIdx: 0, svgId: 'svg-keyboard' },
+    'stadia': { name: 'Stadia', descriptorIdx: 4, svgId: 'svg-stadia' }
+};
+
+// Button mappings for each controller type - maps SVG element IDs to HID usage codes
+const BUTTON_USAGES = {
+    'xac': {
+        'btn-a': '0x00090005',  // A button
+        'btn-b': '0x00090006',  // B button
+        'btn-x': '0x0009000b',  // X button
+        'btn-y': '0x0009000c',  // Y button
+        'btn-lb': '0x00090004', // Left Bumper
+        'btn-rb': '0x0009000a', // Right Bumper
+        'btn-lt': '0x00090007', // Left Trigger (View)
+        'btn-rt': '0x00090008', // Right Trigger (Menu)
+        'btn-back': '0x00090007', // View button
+        'btn-start': '0x00090008', // Menu button
+        'btn-ls': '0x00090003', // Left Stick Button
+        'btn-rs': '0x00090009', // Right Stick Button
+        'btn-home': '0x0009000d', // Home button (if exists)
+        'dpad-up': '0xfff90003',
+        'dpad-down': '0xfff90004',
+        'dpad-left': '0xfff90001',
+        'dpad-right': '0xfff90002',
+        'stick-left': '0x00010030', // Click on stick itself maps to X axis
+        'stick-left-x': '0x00010030',
+        'stick-left-y': '0x00010031',
+        'stick-left-both': 'STICK_LEFT_BOTH', // Special marker for both axes
+        'stick-right': '0x00010032', // Click on stick itself maps to X axis
+        'stick-right-x': '0x00010032',
+        'stick-right-y': '0x00010035',
+        'stick-right-both': 'STICK_RIGHT_BOTH' // Special marker for both axes
+    },
+    'switch': {
+        'btn-a': '0x00090002',
+        'btn-b': '0x00090001',
+        'btn-x': '0x00090004',
+        'btn-y': '0x00090003',
+        'btn-l': '0x00090005',
+        'btn-r': '0x00090006',
+        'btn-zl': '0x00090007',
+        'btn-zr': '0x00090008',
+        'btn-minus': '0x00090009',
+        'btn-plus': '0x0009000a',
+        'btn-ls': '0x0009000b',
+        'btn-rs': '0x0009000c',
+        'btn-home': '0x0009000d',
+        'btn-capture': '0x0009000e',
+        'dpad': '0x00010039',
+        'stick-left': '0x00010030',
+        'stick-right': '0x00010032'
+    },
+    'mouse': {
+        'btn-left': '0x00090001',
+        'btn-right': '0x00090002',
+        'btn-middle': '0x00090003',
+        'btn-back': '0x00090004',
+        'btn-forward': '0x00090005',
+        'axis-x': '0x00010030',
+        'axis-y': '0x00010031',
+        'scroll-v': '0x00010038',
+        'scroll-h': '0x000c0238'
+    },
+    'keyboard': {
+        // Will be populated dynamically based on key clicks
+    },
+    'stadia': {
+        'btn-a': '0x00090001',
+        'btn-b': '0x00090002',
+        'btn-x': '0x00090003',
+        'btn-y': '0x00090004',
+        'btn-l1': '0x00090005',
+        'btn-r1': '0x00090006',
+        'btn-l2': '0x00090007',
+        'btn-r2': '0x00090008',
+        'btn-select': '0x00090009',
+        'btn-start': '0x0009000a',
+        'btn-l3': '0x0009000b',
+        'btn-r3': '0x0009000c',
+        'btn-stadia': '0x0009000d',
+        'btn-assistant': '0x0009000e',
+        'btn-capture': '0x0009000f',
+        'dpad': '0x00010039',
+        'stick-left': '0x00010030',
+        'stick-right': '0x00010032'
+    }
+};
+
+// Expression templates for common use cases
+const EXPRESSION_TEMPLATES = [
+    {
+        id: 'mouse-to-stick-absolute',
+        name: 'Muis → Joystick (blijft staan)',
+        description: 'Muisbewegingen worden omgezet naar joystick posities die blijven staan',
+        expressions: [
+            '/* X-axis accumulator */ 0x00010030 input_state 1 recall add -127 127 clamp dup 1 store',
+            '/* Y-axis accumulator */ 0x00010031 input_state 2 recall add -127 127 clamp dup 2 store'
+        ],
+        mappings: [
+            { source: 'Expression 1', target: '0x00010030', scaling: 1000 },
+            { source: 'Expression 2', target: '0x00010031', scaling: 1000 }
+        ]
+    },
+    {
+        id: 'mouse-to-stick-relative',
+        name: 'Muis → Joystick (zelf-centrerend)',
+        description: 'Muisbewegingen bewegen de joystick, keert terug naar centrum',
+        mappings: [
+            { source: '0x00010030', target: '0x00010030', scaling: 500 },
+            { source: '0x00010031', target: '0x00010031', scaling: 500 }
+        ]
+    },
+    {
+        id: 'swap-sticks',
+        name: 'Wissel linker/rechter stick',
+        description: 'Verwisselt de linker en rechter analog stick',
+        mappings: [
+            { source: '0x00010030', target: '0x00010032', scaling: 1000 },
+            { source: '0x00010031', target: '0x00010035', scaling: 1000 },
+            { source: '0x00010032', target: '0x00010030', scaling: 1000 },
+            { source: '0x00010035', target: '0x00010031', scaling: 1000 }
+        ]
+    },
+    {
+        id: 'invert-y',
+        name: 'Inverteer Y-as',
+        description: 'Inverteer de verticale as van de stick',
+        mappings: [
+            { source: '0x00010031', target: '0x00010031', scaling: -1000 }
+        ]
+    },
+    {
+        id: 'dpad-to-mouse',
+        name: 'D-pad → Muis beweging',
+        description: 'Gebruik de D-pad om de muis te bewegen',
+        expressions: [
+            '/* D-pad to mouse X */ 0x00010039 input_state 7 gt not 0x00010039 input_state 45 mul sin mul 5 mul',
+            '/* D-pad to mouse Y */ 0x00010039 input_state 7 gt not 0x00010039 input_state 45 mul cos -1 mul mul 5 mul'
+        ],
+        mappings: [
+            { source: 'Expression 1', target: '0x00010030', scaling: 1000 },
+            { source: 'Expression 2', target: '0x00010031', scaling: 1000 }
+        ]
+    },
+    {
+        id: 'turbo-mode',
+        name: 'Turbo mode (snelle herhalingen)',
+        description: 'Maakt een knop snel herhalend wanneer ingedrukt',
+        expressions: [
+            '/* Turbo button */ time 100 mod 50 gt 0x00090001 input_state_binary mul'
+        ],
+        mappings: [
+            { source: 'Expression 1', target: '0x00090001', scaling: 1000 }
+        ]
+    }
+];
+
+// Map descriptor numbers to output types
+// 0: Mouse and keyboard, 1: Absolute mouse and keyboard, 2: Switch, 3: PS4, 4: Stadia, 5: XAC/Flex
+const DESCRIPTOR_TO_OUTPUT_TYPE = {
+    0: 'mouse-keyboard',
+    1: 'mouse-keyboard',
+    2: 'controller',
+    3: 'controller',
+    4: 'controller',
+    5: 'controller'
+};
+
+// State management
+let easySetupState = {
+    currentControllerType: 'xac',
+    mappings: [],
+    waitingForInput: false,
+    waitingButton: null,
+    countdownValue: 5,
+    countdownInterval: null,
+    sensitivity: 100,
+    deadzone: 10,
+    lastInputTime: 0,
+    lastInputUsage: null,
+    inputDebounceMs: 300, // Debounce time in milliseconds
+    pendingStickMapping: null // For "both axes" stick mapping
+};
+
+// Initialize Easy Setup when DOM is ready
+export function initEasySetup() {
+    setupControllerTypeSelector();
+    setupOutputTypeListener();
+    setupMappingOverlay();
+    setupSliderControls();
+    setupTemplateSelector();
+    setupAdvancedToggle();
+    updateControllerDisplay();
     
-    // Color scheme: green for left stick, grey/white for right stick
-    const isGreen = isLeftStick;
-    const outerColor = isGreen ? '#00ff7f' : '#8e8e8e'; // springgreen for left, grey for right
-    const innerColor = isGreen ? '#1a1a1a' : '#2a2a2a'; // dark for left, darker grey for right
-    const crosshairColor = isGreen ? '#fff' : '#fff'; // white crosshair for both
-    const centerSquareColor = isGreen ? '#2a2a2a' : '#fff'; // dark square for left, white for right
+    // Start live input visualization when Easy Setup tab is shown
+    const easySetupTab = document.getElementById('nav-easy-setup-tab');
+    if (easySetupTab) {
+        easySetupTab.addEventListener('shown.bs.tab', () => {
+            console.log('Easy Setup tab shown, starting live input visualization');
+            startLiveInputVisualization();
+        });
+        
+        easySetupTab.addEventListener('hidden.bs.tab', () => {
+            console.log('Easy Setup tab hidden, stopping live input visualization');
+            stopLiveInputVisualization();
+        });
+        
+        // If already on Easy Setup tab, start visualization
+        if (easySetupTab.classList.contains('active')) {
+            startLiveInputVisualization();
+        }
+    }
+}
+
+// Listen to changes in the emulated device type dropdown (both dropdowns)
+function setupOutputTypeListener() {
+    const mainDropdown = document.getElementById('our_descriptor_number_dropdown');
+    const easySetupDropdown = document.getElementById('easy-setup-device-type-dropdown');
     
-    // Outer circle (stick housing) - like circle160: r="156.10001" 
-    // In our scale, this is the main radius
-    const outerCircle = document.createElementNS(svgNS, 'circle');
-    outerCircle.setAttribute('cx', cx);
-    outerCircle.setAttribute('cy', cy);
-    outerCircle.setAttribute('r', radius);
-    outerCircle.setAttribute('fill', hasMapping ? '#28a745' : outerColor);
-    outerCircle.setAttribute('fill-opacity', isGreen ? '0.3' : '0.4');
-    outerCircle.setAttribute('stroke', hasMapping ? '#1e7e34' : (isGreen ? '#00cc66' : '#666'));
-    outerCircle.setAttribute('stroke-width', '2');
-    outerCircle.style.cursor = 'pointer';
-    if (clickHandler) outerCircle.addEventListener('click', clickHandler);
-    group.appendChild(outerCircle);
+    if (!mainDropdown || !easySetupDropdown) return;
     
-    // Inner circle - like circle162: r="145.28999" (about 93% of outer)
-    const innerCircle = document.createElementNS(svgNS, 'circle');
-    innerCircle.setAttribute('cx', cx);
-    innerCircle.setAttribute('cy', cy);
-    innerCircle.setAttribute('r', radius * 0.93);
-    innerCircle.setAttribute('fill', hasMapping ? '#28a745' : innerColor);
-    innerCircle.setAttribute('fill-opacity', hasMapping ? '0.4' : (isGreen ? '0.9' : '0.95'));
-    innerCircle.setAttribute('stroke', hasMapping ? '#1e7e34' : (isGreen ? '#333' : '#555'));
-    innerCircle.setAttribute('stroke-width', '1.5');
-    innerCircle.style.cursor = 'pointer';
-    if (clickHandler) innerCircle.addEventListener('click', clickHandler);
-    group.appendChild(innerCircle);
+    // Sync Easy Setup dropdown with main dropdown on load
+    syncDropdowns();
     
-    // D-pad crosshair paths - exact proportions from SVG
-    // The paths form a crosshair pattern in the center
-    const dpadSize = radius * 0.36; // Center square size
-    const dpadArmLength = radius * 0.55; // Length of each arm
-    const dpadArmWidth = radius * 0.19; // Width of each arm at the end
-    
-    // Up direction - path16166
-    const upPath = document.createElementNS(svgNS, 'path');
-    upPath.setAttribute('d', `M ${cx - dpadSize} ${cy - dpadSize} 
-                             L ${cx + dpadSize} ${cy - dpadSize} 
-                             L ${cx + dpadArmWidth} ${cy - dpadArmLength} 
-                             L ${cx - dpadArmWidth} ${cy - dpadArmLength} Z`);
-    upPath.setAttribute('fill', hasMapping ? '#1e7e34' : crosshairColor);
-    upPath.setAttribute('fill-opacity', '1');
-    upPath.setAttribute('stroke', hasMapping ? '#155724' : (isGreen ? '#ddd' : '#bbb'));
-    upPath.setAttribute('stroke-width', '0.5');
-    upPath.setAttribute('pointer-events', 'none');
-    group.appendChild(upPath);
-    
-    // Down direction - path16166-4
-    const downPath = document.createElementNS(svgNS, 'path');
-    downPath.setAttribute('d', `M ${cx - dpadSize} ${cy + dpadSize} 
-                               L ${cx + dpadSize} ${cy + dpadSize} 
-                               L ${cx + dpadArmWidth} ${cy + dpadArmLength} 
-                               L ${cx - dpadArmWidth} ${cy + dpadArmLength} Z`);
-    downPath.setAttribute('fill', hasMapping ? '#1e7e34' : crosshairColor);
-    downPath.setAttribute('fill-opacity', '1');
-    downPath.setAttribute('stroke', hasMapping ? '#155724' : (isGreen ? '#ddd' : '#bbb'));
-    downPath.setAttribute('stroke-width', '0.5');
-    downPath.setAttribute('pointer-events', 'none');
-    group.appendChild(downPath);
-    
-    // Left direction - path16166-5
-    const leftPath = document.createElementNS(svgNS, 'path');
-    leftPath.setAttribute('d', `M ${cx - dpadSize} ${cy - dpadSize} 
-                               L ${cx - dpadArmLength} ${cy - dpadArmWidth} 
-                               L ${cx - dpadArmLength} ${cy + dpadArmWidth} 
-                               L ${cx - dpadSize} ${cy + dpadSize} Z`);
-    leftPath.setAttribute('fill', hasMapping ? '#1e7e34' : crosshairColor);
-    leftPath.setAttribute('fill-opacity', '1');
-    leftPath.setAttribute('stroke', hasMapping ? '#155724' : (isGreen ? '#ddd' : '#bbb'));
-    leftPath.setAttribute('stroke-width', '0.5');
-    leftPath.setAttribute('pointer-events', 'none');
-    group.appendChild(leftPath);
-    
-    // Right direction - path16166-5-5
-    const rightPath = document.createElementNS(svgNS, 'path');
-    rightPath.setAttribute('d', `M ${cx + dpadSize} ${cy - dpadSize} 
-                                L ${cx + dpadArmLength} ${cy - dpadArmWidth} 
-                                L ${cx + dpadArmLength} ${cy + dpadArmWidth} 
-                                L ${cx + dpadSize} ${cy + dpadSize} Z`);
-    rightPath.setAttribute('fill', hasMapping ? '#1e7e34' : crosshairColor);
-    rightPath.setAttribute('fill-opacity', '1');
-    rightPath.setAttribute('stroke', hasMapping ? '#155724' : (isGreen ? '#ddd' : '#bbb'));
-    rightPath.setAttribute('stroke-width', '0.5');
-    rightPath.setAttribute('pointer-events', 'none');
-    group.appendChild(rightPath);
-    
-    // Center square (like in the image - darker square in the middle for left, white for right)
-    const centerSquare = document.createElementNS(svgNS, 'rect');
-    const squareSize = radius * 0.25;
-    centerSquare.setAttribute('x', cx - squareSize);
-    centerSquare.setAttribute('y', cy - squareSize);
-    centerSquare.setAttribute('width', squareSize * 2);
-    centerSquare.setAttribute('height', squareSize * 2);
-    centerSquare.setAttribute('fill', hasMapping ? '#1e7e34' : centerSquareColor);
-    centerSquare.setAttribute('fill-opacity', hasMapping ? '0.8' : (isGreen ? '0.8' : '0.9'));
-    centerSquare.setAttribute('stroke', hasMapping ? '#155724' : (isGreen ? '#444' : '#ddd'));
-    centerSquare.setAttribute('stroke-width', '1');
-    centerSquare.setAttribute('pointer-events', 'none');
-    group.appendChild(centerSquare);
-    
-    // Direction indicator dots - like circle164, circle166, circle168, circle170
-    // r="8.04" in original, positioned at 75% of radius
-    const dotRadius = radius * 0.045;
-    const directions = [
-        { x: cx, y: cy - radius * 0.73 }, // Up
-        { x: cx, y: cy + radius * 0.73 }, // Down
-        { x: cx - radius * 0.73, y: cy }, // Left
-        { x: cx + radius * 0.73, y: cy }  // Right
-    ];
-    
-    directions.forEach(pos => {
-        const dot = document.createElementNS(svgNS, 'circle');
-        dot.setAttribute('cx', pos.x);
-        dot.setAttribute('cy', pos.y);
-        dot.setAttribute('r', dotRadius * 1.8);
-        dot.setAttribute('fill', 'none');
-        dot.setAttribute('stroke', hasMapping ? '#1e7e34' : (isGreen ? '#888' : '#aaa'));
-        dot.setAttribute('stroke-width', '2');
-        dot.setAttribute('opacity', '0.7');
-        dot.setAttribute('pointer-events', 'none');
-        group.appendChild(dot);
+    // Listen for changes in Easy Setup dropdown
+    easySetupDropdown.addEventListener('change', () => {
+        const value = easySetupDropdown.value;
+        // Update main dropdown
+        if (mainDropdown.value !== value) {
+            mainDropdown.value = value;
+            mainDropdown.dispatchEvent(new Event('change'));
+        }
+        updateControllerDisplay();
     });
     
-    return group;
-}
-
-let easy_setup_mapping_target = null;
-let easy_setup_timeout = null;
-let easy_setup_start_time = null;
-let easy_setup_listening = false;
-
-// Make functions globally available
-if (typeof window !== 'undefined') {
-    window.easy_setup_listening = false;
-    window.easy_setup_mapping_target = null;
-}
-
-// Controller button definitions based on output type
-const controller_layouts = {
-    0: { // Mouse and keyboard - show as mouse
-        type: 'mouse',
-        buttons: [
-            { usage: '0x00090001', name: 'Links', x: 120, y: 180, radius: 20 },
-            { usage: '0x00090002', name: 'Rechts', x: 200, y: 180, radius: 20 },
-            { usage: '0x00090003', name: 'Midden', x: 160, y: 180, radius: 15 },
-        ],
-        axes: [
-            { usage: '0x00010030', name: 'X-as', x: 160, y: 140, width: 80, height: 20 },
-            { usage: '0x00010031', name: 'Y-as', x: 160, y: 220, width: 20, height: 80 },
-            { usage: '0x00010038', name: 'Scroll', x: 160, y: 100, width: 40, height: 30 },
-        ]
-    },
-    2: { // Switch Pro Controller
-        type: 'switch',
-        buttons: [
-            { usage: '0x00090001', name: 'Y', x: 140, y: 80, radius: 18 },
-            { usage: '0x00090002', name: 'B', x: 180, y: 100, radius: 18 },
-            { usage: '0x00090003', name: 'A', x: 160, y: 120, radius: 18 },
-            { usage: '0x00090004', name: 'X', x: 120, y: 100, radius: 18 },
-            { usage: '0x00090005', name: 'L', x: 60, y: 60, radius: 15 },
-            { usage: '0x00090006', name: 'R', x: 220, y: 60, radius: 15 },
-            { usage: '0x00090007', name: 'ZL', x: 40, y: 100, radius: 12 },
-            { usage: '0x00090008', name: 'ZR', x: 240, y: 100, radius: 12 },
-            { usage: '0x00090009', name: 'Minus', x: 100, y: 140, radius: 12 },
-            { usage: '0x0009000a', name: 'Plus', x: 180, y: 140, radius: 12 },
-            { usage: '0x0009000b', name: 'LS', x: 80, y: 180, radius: 15 },
-            { usage: '0x0009000c', name: 'RS', x: 200, y: 180, radius: 15 },
-            { usage: '0x0009000d', name: 'Home', x: 160, y: 160, radius: 12 },
-            { usage: '0xfff90001', name: '←', x: 80, y: 240, radius: 12 },
-            { usage: '0xfff90002', name: '→', x: 120, y: 240, radius: 12 },
-            { usage: '0xfff90003', name: '↑', x: 100, y: 220, radius: 12 },
-            { usage: '0xfff90004', name: '↓', x: 100, y: 260, radius: 12 },
-        ],
-        sticks: [
-            { usageX: '0x00010030', usageY: '0x00010031', name: 'Links', x: 80, y: 180, radius: 25 },
-            { usageX: '0x00010032', usageY: '0x00010035', name: 'Rechts', x: 200, y: 180, radius: 25 },
-        ]
-    },
-    4: { // Stadia Controller
-        type: 'stadia',
-        buttons: [
-            { usage: '0x00090001', name: 'A', x: 160, y: 120, radius: 18 },
-            { usage: '0x00090002', name: 'B', x: 180, y: 100, radius: 18 },
-            { usage: '0x00090004', name: 'X', x: 140, y: 100, radius: 18 },
-            { usage: '0x00090005', name: 'Y', x: 160, y: 80, radius: 18 },
-            { usage: '0x00090007', name: 'L1', x: 60, y: 60, radius: 15 },
-            { usage: '0x00090008', name: 'R1', x: 220, y: 60, radius: 15 },
-            { usage: '0x0009000e', name: 'L3', x: 80, y: 180, radius: 15 },
-            { usage: '0x0009000f', name: 'R3', x: 200, y: 180, radius: 15 },
-            { usage: '0x0009000b', name: 'Opt', x: 100, y: 140, radius: 12 },
-            { usage: '0x0009000c', name: 'Menu', x: 180, y: 140, radius: 12 },
-            { usage: '0x0009000d', name: 'Stadia', x: 160, y: 160, radius: 12 },
-            { usage: '0xfff90001', name: '←', x: 80, y: 240, radius: 12 },
-            { usage: '0xfff90002', name: '→', x: 120, y: 240, radius: 12 },
-            { usage: '0xfff90003', name: '↑', x: 100, y: 220, radius: 12 },
-            { usage: '0xfff90004', name: '↓', x: 100, y: 260, radius: 12 },
-        ],
-        sticks: [
-            { usageX: '0x00010030', usageY: '0x00010031', name: 'Links', x: 80, y: 180, radius: 25 },
-            { usageX: '0x00010032', usageY: '0x00010035', name: 'Rechts', x: 200, y: 180, radius: 25 },
-        ]
-    },
-    5: { // XAC/Flex (Xbox) Controller
-        type: 'xbox',
-        buttons: [
-            { usage: '0x00090005', name: 'A', x: 380, y: 230, radius: 22 },
-            { usage: '0x00090006', name: 'B', x: 405, y: 205, radius: 22 },
-            { usage: '0x0009000b', name: 'X', x: 355, y: 205, radius: 22 },
-            { usage: '0x0009000c', name: 'Y', x: 380, y: 180, radius: 22 },
-            { usage: '0x00090004', name: 'LB', x: 100, y: 80, radius: 20 },
-            { usage: '0x0009000a', name: 'RB', x: 400, y: 80, radius: 20 },
-            { usage: '0x00090001', name: 'X1', x: 130, y: 180, radius: 16 },
-            { usage: '0x00090002', name: 'X2', x: 370, y: 180, radius: 16 },
-            { usage: '0x00090003', name: 'LS', x: 180, y: 250, radius: 18 },
-            { usage: '0x00090009', name: 'RS', x: 320, y: 250, radius: 18 },
-            { usage: '0x00090007', name: 'View', x: 230, y: 210, radius: 16 },
-            { usage: '0x00090008', name: 'Menu', x: 270, y: 210, radius: 16 },
-            { usage: '0xfff90001', name: '←', x: 140, y: 310, radius: 16 },
-            { usage: '0xfff90002', name: '→', x: 180, y: 310, radius: 16 },
-            { usage: '0xfff90003', name: '↑', x: 160, y: 290, radius: 16 },
-            { usage: '0xfff90004', name: '↓', x: 160, y: 330, radius: 16 },
-        ],
-        sticks: [
-            { usageX: '0x00010030', usageY: '0x00010031', name: 'Links', x: 180, y: 250, radius: 35 },
-            { usageX: '0x00010032', usageY: '0x00010035', name: 'Rechts', x: 320, y: 250, radius: 35 },
-        ]
-    }
-};
-
-// Keyboard layout for keyboard output
-const keyboard_layout = {
-    type: 'keyboard',
-    // Simplified keyboard - showing main keys
-    buttons: [
-        { usage: '0x00070004', name: 'A', x: 60, y: 100, width: 30, height: 30 },
-        { usage: '0x00070005', name: 'B', x: 90, y: 100, width: 30, height: 30 },
-        { usage: '0x00070006', name: 'C', x: 120, y: 100, width: 30, height: 30 },
-        { usage: '0x00070007', name: 'D', x: 150, y: 100, width: 30, height: 30 },
-        { usage: '0x00070008', name: 'E', x: 180, y: 100, width: 30, height: 30 },
-        { usage: '0x00070009', name: 'F', x: 210, y: 100, width: 30, height: 30 },
-        { usage: '0x0007002c', name: 'Space', x: 100, y: 140, width: 80, height: 30 },
-        { usage: '0x00070028', name: 'Enter', x: 220, y: 140, width: 50, height: 30 },
-    ]
-};
-
-function get_current_mapping_for_target(target_usage) {
-    const cfg = typeof config !== 'undefined' ? config : (typeof window !== 'undefined' ? window.config : null);
-    if (!cfg || !cfg['mappings']) return null;
-    return cfg['mappings'].find(m => m['target_usage'] === target_usage);
-}
-
-function set_mapping_for_target(target_usage, source_usage) {
-    // Access global config object
-    const cfg = typeof config !== 'undefined' ? config : (typeof window !== 'undefined' ? window.config : null);
-    if (!cfg) return;
+    // Listen for changes in main dropdown
+    mainDropdown.addEventListener('change', () => {
+        const value = mainDropdown.value;
+        // Update Easy Setup dropdown
+        if (easySetupDropdown.value !== value) {
+            easySetupDropdown.value = value;
+        }
+        updateControllerDisplay();
+    });
     
-    // Remove existing mapping for this target
-    cfg['mappings'] = cfg['mappings'].filter(m => m['target_usage'] !== target_usage);
+    // Initial update
+    updateControllerDisplay();
+}
+
+// Sync Easy Setup dropdown with main dropdown
+function syncDropdowns() {
+    const mainDropdown = document.getElementById('our_descriptor_number_dropdown');
+    const easySetupDropdown = document.getElementById('easy-setup-device-type-dropdown');
     
-    // Add new mapping
-    if (source_usage && source_usage !== '0x00000000') {
-        const DEFAULT_SCALING_VAL = typeof DEFAULT_SCALING !== 'undefined' ? DEFAULT_SCALING : 1000;
-        cfg['mappings'].push({
-            'source_usage': source_usage,
-            'target_usage': target_usage,
-            'layers': [0],
-            'sticky': false,
-            'tap': false,
-            'hold': false,
-            'scaling': DEFAULT_SCALING_VAL,
-            'source_port': 0,
-            'target_port': 0,
-        });
+    if (mainDropdown && easySetupDropdown) {
+        // If main dropdown has no value set or is 0 (Mouse/keyboard), default to 5 (XAC/Flex)
+        if (!mainDropdown.value || mainDropdown.value === '' || mainDropdown.value === '0') {
+            mainDropdown.value = '5';
+            // Also update config if it exists
+            if (typeof config !== 'undefined') {
+                config['our_descriptor_number'] = 5;
+            }
+        }
+        easySetupDropdown.value = mainDropdown.value;
+    } else if (easySetupDropdown) {
+        // If main dropdown doesn't exist yet, set default to 5
+        easySetupDropdown.value = '5';
     }
 }
 
-function render_controller() {
-    const container = document.getElementById('easy-setup-controller-container');
+// Update controller display based on descriptor dropdown value
+function updateControllerDisplay() {
+    // Try Easy Setup dropdown first, fallback to main dropdown
+    const easySetupDropdown = document.getElementById('easy-setup-device-type-dropdown');
+    const mainDropdown = document.getElementById('our_descriptor_number_dropdown');
+    const dropdown = easySetupDropdown || mainDropdown;
+    
+    if (!dropdown) return;
+    
+    const descriptorValue = parseInt(dropdown.value, 10);
+    
+    // Update controller type selector visibility and available options
+    updateControllerTypeSelector();
+    
+    // Show display area
+    const displayArea = document.querySelector('.controller-display');
+    if (displayArea) {
+        displayArea.classList.remove('hidden');
+    }
+    
+    // Load appropriate controller visualization based on descriptor value
+    // 0: Mouse and keyboard
+    // 1: Absolute mouse and keyboard  
+    // 2: Switch gamepad
+    // 3: PS4 arcade stick
+    // 4: Stadia controller
+    // 5: XAC/Flex compatible (default - Xbox controller)
+    
+    if (descriptorValue === 0 || descriptorValue === 1) {
+        // Mouse and keyboard
+        console.log('Loading mouse/keyboard, descriptorValue:', descriptorValue);
+        loadMouseKeyboard();
+    } else if (descriptorValue === 2) {
+        // Switch gamepad
+        loadControllerSVG('switch');
+    } else if (descriptorValue === 3) {
+        // PS4 arcade stick
+        loadControllerSVG('ps4');
+    } else if (descriptorValue === 4) {
+        // Stadia controller
+        loadControllerSVG('stadia');
+    } else {
+        // Default: XAC/Flex compatible (Xbox controller)
+        loadControllerSVG('xac');
+    }
+}
+
+// Update controller type selector based on current descriptor dropdown value
+function updateControllerTypeSelector() {
+    const selector = document.querySelector('.controller-selector');
+    if (!selector) return;
+    
+    // Try Easy Setup dropdown first, fallback to main dropdown
+    const easySetupDropdown = document.getElementById('easy-setup-device-type-dropdown');
+    const mainDropdown = document.getElementById('our_descriptor_number_dropdown');
+    const dropdown = easySetupDropdown || mainDropdown;
+    
+    if (!dropdown) return;
+    
+    const descriptorValue = parseInt(dropdown.value, 10);
+    
+    // Clear existing content
+    selector.innerHTML = '';
+    
+    // Only show controller selector for controller output types (not mouse/keyboard)
+    if (descriptorValue === 0 || descriptorValue === 1) {
+        // Hide selector for mouse/keyboard
+        selector.style.display = 'none';
+        return;
+    }
+    
+    // Show selector for controllers
+    selector.style.display = 'flex';
+    
+    // Optional: Add info text about selected controller type
+    const infoText = document.createElement('div');
+    infoText.className = 'controller-type-info';
+    infoText.style.cssText = 'width: 100%; text-align: center; color: var(--es-text-muted); font-size: 0.9rem; margin-bottom: 0.5rem;';
+    
+    if (descriptorValue === 2) {
+        infoText.textContent = 'Switch Pro Controller';
+    } else if (descriptorValue === 3) {
+        infoText.textContent = 'PS4 Arcade Stick';
+    } else if (descriptorValue === 4) {
+        infoText.textContent = 'Stadia Controller';
+    } else if (descriptorValue === 5) {
+        infoText.textContent = 'XAC/Flex Compatible (Xbox Controller)';
+    }
+    
+    if (infoText.textContent) {
+        selector.appendChild(infoText);
+    }
+}
+
+// Set up controller type selection buttons
+function setupControllerTypeSelector() {
+    updateControllerTypeSelector();
+}
+
+// Handle controller type selection
+function selectControllerType(type) {
+    easySetupState.currentControllerType = type;
+    
+    // Update button states
+    document.querySelectorAll('.controller-type-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.type === type);
+    });
+    
+    // Load the appropriate SVG
+    loadControllerSVG(type);
+    
+    // Update descriptor dropdown in main settings if it exists
+    const descriptorDropdown = document.getElementById('our_descriptor_number_dropdown');
+    if (descriptorDropdown) {
+        descriptorDropdown.value = CONTROLLER_TYPES[type].descriptorIdx;
+        descriptorDropdown.dispatchEvent(new Event('change'));
+    }
+}
+
+// Load mouse and keyboard visualization
+function loadMouseKeyboard() {
+    const container = document.querySelector('.controller-svg-container');
     if (!container) return;
     
-    const cfg = typeof config !== 'undefined' ? config : (typeof window !== 'undefined' ? window.config : null);
-    if (!cfg) return;
+    // Hide ALL controllers first - be very explicit
+    const allControllers = container.querySelectorAll('.controller');
+    console.log('Hiding controllers:', allControllers.length);
+    allControllers.forEach(controller => {
+        controller.classList.add('hidden');
+        controller.style.setProperty('display', 'none', 'important');
+        console.log('Hiding controller:', controller.id, controller.className);
+    });
     
-    const output_type = cfg['our_descriptor_number'] || 0;
-    let layout = controller_layouts[output_type];
-    
-    if (output_type === 0) {
-        // For mouse/keyboard, decide based on what makes sense
-        // For now, show mouse layout
-        layout = controller_layouts[0];
+    // Also hide by ID explicitly
+    const xboxController = document.getElementById('controller-xac');
+    if (xboxController) {
+        xboxController.classList.add('hidden');
+        xboxController.style.setProperty('display', 'none', 'important');
+        console.log('Explicitly hiding Xbox controller');
     }
     
-    if (!layout && output_type !== 0) {
-        container.innerHTML = '<p class="text-muted">Visuele controller niet beschikbaar voor dit output type. Gebruik Advanced Setup.</p>';
-        return;
+    // Show mouse/keyboard SVG
+    let mouseKeyboardContainer = container.querySelector('#controller-mouse-keyboard');
+    if (!mouseKeyboardContainer) {
+        // Create mouse/keyboard container if it doesn't exist
+        mouseKeyboardContainer = document.createElement('div');
+        mouseKeyboardContainer.id = 'controller-mouse-keyboard';
+        mouseKeyboardContainer.className = 'controller mouse-keyboard';
+        mouseKeyboardContainer.innerHTML = `
+            <object data="controllers/mouse.svg" type="image/svg+xml" class="mouse-svg" style="max-width: 300px;"></object>
+            <object data="controllers/keyboard.svg" type="image/svg+xml" class="keyboard-svg" style="max-width: 500px;"></object>
+        `;
+        container.appendChild(mouseKeyboardContainer);
     }
     
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('width', '500');
-    svg.setAttribute('height', layout.type === 'mouse' ? '350' : '360');
-    svg.setAttribute('viewBox', '0 0 500 360');
-    svg.style.border = 'none';
-    svg.style.borderRadius = '25px';
-    svg.style.backgroundColor = 'transparent';
+    // Show mouse/keyboard - remove hidden class and set display
+    mouseKeyboardContainer.classList.remove('hidden');
+    mouseKeyboardContainer.style.setProperty('display', 'flex', 'important');
+    console.log('Showing mouse/keyboard');
     
-    // Draw controller body with realistic Xbox controller shape (joypad.ai style)
-    if (layout.type === 'xbox') {
-        // Controller shadow
-        const shadow = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
-        shadow.setAttribute('cx', '250');
-        shadow.setAttribute('cy', '340');
-        shadow.setAttribute('rx', '220');
-        shadow.setAttribute('ry', '20');
-        shadow.setAttribute('fill', 'rgba(0,0,0,0.5)');
-        shadow.setAttribute('fill-opacity', '0.5');
-        svg.appendChild(shadow);
-        
-        // Left grip - darker, more realistic
-        const leftGrip = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        leftGrip.setAttribute('d', 'M 50 85 Q 25 130 25 180 Q 25 235 55 275 Q 75 295 100 295 L 125 295 Q 135 295 135 285 L 135 95 Q 135 85 125 85 Z');
-        leftGrip.setAttribute('fill', '#3a3a3a'); // Darker grey like in image
-        leftGrip.setAttribute('stroke', '#2a2a2a');
-        leftGrip.setAttribute('stroke-width', '2.5');
-        svg.appendChild(leftGrip);
-        
-        // Right grip - darker, more realistic
-        const rightGrip = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        rightGrip.setAttribute('d', 'M 450 85 Q 475 130 475 180 Q 475 235 445 275 Q 425 295 400 295 L 375 295 Q 365 295 365 285 L 365 95 Q 365 85 375 85 Z');
-        rightGrip.setAttribute('fill', '#3a3a3a'); // Darker grey like in image
-        rightGrip.setAttribute('stroke', '#2a2a2a');
-        rightGrip.setAttribute('stroke-width', '2.5');
-        svg.appendChild(rightGrip);
-        
-        // Main body - darker grey, more realistic shape
-        const mainBody = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        mainBody.setAttribute('x', '135');
-        mainBody.setAttribute('y', '85');
-        mainBody.setAttribute('width', '230');
-        mainBody.setAttribute('height', '210');
-        mainBody.setAttribute('rx', '40');
-        mainBody.setAttribute('fill', '#4a4a4a'); // Dark grey like in the image
-        mainBody.setAttribute('stroke', '#2a2a2a');
-        mainBody.setAttribute('stroke-width', '2.5');
-        svg.appendChild(mainBody);
-        
-        // Inner shadow for depth
-        const innerShadow = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        innerShadow.setAttribute('x', '145');
-        innerShadow.setAttribute('y', '95');
-        innerShadow.setAttribute('width', '210');
-        innerShadow.setAttribute('height', '190');
-        innerShadow.setAttribute('rx', '30');
-        innerShadow.setAttribute('fill', 'rgba(0,0,0,0.2)');
-        svg.appendChild(innerShadow);
-        
-        // Center accent area (Xbox logo area) - subtle green tint
-        const centerAccent = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
-        centerAccent.setAttribute('cx', '250');
-        centerAccent.setAttribute('cy', '180');
-        centerAccent.setAttribute('rx', '65');
-        centerAccent.setAttribute('ry', '30');
-        centerAccent.setAttribute('fill', '#107c10');
-        centerAccent.setAttribute('fill-opacity', '0.25');
-        svg.appendChild(centerAccent);
-    } else {
-        // Generic controller background for other types
-        const controller_bg = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
-        controller_bg.setAttribute('cx', '250');
-        controller_bg.setAttribute('cy', layout.type === 'mouse' ? '175' : '180');
-        controller_bg.setAttribute('rx', '220');
-        controller_bg.setAttribute('ry', layout.type === 'mouse' ? '140' : '160');
-        controller_bg.setAttribute('fill', layout.type === 'switch' ? '#e60012' : 
-                                   layout.type === 'stadia' ? '#4285f4' : '#8e8e8e');
-        controller_bg.setAttribute('fill-opacity', '0.2');
-        controller_bg.setAttribute('stroke', '#333');
-        controller_bg.setAttribute('stroke-width', '3');
-        svg.appendChild(controller_bg);
-    }
-    
-    // Draw buttons with realistic 3D styling (joypad.ai style)
-    if (layout.buttons) {
-        layout.buttons.forEach(btn => {
-            const mapping = get_current_mapping_for_target(btn.usage);
-            
-            // Button shadow - larger, more realistic
-            const shadow = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            shadow.setAttribute('cx', btn.x + 3);
-            shadow.setAttribute('cy', btn.y + 3);
-            shadow.setAttribute('r', btn.radius);
-            shadow.setAttribute('fill', 'rgba(0,0,0,0.5)');
-            shadow.setAttribute('pointer-events', 'none');
-            svg.appendChild(shadow);
-            
-            // Button base (darker outer circle for 3D effect)
-            const baseCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            baseCircle.setAttribute('cx', btn.x);
-            baseCircle.setAttribute('cy', btn.y);
-            baseCircle.setAttribute('r', btn.radius);
-            
-            // Color coding for Xbox buttons - more vibrant colors
-            let fillColor, strokeColor, baseColor;
-            if (layout.type === 'xbox') {
-                if (btn.name === 'A') {
-                    fillColor = mapping ? '#28a745' : '#00ff7f'; // Bright green
-                    strokeColor = mapping ? '#1e7e34' : '#00cc66';
-                    baseColor = mapping ? '#1e7e34' : '#00cc66';
-                } else if (btn.name === 'B') {
-                    fillColor = mapping ? '#28a745' : '#e81123'; // Red
-                    strokeColor = mapping ? '#1e7e34' : '#c8102e';
-                    baseColor = mapping ? '#1e7e34' : '#c8102e';
-                } else if (btn.name === 'X') {
-                    fillColor = mapping ? '#28a745' : '#0089ce'; // Blue
-                    strokeColor = mapping ? '#1e7e34' : '#0078d4';
-                    baseColor = mapping ? '#1e7e34' : '#0078d4';
-                } else if (btn.name === 'Y') {
-                    fillColor = mapping ? '#28a745' : '#ffb900'; // Yellow/Orange
-                    strokeColor = mapping ? '#1e7e34' : '#ffaa00';
-                    baseColor = mapping ? '#1e7e34' : '#ffaa00';
-                } else {
-                    fillColor = mapping ? '#28a745' : '#5a5a5a'; // Dark grey for other buttons
-                    strokeColor = mapping ? '#1e7e34' : '#3a3a3a';
-                    baseColor = mapping ? '#1e7e34' : '#3a3a3a';
-                }
-            } else {
-                fillColor = mapping ? '#28a745' : '#5a5a5a';
-                strokeColor = mapping ? '#1e7e34' : '#3a3a3a';
-                baseColor = mapping ? '#1e7e34' : '#3a3a3a';
-            }
-            
-            // Base circle (darker for depth)
-            baseCircle.setAttribute('fill', baseColor);
-            baseCircle.setAttribute('opacity', '0.6');
-            baseCircle.setAttribute('pointer-events', 'none');
-            svg.appendChild(baseCircle);
-            
-            // Main button circle
-            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            circle.setAttribute('cx', btn.x);
-            circle.setAttribute('cy', btn.y - 1); // Slight offset for 3D effect
-            circle.setAttribute('r', btn.radius);
-            circle.setAttribute('fill', fillColor);
-            circle.setAttribute('stroke', strokeColor);
-            circle.setAttribute('stroke-width', '2.5');
-            circle.setAttribute('class', 'easy-setup-button');
-            circle.setAttribute('data-usage', btn.usage);
-            circle.style.cursor = 'pointer';
-            circle.style.filter = mapping ? 'none' : 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))';
-            
-            // Add hover effect
-            const originalFill = fillColor;
-            const originalY = btn.y - 1;
-            circle.addEventListener('mouseenter', function() {
-                if (!mapping) {
-                    this.setAttribute('cy', originalY - 1);
-                    this.style.filter = 'drop-shadow(0 3px 6px rgba(0,0,0,0.4)) brightness(1.1)';
-                }
-            });
-            circle.addEventListener('mouseleave', function() {
-                if (!mapping) {
-                    this.setAttribute('cy', originalY);
-                    this.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))';
-                }
-            });
-            circle.addEventListener('click', () => easy_setup_start_mapping(btn.usage, btn.name));
-            svg.appendChild(circle);
-            
-            // Button highlight (top highlight for 3D effect)
-            if (!mapping && layout.type === 'xbox' && ['A','B','X','Y'].includes(btn.name)) {
-                const highlight = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
-                highlight.setAttribute('cx', btn.x);
-                highlight.setAttribute('cy', btn.y - btn.radius * 0.4 - 1);
-                highlight.setAttribute('rx', btn.radius * 0.6);
-                highlight.setAttribute('ry', btn.radius * 0.3);
-                highlight.setAttribute('fill', 'rgba(255,255,255,0.3)');
-                highlight.setAttribute('pointer-events', 'none');
-                svg.appendChild(highlight);
-            }
-            
-            // Button text with shadow for better readability
-            const textShadow = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            textShadow.setAttribute('x', btn.x);
-            textShadow.setAttribute('y', btn.y + (btn.name.length > 2 ? 4 : 6) + 1);
-            textShadow.setAttribute('text-anchor', 'middle');
-            textShadow.setAttribute('font-size', btn.name.length > 2 ? '11' : '14');
-            textShadow.setAttribute('font-weight', 'bold');
-            textShadow.setAttribute('fill', 'rgba(0,0,0,0.5)');
-            textShadow.setAttribute('pointer-events', 'none');
-            textShadow.setAttribute('font-family', 'Arial, sans-serif');
-            textShadow.textContent = btn.name;
-            svg.appendChild(textShadow);
-            
-            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            text.setAttribute('x', btn.x);
-            text.setAttribute('y', btn.y + (btn.name.length > 2 ? 4 : 6));
-            text.setAttribute('text-anchor', 'middle');
-            text.setAttribute('font-size', btn.name.length > 2 ? '11' : '14');
-            text.setAttribute('font-weight', 'bold');
-            text.setAttribute('fill', '#fff');
-            text.setAttribute('pointer-events', 'none');
-            text.setAttribute('font-family', 'Arial, sans-serif');
-            text.textContent = btn.name;
-            svg.appendChild(text);
-        });
-    }
-    
-    // Draw sticks with joypad.ai style visualization
-    if (layout.sticks) {
-        layout.sticks.forEach((stick, index) => {
-            const mappingX = get_current_mapping_for_target(stick.usageX);
-            const mappingY = get_current_mapping_for_target(stick.usageY);
-            const hasMapping = mappingX || mappingY;
-            
-            const clickHandler = () => easy_setup_start_mapping(stick.usageX, stick.name + ' X-as');
-            
-            // Determine if this is the left stick (first stick) or right stick
-            const isLeftStick = index === 0 || stick.name.toLowerCase().includes('links') || stick.name.toLowerCase().includes('left');
-            
-            // Use the improved joypad.ai style stick visualization
-            const stickGroup = create_joypad_style_stick(stick.x, stick.y, stick.radius, hasMapping, clickHandler, isLeftStick);
-            svg.appendChild(stickGroup);
-            
-            // Label text above stick - green like in the image
-            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            text.setAttribute('x', stick.x);
-            text.setAttribute('y', stick.y - stick.radius - 12);
-            text.setAttribute('text-anchor', 'middle');
-            text.setAttribute('font-size', '12');
-            text.setAttribute('font-weight', 'bold');
-            text.setAttribute('fill', hasMapping ? '#28a745' : '#00ff7f'); // Green like in image
-            text.setAttribute('font-family', 'Arial, sans-serif');
-            text.style.textShadow = '1px 1px 3px rgba(0,0,0,0.9)';
-            text.textContent = stick.name;
-            svg.appendChild(text);
-        });
-    }
-    
-    container.innerHTML = '';
-    container.appendChild(svg);
+    // Update mappings display
+    updateMappingsPanel();
 }
 
-function easy_setup_start_mapping(target_usage, target_name) {
-    if (easy_setup_listening) {
-        easy_setup_cancel_mapping();
+// Load controller HTML into the display area
+function loadControllerSVG(type) {
+    const container = document.querySelector('.controller-svg-container');
+    if (!container) return;
+    
+    // Hide all controllers first - be very explicit
+    container.querySelectorAll('.controller').forEach(controller => {
+        controller.classList.add('hidden');
+        controller.style.setProperty('display', 'none', 'important');
+    });
+    
+    // Also explicitly hide mouse/keyboard if it exists
+    const mouseKeyboard = document.getElementById('controller-mouse-keyboard');
+    if (mouseKeyboard) {
+        mouseKeyboard.classList.add('hidden');
+        mouseKeyboard.style.setProperty('display', 'none', 'important');
     }
     
-    easy_setup_mapping_target = target_usage;
-    easy_setup_listening = true;
-    easy_setup_start_time = Date.now();
+    // Map controller types to their IDs
+    const controllerMap = {
+        'xac': 'controller-xac',
+        'switch': 'controller-switch',
+        'stadia': 'controller-stadia',
+        'ps4': 'controller-ps4'
+    };
     
-    const status_div = document.getElementById('easy-setup-status');
-    const progress_bar = document.getElementById('easy-setup-progress');
-    const target_name_span = document.getElementById('easy-setup-target-button-name');
+    const controllerId = controllerMap[type] || 'controller-xac';
     
-    target_name_span.textContent = target_name;
-    status_div.classList.remove('d-none');
+    // Check if controller exists, if not create it
+    let activeController = container.querySelector(`#${controllerId}`);
     
-    // Enable monitor to capture inputs
-    const dev = typeof device !== 'undefined' ? device : (typeof window !== 'undefined' ? window.device : null);
-    const mon_enabled = typeof monitor_enabled !== 'undefined' ? monitor_enabled : 
-                       (typeof window !== 'undefined' ? window.monitor_enabled : false);
-    if (dev && !mon_enabled && typeof set_monitor_enabled === 'function') {
-        set_monitor_enabled(true);
-    }
-    
-    // Timeout after 5 seconds
-    const duration = 5000;
-    const start = Date.now();
-    
-    function update_progress() {
-        if (!easy_setup_listening) return;
-        
-        const elapsed = Date.now() - start;
-        const remaining = Math.max(0, duration - elapsed);
-        const percent = (remaining / duration) * 100;
-        
-        progress_bar.style.width = percent + '%';
-        
-        if (remaining > 0) {
-            requestAnimationFrame(update_progress);
+    if (!activeController) {
+        // Create controller based on type
+        if (type === 'switch') {
+            activeController = createSwitchController();
+        } else if (type === 'stadia') {
+            activeController = createStadiaController();
+        } else if (type === 'ps4') {
+            activeController = createPS4Controller();
         } else {
-            easy_setup_cancel_mapping();
+            // Default to Xbox (already exists in HTML)
+            activeController = container.querySelector('#controller-xac');
         }
-    }
-    
-    update_progress();
-    
-    easy_setup_timeout = setTimeout(() => {
-        easy_setup_cancel_mapping();
-    }, duration);
-    
-    // Set global flags so input_report_received can detect easy setup mode
-    if (typeof window !== 'undefined') {
-        window.easy_setup_listening = true;
-        window.easy_setup_mapping_target = target_usage;
-        easy_setup_listening = true;
-        easy_setup_mapping_target = target_usage;
-    }
-}
-
-function easy_setup_handle_input(event) {
-    if (!easy_setup_listening || !easy_setup_mapping_target) {
-        return;
-    }
-    
-    // Use the existing input_report_received function's logic
-    if (event.reportId == REPORT_ID_MONITOR) {
-        // Parse monitor data to find button presses
-        for (let i = 0; i < 7; i++) {
-            const usage = "0x" + event.data.getUint32(i * 9, true).toString(16).padStart(8, "0");
-            const value = event.data.getInt32(i * 9 + 4, true);
-            
-            // Check if this is a button press (value > 0 for buttons)
-            // Or axis movement for analog inputs
-            if (usage !== '0x00000000' && value != 0) {
-                // Found input! Complete the mapping
-                easy_setup_complete_mapping(usage);
-                return;
-            }
-        }
-    }
-}
-
-function easy_setup_complete_mapping(source_usage) {
-    const target = easy_setup_mapping_target || (typeof window !== 'undefined' ? window.easy_setup_mapping_target : null);
-    if (!target) return;
-    
-    set_mapping_for_target(target, source_usage);
-    if (typeof render_controller === 'function') {
-        render_controller();
-    }
-    easy_setup_cancel_mapping();
-    
-    // Show success message briefly
-    const status_div = document.getElementById('easy-setup-status');
-    if (status_div) {
-        status_div.className = 'alert alert-success mt-3';
-        const target_name = typeof readable_target_usage_name === 'function' ? 
-            readable_target_usage_name(target) : target;
-        const source_name = typeof readable_usage_name === 'function' ? 
-            readable_usage_name(source_usage) : source_usage;
-        status_div.innerHTML = '<strong>Mapping opgeslagen!</strong> ' + 
-            target_name + ' is nu gemapped naar ' + source_name;
         
-        setTimeout(() => {
-            status_div.classList.add('d-none');
-            status_div.className = 'alert alert-info mt-3 d-none';
-        }, 2000);
-    }
-    
-    // Also update advanced mappings view
-    if (typeof set_mappings_ui_state === 'function') {
-        set_mappings_ui_state();
-    }
-}
-
-function easy_setup_cancel_mapping() {
-    easy_setup_listening = false;
-    easy_setup_mapping_target = null;
-    
-    if (easy_setup_timeout) {
-        clearTimeout(easy_setup_timeout);
-        easy_setup_timeout = null;
-    }
-    
-    const status_div = document.getElementById('easy-setup-status');
-    if (status_div) {
-        status_div.classList.add('d-none');
-    }
-    
-    if (typeof window !== 'undefined') {
-        window.easy_setup_listening = false;
-        window.easy_setup_mapping_target = null;
-    }
-}
-
-function easy_setup_clear_all() {
-    if (confirm('Weet je zeker dat je alle mappings wilt wissen?')) {
-        const cfg = typeof config !== 'undefined' ? config : (typeof window !== 'undefined' ? window.config : null);
-        if (!cfg) return;
-        
-        // Clear only mappings that match current output type
-        const output_type = cfg['our_descriptor_number'] || 0;
-        const layout = controller_layouts[output_type];
-        if (layout) {
-            const target_usages = [];
-            if (layout.buttons) {
-                layout.buttons.forEach(btn => target_usages.push(btn.usage));
-            }
-            if (layout.sticks) {
-                layout.sticks.forEach(stick => {
-                    target_usages.push(stick.usageX);
-                    target_usages.push(stick.usageY);
-                });
-            }
-            
-            cfg['mappings'] = cfg['mappings'].filter(m => !target_usages.includes(m['target_usage']));
-        }
-        if (typeof render_controller === 'function') {
-            render_controller();
-        }
-        if (typeof set_mappings_ui_state === 'function') {
-            set_mappings_ui_state();
+        if (activeController && activeController.parentNode !== container) {
+            container.appendChild(activeController);
         }
     }
-}
-
-function easy_setup_swap_sticks() {
-    const cfg = typeof config !== 'undefined' ? config : (typeof window !== 'undefined' ? window.config : null);
-    if (!cfg) return;
     
-    const output_type = cfg['our_descriptor_number'] || 0;
-    const layout = controller_layouts[output_type];
-    if (!layout || !layout.sticks || layout.sticks.length < 2) {
-        alert('Stick swapping is niet beschikbaar voor dit controller type.');
-        return;
-    }
-    
-    const left = layout.sticks[0];
-    const right = layout.sticks[1];
-    
-    // Swap X axes
-    const left_x_mapping = get_current_mapping_for_target(left.usageX);
-    const right_x_mapping = get_current_mapping_for_target(right.usageX);
-    
-    if (left_x_mapping) set_mapping_for_target(right.usageX, left_x_mapping['source_usage']);
-    if (right_x_mapping) set_mapping_for_target(left.usageX, right_x_mapping['source_usage']);
-    
-    // Swap Y axes
-    const left_y_mapping = get_current_mapping_for_target(left.usageY);
-    const right_y_mapping = get_current_mapping_for_target(right.usageY);
-    
-    if (left_y_mapping) set_mapping_for_target(right.usageY, left_y_mapping['source_usage']);
-    if (right_y_mapping) set_mapping_for_target(left.usageY, right_y_mapping['source_usage']);
-    
-    if (typeof render_controller === 'function') {
-        render_controller();
-    }
-    if (typeof set_mappings_ui_state === 'function') {
-        set_mappings_ui_state();
-    }
-}
-
-function easy_setup_mirror_buttons() {
-    const cfg = typeof config !== 'undefined' ? config : (typeof window !== 'undefined' ? window.config : null);
-    if (!cfg) return;
-    
-    // Mirror left/right buttons (for gamepads)
-    const output_type = cfg['our_descriptor_number'] || 0;
-    if (output_type === 5) { // Xbox
-        // Swap A/B, X/Y, LB/RB, etc.
-        const swaps = [
-            ['0x00090005', '0x00090006'], // A <-> B
-            ['0x0009000b', '0x0009000c'], // X <-> Y
-            ['0x00090004', '0x0009000a'], // LB <-> RB
-        ];
-        
-        swaps.forEach(([usage1, usage2]) => {
-            const mapping1 = get_current_mapping_for_target(usage1);
-            const mapping2 = get_current_mapping_for_target(usage2);
-            
-            if (mapping1) set_mapping_for_target(usage2, mapping1['source_usage']);
-            if (mapping2) set_mapping_for_target(usage1, mapping2['source_usage']);
-        });
-        
-        render_controller();
-        set_mappings_ui_state();
+    if (activeController) {
+        // Show the selected controller - remove hidden class and set display with important
+        activeController.classList.remove('hidden');
+        activeController.style.setProperty('display', 'block', 'important');
+        console.log('Showing controller:', type, activeController.id);
+        setupButtonClickHandlers(activeController, type);
     } else {
-        alert('Button mirroring is alleen beschikbaar voor Xbox controllers.');
+        console.warn('Controller not found for type:', type);
     }
-}
-
-function easy_setup_reset_defaults() {
-    if (confirm('Reset alle mappings naar standaard (geen mappings)?')) {
-        easy_setup_clear_all();
-    }
-}
-
-// Make key functions globally available
-if (typeof window !== 'undefined') {
-    window.easy_setup_complete_mapping = easy_setup_complete_mapping;
-    window.render_controller = render_controller;
-}
-
-// Initialize easy setup when tab is shown
-function easy_setup_init() {
-    const clearBtn = document.getElementById('easy-setup-clear-all');
-    const swapBtn = document.getElementById('easy-setup-swap-sticks');
-    const mirrorBtn = document.getElementById('easy-setup-mirror-buttons');
-    const resetBtn = document.getElementById('easy-setup-reset-defaults');
     
-    if (clearBtn) clearBtn.addEventListener('click', easy_setup_clear_all);
-    if (swapBtn) swapBtn.addEventListener('click', easy_setup_swap_sticks);
-    if (mirrorBtn) mirrorBtn.addEventListener('click', easy_setup_mirror_buttons);
-    if (resetBtn) resetBtn.addEventListener('click', easy_setup_reset_defaults);
+    // Update mappings display
+    updateMappingsPanel();
+}
+
+// Create Switch Pro controller structure
+function createSwitchController() {
+    const controller = document.createElement('div');
+    controller.id = 'controller-switch';
+    controller.className = 'controller switch';
+    controller.innerHTML = `
+        <object data="controllers/switch-pro.svg" type="image/svg+xml" class="controller-svg"></object>
+    `;
+    return controller;
+}
+
+// Create Stadia controller structure
+function createStadiaController() {
+    const controller = document.createElement('div');
+    controller.id = 'controller-stadia';
+    controller.className = 'controller stadia';
+    controller.innerHTML = `
+        <object data="controllers/stadia.svg" type="image/svg+xml" class="controller-svg"></object>
+    `;
+    return controller;
+}
+
+// Create PS4 arcade stick structure
+function createPS4Controller() {
+    const controller = document.createElement('div');
+    controller.id = 'controller-ps4';
+    controller.className = 'controller ps4';
+    // For now, use a placeholder or create HTML structure similar to Xbox
+    // PS4 arcade stick might need a custom HTML structure like Xbox
+    controller.innerHTML = `
+        <div style="text-align: center; padding: 2rem; color: var(--es-text);">
+            <p>PS4 Arcade Stick visualization</p>
+            <p style="font-size: 0.9rem; color: var(--es-text-muted);">(Visualisatie komt binnenkort)</p>
+        </div>
+    `;
+    return controller;
+}
+
+// Set up click handlers for controller buttons in the HTML structure
+function setupButtonClickHandlers(controller, type) {
+    const buttonUsages = BUTTON_USAGES[type];
+    if (!buttonUsages) return;
     
-    // Render controller when easy setup tab is shown
-    const easy_setup_tab = document.getElementById('nav-easy-setup-tab');
-    if (easy_setup_tab) {
-        easy_setup_tab.addEventListener('shown.bs.tab', () => {
-            if (typeof render_controller === 'function') {
-                render_controller();
+    // Find all interactive button regions (now using data-btn-id on HTML elements)
+    controller.querySelectorAll('[data-btn-id]').forEach(element => {
+        const btnId = element.dataset.btnId;
+        if (buttonUsages[btnId]) {
+            // Remove any existing click handlers to avoid duplicates
+            const newElement = element.cloneNode(true);
+            element.parentNode.replaceChild(newElement, element);
+            
+            // Check if this is a stick element
+            if (btnId === 'stick-left' || btnId === 'stick-right') {
+                // Open stick mapping panel instead of direct mapping
+                newElement.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openStickMappingPanel(btnId === 'stick-left' ? 'left' : 'right', newElement);
+                });
+            } else {
+                // Add click handler to the new element
+                newElement.addEventListener('click', () => startButtonMapping(btnId, buttonUsages[btnId], newElement));
             }
+        }
+    });
+}
+
+// Start the button mapping process
+function startButtonMapping(btnId, targetUsage, element) {
+    console.log('startButtonMapping called:', btnId, targetUsage, element);
+    console.log('Current mappings:', easySetupState.mappings);
+    
+    // Handle special "both axes" mapping for sticks
+    if (targetUsage === 'STICK_LEFT_BOTH' || targetUsage === 'STICK_RIGHT_BOTH') {
+        startStickBothAxesMapping(btnId, targetUsage, element);
+        return;
+    }
+    
+    // Check if this button already has a mapping
+    const existingMapping = easySetupState.mappings.find(m => m.target_usage === targetUsage);
+    console.log('Existing mapping found:', existingMapping);
+    
+    if (existingMapping) {
+        // Show existing mapping in overlay
+        console.log('Showing existing mapping for:', btnId);
+        showExistingMapping(btnId, targetUsage, element, existingMapping);
+        return;
+    }
+    
+    if (easySetupState.waitingForInput) return;
+    
+    easySetupState.waitingForInput = true;
+    easySetupState.waitingButton = { btnId, targetUsage, element };
+    easySetupState.countdownValue = 5; // Longer timeout for better UX
+    easySetupState.lastInputTime = 0;
+    easySetupState.lastInputUsage = null;
+    
+    // Add waiting state to button
+    element.classList.add('waiting');
+    
+    // Show overlay with appropriate message
+    const overlay = document.querySelector('.mapping-overlay');
+    const targetName = getUsageName(targetUsage) || formatButtonName(btnId);
+    overlay.querySelector('.target-button-name').textContent = targetName;
+    overlay.querySelector('.countdown-circle').textContent = '5';
+    
+    // Different message for axes vs buttons
+    if (isAxisMapping(btnId)) {
+        overlay.querySelector('.mapping-status').textContent = 'Beweeg de joystick of druk een knop in...';
+    } else {
+        overlay.querySelector('.mapping-status').textContent = 'Druk nu een knop in op je hardware...';
+    }
+    overlay.classList.add('active');
+    
+    // Start countdown
+    easySetupState.countdownInterval = setInterval(() => {
+        easySetupState.countdownValue--;
+        overlay.querySelector('.countdown-circle').textContent = easySetupState.countdownValue;
+        
+        if (easySetupState.countdownValue <= 0) {
+            cancelMapping();
+        }
+    }, 1000);
+    
+    // Start listening for hardware input
+    startInputListening();
+}
+
+// Start mapping both axes of a stick
+function startStickBothAxesMapping(btnId, targetUsage, element) {
+    const isLeft = targetUsage === 'STICK_LEFT_BOTH';
+    const xUsage = isLeft ? '0x00010030' : '0x00010032';
+    const yUsage = isLeft ? '0x00010031' : '0x00010035';
+    const stickName = isLeft ? 'Linker stick' : 'Rechter stick';
+    
+    // First map X axis, then Y axis
+    easySetupState.pendingStickMapping = {
+        isLeft,
+        phase: 'x',
+        xUsage,
+        yUsage,
+        element,
+        xMapped: false,
+        yMapped: false
+    };
+    
+    if (easySetupState.waitingForInput) return;
+    
+    easySetupState.waitingForInput = true;
+    easySetupState.waitingButton = { 
+        btnId: isLeft ? 'stick-left-x' : 'stick-right-x', 
+        targetUsage: xUsage, 
+        element 
+    };
+    easySetupState.countdownValue = 10; // Longer for stick mapping
+    easySetupState.lastInputTime = 0;
+    easySetupState.lastInputUsage = null;
+    
+    element.classList.add('waiting');
+    
+    const overlay = document.querySelector('.mapping-overlay');
+    overlay.querySelector('.target-button-name').textContent = `${stickName} - Horizontaal (X)`;
+    overlay.querySelector('.countdown-circle').textContent = '10';
+    overlay.querySelector('.mapping-status').textContent = 'Beweeg de joystick LINKS-RECHTS...';
+    overlay.classList.add('active');
+    
+    easySetupState.countdownInterval = setInterval(() => {
+        easySetupState.countdownValue--;
+        overlay.querySelector('.countdown-circle').textContent = easySetupState.countdownValue;
+        
+        if (easySetupState.countdownValue <= 0) {
+            cancelMapping();
+            easySetupState.pendingStickMapping = null;
+        }
+    }, 1000);
+    
+    startInputListening();
+}
+
+// Cancel current stick mapping
+function cancelStickMapping() {
+    if (easySetupState.pendingStickMapping) {
+        easySetupState.pendingStickMapping.element.classList.remove('waiting');
+        easySetupState.pendingStickMapping = null;
+    }
+}
+
+// Check if this is an axis mapping
+function isAxisMapping(btnId) {
+    return btnId && (btnId.includes('stick') || btnId.includes('axis'));
+}
+
+// Format button name for display
+function formatButtonName(btnId) {
+    const nameMap = {
+        'btn-a': 'A knop',
+        'btn-b': 'B knop',
+        'btn-x': 'X knop',
+        'btn-y': 'Y knop',
+        'btn-lb': 'Left Bumper',
+        'btn-rb': 'Right Bumper',
+        'btn-lt': 'Left Trigger',
+        'btn-rt': 'Right Trigger',
+        'btn-back': 'Back/View',
+        'btn-start': 'Start/Menu',
+        'btn-ls': 'Left Stick Click',
+        'btn-rs': 'Right Stick Click',
+        'btn-home': 'Home',
+        'dpad-up': 'D-pad Omhoog',
+        'dpad-down': 'D-pad Omlaag',
+        'dpad-left': 'D-pad Links',
+        'dpad-right': 'D-pad Rechts',
+        'stick-left-x': 'Linker stick X',
+        'stick-left-y': 'Linker stick Y',
+        'stick-right-x': 'Rechter stick X',
+        'stick-right-y': 'Rechter stick Y'
+    };
+    return nameMap[btnId] || btnId;
+}
+
+// Show existing mapping in overlay
+function showExistingMapping(btnId, targetUsage, element, mapping) {
+    console.log('showExistingMapping called:', btnId, targetUsage, element, mapping);
+    
+    const overlay = document.querySelector('.mapping-overlay');
+    if (!overlay) {
+        console.error('Overlay not found!');
+        return;
+    }
+    
+    const targetName = getUsageName(targetUsage) || formatButtonName(btnId);
+    const sourceName = getUsageName(mapping.source_usage) || mapping.source_usage;
+    
+    console.log('Target name:', targetName, 'Source name:', sourceName);
+    
+    overlay.querySelector('.target-button-name').textContent = targetName;
+    overlay.querySelector('.countdown-circle').textContent = '✓';
+    overlay.querySelector('.countdown-circle').style.background = 'var(--es-success)';
+    overlay.querySelector('.countdown-circle').style.color = 'white';
+    overlay.querySelector('.mapping-status').innerHTML = `
+        <strong style="color: var(--es-success);">Huidige mapping:</strong><br>
+        <span style="font-size: 1.1rem;">${sourceName}</span> → <span style="font-size: 1.1rem;">${targetName}</span>
+    `;
+    overlay.classList.add('active');
+    overlay.classList.add('existing-mapping');
+    
+    console.log('Overlay activated, adding highlight to element:', element);
+    console.log('Element classList before:', element.classList.toString());
+    
+    // Flash the button on the controller to show which one is selected
+    element.classList.remove('mapped-highlight'); // Reset if already has it
+    void element.offsetWidth; // Force reflow to restart animation
+    element.classList.add('mapped-highlight');
+    
+    console.log('Element classList after:', element.classList.toString());
+    
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+        overlay.classList.remove('active');
+        overlay.classList.remove('existing-mapping');
+        element.classList.remove('mapped-highlight');
+        overlay.querySelector('.countdown-circle').style.background = '';
+        overlay.querySelector('.countdown-circle').style.color = '';
+    }, 3000);
+}
+
+// Cancel current mapping operation
+function cancelMapping() {
+    if (easySetupState.countdownInterval) {
+        clearInterval(easySetupState.countdownInterval);
+        easySetupState.countdownInterval = null;
+    }
+    
+    if (easySetupState.waitingButton) {
+        easySetupState.waitingButton.element.classList.remove('waiting');
+    }
+    
+    easySetupState.waitingForInput = false;
+    easySetupState.waitingButton = null;
+    easySetupState.lastInputTime = 0;
+    easySetupState.lastInputUsage = null;
+    
+    // Hide overlay and reset status
+    const overlay = document.querySelector('.mapping-overlay');
+    overlay.classList.remove('active');
+    overlay.classList.remove('existing-mapping');
+    overlay.querySelector('.mapping-status').textContent = 'Druk nu een knop in op je hardware';
+    overlay.querySelector('.mapping-status').style.color = 'var(--es-text-muted)';
+    
+    // Stop input listening
+    stopInputListening();
+}
+
+// Complete a mapping when hardware input is detected
+function completeMapping(sourceUsage, sourcePort = 0) {
+    console.log('completeMapping called:', sourceUsage, sourcePort);
+    if (!easySetupState.waitingButton) {
+        console.log('No waiting button, returning');
+        return;
+    }
+    
+    // Handle stick "both axes" mapping
+    if (easySetupState.pendingStickMapping) {
+        completeBothAxesMapping(sourceUsage, sourcePort);
+        return;
+    }
+    
+    console.log('Waiting button:', easySetupState.waitingButton);
+    
+    // Check if this target already has a mapping and remove it
+    const existingIndex = easySetupState.mappings.findIndex(m => m.target_usage === easySetupState.waitingButton.targetUsage);
+    if (existingIndex !== -1) {
+        console.log('Removing existing mapping at index:', existingIndex);
+        easySetupState.mappings.splice(existingIndex, 1);
+    }
+    
+    // Apply deadzone for axis mappings
+    const isAxis = isAxisMapping(easySetupState.waitingButton.btnId);
+    
+    const mapping = {
+        source_usage: sourceUsage,
+        source_port: sourcePort,
+        target_usage: easySetupState.waitingButton.targetUsage,
+        layer: 0,
+        sticky: false,
+        scaling: easySetupState.sensitivity * 10, // Convert percentage to scaling factor
+        deadzone: isAxis ? easySetupState.deadzone : 0 // Apply deadzone only to axes
+    };
+    
+    // Add to our local mappings list
+    easySetupState.mappings.push(mapping);
+    console.log('Mapping added! Current mappings:', easySetupState.mappings);
+    
+    // Mark button as mapped
+    easySetupState.waitingButton.element.classList.remove('waiting');
+    easySetupState.waitingButton.element.classList.add('mapped');
+    
+    // Also mark axis button if it exists
+    const axisBtn = document.querySelector(`.axis-btn[data-btn-id="${easySetupState.waitingButton.btnId}"]`);
+    if (axisBtn) {
+        axisBtn.classList.add('mapped');
+    }
+    
+    // Show success message in overlay briefly
+    const overlay = document.querySelector('.mapping-overlay');
+    const sourceName = getUsageName(sourceUsage) || sourceUsage;
+    const targetName = getUsageName(easySetupState.waitingButton.targetUsage) || easySetupState.waitingButton.btnId;
+    overlay.querySelector('.countdown-circle').textContent = '✓';
+    overlay.querySelector('.mapping-status').textContent = `Gemapped: ${sourceName} → ${targetName}`;
+    overlay.querySelector('.mapping-status').style.color = 'var(--es-success)';
+    
+    // Clean up after showing success
+    setTimeout(() => {
+        cancelMapping();
+    }, 1500);
+    
+    // Update mappings panel
+    updateMappingsPanel();
+    
+    // Sync with main config
+    syncMappingsToConfig();
+}
+
+// Listen for hardware input during mapping AND for live visualization
+let monitorCallback = null;
+let liveInputCallback = null;
+
+function startInputListening() {
+    // Hook into the monitor system
+    monitorCallback = (usage, value, port) => {
+        console.log('Easy Setup received input:', usage, value, port, 'waiting:', easySetupState.waitingForInput);
+        if (easySetupState.waitingForInput) {
+            // For buttons, value 1 means pressed, 0 means released
+            // For axes, any non-zero value means movement
+            // Accept any non-zero value as input, but debounce to avoid fluctuations
+            if (value !== 0) {
+                const now = Date.now();
+                const timeSinceLastInput = now - easySetupState.lastInputTime;
+                
+                // Debounce: only accept input if it's different from last input or enough time has passed
+                if (usage !== easySetupState.lastInputUsage || timeSinceLastInput > easySetupState.inputDebounceMs) {
+                    easySetupState.lastInputTime = now;
+                    easySetupState.lastInputUsage = usage;
+                    
+                    // Update overlay to show detected input
+                    const overlay = document.querySelector('.mapping-overlay');
+                    const sourceName = getUsageName(usage) || usage;
+                    overlay.querySelector('.mapping-status').textContent = `Gedetecteerd: ${sourceName}`;
+                    
+                    // Small delay before completing to show the detected input
+                    setTimeout(() => {
+                        console.log('Completing mapping with:', usage, value, port);
+                        completeMapping(usage, port);
+                    }, 200);
+                }
+            }
+        }
+    };
+    
+    // Always register the callback
+    window.easySetupMonitorCallback = monitorCallback;
+    console.log('Easy Setup monitor callback registered, waiting for input...');
+    
+    // Enable monitor by triggering the Monitor tab show event
+    // This will call monitor_tab_shown which enables the monitor
+    const monitorTab = document.getElementById('nav-monitor-tab');
+    if (monitorTab) {
+        // Dispatch the shown.bs.tab event to enable monitor
+        const showEvent = new Event('shown.bs.tab', { bubbles: true });
+        monitorTab.dispatchEvent(showEvent);
+        console.log('Monitor enabled via tab event dispatch');
+    }
+}
+
+function stopInputListening() {
+    window.easySetupMonitorCallback = null;
+    monitorCallback = null;
+    
+    // Don't disable monitor here - it might be used by the Monitor tab
+    // The monitor will be disabled when the user closes the device or navigates away
+}
+
+// Start live input visualization - shows mapped buttons lighting up when hardware input is received
+function startLiveInputVisualization() {
+    console.log('Starting live input visualization...');
+    
+    liveInputCallback = (usage, value, port) => {
+        // Don't interfere with mapping mode
+        if (easySetupState.waitingForInput) return;
+        
+        // Find if this source_usage is mapped to any target
+        const mapping = easySetupState.mappings.find(m => m.source_usage === usage);
+        if (!mapping) return;
+        
+        // Find the button element for this target
+        const buttonUsages = BUTTON_USAGES[easySetupState.currentControllerType] || {};
+        const btnId = Object.keys(buttonUsages).find(key => buttonUsages[key] === mapping.target_usage);
+        if (!btnId) return;
+        
+        const controller = document.querySelector('.controller:not(.hidden)');
+        if (!controller) return;
+        
+        const buttonElement = controller.querySelector(`[data-btn-id="${btnId}"]`);
+        if (!buttonElement) return;
+        
+        // Show pressed state when value > 0, remove when released
+        if (value !== 0) {
+            console.log('Live input: pressing', btnId);
+            buttonElement.classList.add('live-pressed');
+        } else {
+            console.log('Live input: releasing', btnId);
+            buttonElement.classList.remove('live-pressed');
+        }
+    };
+    
+    window.easySetupLiveCallback = liveInputCallback;
+    
+    // Also enable monitor
+    const monitorTab = document.getElementById('nav-monitor-tab');
+    if (monitorTab) {
+        const showEvent = new Event('shown.bs.tab', { bubbles: true });
+        monitorTab.dispatchEvent(showEvent);
+    }
+}
+
+function stopLiveInputVisualization() {
+    window.easySetupLiveCallback = null;
+    liveInputCallback = null;
+    
+    // Remove all live-pressed classes
+    document.querySelectorAll('.live-pressed').forEach(el => el.classList.remove('live-pressed'));
+}
+
+// Update the mappings summary panel
+function updateMappingsPanel() {
+    const panel = document.querySelector('.mappings-list');
+    if (!panel) return;
+    
+    panel.innerHTML = '';
+    
+    if (easySetupState.mappings.length === 0) {
+        panel.innerHTML = '<div class="text-muted text-center py-3">Nog geen mappings geconfigureerd</div>';
+        return;
+    }
+    
+    easySetupState.mappings.forEach((mapping, index) => {
+        const item = document.createElement('div');
+        item.className = 'mapping-item';
+        
+        const sourceName = getUsageName(mapping.source_usage) || mapping.source_usage;
+        let targetName = getUsageName(mapping.target_usage) || mapping.target_usage;
+        
+        // Add direction indicator for button-to-axis mappings
+        let directionIndicator = '';
+        if (mapping.isButtonToAxis && mapping.direction) {
+            const dirIcons = {
+                'x-positive': '→',
+                'x-negative': '←',
+                'y-positive': '↓',
+                'y-negative': '↑'
+            };
+            directionIndicator = dirIcons[mapping.direction] || '';
+            if (mapping.strength && mapping.strength !== 100) {
+                directionIndicator += ` ${mapping.strength}%`;
+            }
+        }
+        
+        // Find the button element for this mapping to highlight it
+        const btnId = Object.keys(BUTTON_USAGES[easySetupState.currentControllerType] || {}).find(
+            key => BUTTON_USAGES[easySetupState.currentControllerType][key] === mapping.target_usage
+        );
+        
+        item.innerHTML = `
+            <div class="mapping-info">
+                <span class="mapping-label">Input:</span>
+                <span class="source-name">${sourceName}</span>
+            </div>
+            <span class="mapping-arrow">→</span>
+            <div class="mapping-info">
+                <span class="mapping-label">Output:</span>
+                <span class="target-name">${targetName} ${directionIndicator}</span>
+            </div>
+            <button class="delete-mapping" data-index="${index}" title="Verwijder mapping">×</button>
+        `;
+        
+        // Add special styling for button-to-axis mappings
+        if (mapping.isButtonToAxis) {
+            item.classList.add('button-to-axis');
+        }
+        
+        // Add click handler to show mapping on controller
+        item.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('delete-mapping')) {
+                // Find and highlight the button on the controller
+                if (btnId) {
+                    const controller = document.querySelector('.controller:not(.hidden)');
+                    if (controller) {
+                        const buttonElement = controller.querySelector(`[data-btn-id="${btnId}"]`);
+                        if (buttonElement) {
+                            showExistingMapping(btnId, mapping.target_usage, buttonElement, mapping);
+                        }
+                    }
+                }
+            }
+        });
+        
+        item.querySelector('.delete-mapping').addEventListener('click', (e) => {
+            e.stopPropagation();
+            deleteMapping(index);
+        });
+        
+        panel.appendChild(item);
+    });
+}
+
+// Delete a mapping
+function deleteMapping(index) {
+    easySetupState.mappings.splice(index, 1);
+    updateMappingsPanel();
+    syncMappingsToConfig();
+}
+
+// Sync mappings to the main config
+function syncMappingsToConfig() {
+    // Trigger custom event to sync with main code.js
+    const event = new CustomEvent('easySetupMappingsChanged', {
+        detail: { mappings: easySetupState.mappings }
+    });
+    document.dispatchEvent(event);
+}
+
+// Get human-readable name for a usage code
+function getUsageName(usageCode) {
+    // Get the current descriptor number to look up the correct usage names
+    const easySetupDropdown = document.getElementById('easy-setup-device-type-dropdown');
+    const mainDropdown = document.getElementById('our_descriptor_number_dropdown');
+    const dropdown = easySetupDropdown || mainDropdown;
+    const descriptorIdx = dropdown ? parseInt(dropdown.value, 10) : 5; // Default to 5 (XAC)
+    
+    // Check in the correct descriptor's usages
+    if (usages[descriptorIdx] && usages[descriptorIdx][usageCode]) {
+        return usages[descriptorIdx][usageCode].name;
+    }
+    
+    // Fallback: Check in source usages
+    for (const category of ['source_0', 'source_1', 'source']) {
+        if (usages[category] && usages[category][usageCode]) {
+            return usages[category][usageCode].name;
+        }
+    }
+    // Fallback: Check in target usages
+    for (const category of ['target_0', 'target_1', 'target']) {
+        if (usages[category] && usages[category][usageCode]) {
+            return usages[category][usageCode].name;
+        }
+    }
+    return null;
+}
+
+// Set up the mapping overlay
+function setupMappingOverlay() {
+    const overlay = document.querySelector('.mapping-overlay');
+    if (!overlay) return;
+    
+    overlay.querySelector('.cancel-btn').addEventListener('click', cancelMapping);
+}
+
+// Set up sensitivity and deadzone sliders
+function setupSliderControls() {
+    const sensitivitySlider = document.getElementById('easy-sensitivity');
+    const deadzoneSlider = document.getElementById('easy-deadzone');
+    
+    if (sensitivitySlider) {
+        sensitivitySlider.addEventListener('input', (e) => {
+            easySetupState.sensitivity = parseInt(e.target.value);
+            document.getElementById('sensitivity-value').textContent = `${easySetupState.sensitivity}%`;
+        });
+    }
+    
+    if (deadzoneSlider) {
+        deadzoneSlider.addEventListener('input', (e) => {
+            easySetupState.deadzone = parseInt(e.target.value);
+            document.getElementById('deadzone-value').textContent = `${easySetupState.deadzone}%`;
         });
     }
 }
 
+// Set up template expression selector
+function setupTemplateSelector() {
+    const select = document.getElementById('template-select');
+    if (!select) return;
+    
+    EXPRESSION_TEMPLATES.forEach(template => {
+        const option = document.createElement('option');
+        option.value = template.id;
+        option.textContent = template.name;
+        select.appendChild(option);
+    });
+    
+    const applyBtn = document.querySelector('.template-apply-btn');
+    if (applyBtn) {
+        applyBtn.addEventListener('click', applySelectedTemplate);
+    }
+}
+
+// Apply the selected template
+function applySelectedTemplate() {
+    const select = document.getElementById('template-select');
+    const templateId = select.value;
+    
+    const template = EXPRESSION_TEMPLATES.find(t => t.id === templateId);
+    if (!template) return;
+    
+    // Trigger event to apply template to main config
+    const event = new CustomEvent('easySetupApplyTemplate', {
+        detail: template
+    });
+    document.dispatchEvent(event);
+    
+    // Show confirmation
+    showToast(`Template "${template.name}" toegepast!`);
+}
+
+// Set up advanced mode toggle
+function setupAdvancedToggle() {
+    const toggleBtn = document.querySelector('.advanced-toggle-btn');
+    if (!toggleBtn) return;
+    
+    toggleBtn.addEventListener('click', () => {
+        // Switch to the advanced mappings tab
+        const mappingsTab = document.getElementById('nav-mappings-tab');
+        if (mappingsTab) {
+            mappingsTab.click();
+        }
+    });
+}
+
+// Show toast notification
+function showToast(message) {
+    // Simple toast implementation
+    const toast = document.createElement('div');
+    toast.className = 'easy-toast';
+    toast.textContent = message;
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--es-success, #00d9a5);
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        z-index: 9999;
+        animation: fadeInOut 2s forwards;
+    `;
+    
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2000);
+}
+
+// Clear all mappings
+export function clearAllMappings() {
+    easySetupState.mappings = [];
+    
+    // Reset button states (now using data-btn-id instead of btn-region class)
+    document.querySelectorAll('[data-btn-id].mapped').forEach(el => {
+        el.classList.remove('mapped');
+    });
+    
+    updateMappingsPanel();
+    syncMappingsToConfig();
+}
+
+// Export current mappings for the main config
+export function getEasySetupMappings() {
+    return easySetupState.mappings;
+}
+
+// Get controller type descriptor index
+export function getControllerDescriptorIdx() {
+    return CONTROLLER_TYPES[easySetupState.currentControllerType].descriptorIdx;
+}
+
+// ============================================
+// STICK MAPPING PANEL
+// ============================================
+
+let stickPanelState = {
+    isOpen: false,
+    currentStick: null, // 'left' or 'right'
+    stickElement: null,
+    inputType: 'axis', // 'axis' or 'button'
+    xMapping: null,
+    yMapping: null,
+    // Button-to-axis mappings
+    buttonMappings: {
+        'x-positive': null, // { usage, port }
+        'x-negative': null,
+        'y-positive': null,
+        'y-negative': null
+    },
+    xStrength: 100, // Percentage of full axis movement for buttons
+    yStrength: 100,
+    deadzone: 15,
+    sensitivity: 100,
+    invertX: false,
+    invertY: false,
+    waitingForAxis: null, // 'x', 'y', or null
+    waitingForButton: null, // 'x-positive', 'x-negative', 'y-positive', 'y-negative', or null
+    waitingButtonElement: null,
+    waitingDirectionDiv: null,
+    livePreviewActive: false
+};
+
+// Open the stick mapping panel
+function openStickMappingPanel(stick, element) {
+    console.log('Opening stick mapping panel for:', stick);
+    
+    const panel = document.getElementById('stick-mapping-panel');
+    if (!panel) return;
+    
+    stickPanelState.isOpen = true;
+    stickPanelState.currentStick = stick;
+    stickPanelState.stickElement = element;
+    
+    // Update panel title
+    const title = panel.querySelector('.stick-panel-title');
+    title.textContent = stick === 'left' ? 'Linker Stick' : 'Rechter Stick';
+    
+    // Load existing mappings for this stick
+    loadExistingStickMappings(stick);
+    
+    // Update UI state
+    updateStickPanelUI();
+    
+    // Set up panel event listeners
+    setupStickPanelListeners();
+    
+    // Start live preview
+    startStickLivePreview();
+    
+    // Show panel
+    panel.classList.add('active');
+}
+
+// Close the stick mapping panel
+function closeStickMappingPanel() {
+    const panel = document.getElementById('stick-mapping-panel');
+    if (!panel) return;
+    
+    stickPanelState.isOpen = false;
+    stickPanelState.waitingForAxis = null;
+    stickPanelState.waitingForButton = null;
+    
+    // Stop live preview
+    stopStickLivePreview();
+    
+    // Remove waiting states
+    panel.querySelectorAll('.map-axis-btn.waiting').forEach(btn => btn.classList.remove('waiting'));
+    
+    // Hide panel
+    panel.classList.remove('active');
+    
+    // Save stick mappings
+    saveStickMappings();
+}
+
+// Load existing mappings for the current stick
+function loadExistingStickMappings(stick) {
+    const xUsage = stick === 'left' ? '0x00010030' : '0x00010032';
+    const yUsage = stick === 'left' ? '0x00010031' : '0x00010035';
+    
+    // Find existing X mapping
+    stickPanelState.xMapping = easySetupState.mappings.find(m => m.target_usage === xUsage) || null;
+    
+    // Find existing Y mapping
+    stickPanelState.yMapping = easySetupState.mappings.find(m => m.target_usage === yUsage) || null;
+    
+    // Load deadzone/sensitivity from existing mappings or use defaults
+    if (stickPanelState.xMapping) {
+        stickPanelState.deadzone = stickPanelState.xMapping.deadzone || 15;
+        stickPanelState.sensitivity = (stickPanelState.xMapping.scaling || 1000) / 10;
+    }
+}
+
+// Update the panel UI based on current state
+function updateStickPanelUI() {
+    const panel = document.getElementById('stick-mapping-panel');
+    if (!panel) return;
+    
+    // Update X axis section
+    const xSection = panel.querySelector('.axis-mapping-section[data-axis="x"]');
+    const xStatus = xSection.querySelector('.axis-status');
+    const xInfo = xSection.querySelector('.axis-source-info');
+    
+    if (stickPanelState.xMapping) {
+        xSection.classList.add('mapped');
+        xStatus.textContent = '✓ Gemapped';
+        xStatus.classList.add('mapped');
+        const sourceName = getUsageName(stickPanelState.xMapping.source_usage) || stickPanelState.xMapping.source_usage;
+        xInfo.textContent = `Bron: ${sourceName}`;
+    } else {
+        xSection.classList.remove('mapped');
+        xStatus.textContent = 'Niet gemapped';
+        xStatus.classList.remove('mapped');
+        xInfo.textContent = '';
+    }
+    
+    // Update Y axis section
+    const ySection = panel.querySelector('.axis-mapping-section[data-axis="y"]');
+    const yStatus = ySection.querySelector('.axis-status');
+    const yInfo = ySection.querySelector('.axis-source-info');
+    
+    if (stickPanelState.yMapping) {
+        ySection.classList.add('mapped');
+        yStatus.textContent = '✓ Gemapped';
+        yStatus.classList.add('mapped');
+        const sourceName = getUsageName(stickPanelState.yMapping.source_usage) || stickPanelState.yMapping.source_usage;
+        yInfo.textContent = `Bron: ${sourceName}`;
+    } else {
+        ySection.classList.remove('mapped');
+        yStatus.textContent = 'Niet gemapped';
+        yStatus.classList.remove('mapped');
+        yInfo.textContent = '';
+    }
+    
+    // Update sliders
+    const deadzoneSlider = panel.querySelector('.stick-deadzone-slider');
+    const sensitivitySlider = panel.querySelector('.stick-sensitivity-slider');
+    
+    if (deadzoneSlider) {
+        deadzoneSlider.value = stickPanelState.deadzone;
+        deadzoneSlider.nextElementSibling.textContent = `${stickPanelState.deadzone}%`;
+    }
+    
+    if (sensitivitySlider) {
+        sensitivitySlider.value = stickPanelState.sensitivity;
+        sensitivitySlider.nextElementSibling.textContent = `${stickPanelState.sensitivity}%`;
+    }
+    
+    // Update deadzone ring visual
+    updateDeadzoneRingVisual();
+}
+
+// Update the visual deadzone ring
+function updateDeadzoneRingVisual() {
+    const ring = document.querySelector('.stick-deadzone-ring');
+    if (ring) {
+        const size = stickPanelState.deadzone * 2; // Scale to percentage of container
+        ring.style.width = `${size}%`;
+        ring.style.height = `${size}%`;
+    }
+}
+
+// Set up panel event listeners
+function setupStickPanelListeners() {
+    const panel = document.getElementById('stick-mapping-panel');
+    if (!panel) return;
+    
+    // Close button
+    const closeBtn = panel.querySelector('.stick-panel-close');
+    closeBtn.onclick = closeStickMappingPanel;
+    
+    // Done button
+    const doneBtn = panel.querySelector('.stick-panel-done');
+    doneBtn.onclick = closeStickMappingPanel;
+    
+    // Map axis buttons
+    panel.querySelectorAll('.map-axis-btn').forEach(btn => {
+        btn.onclick = () => startAxisMapping(btn.dataset.axis);
+    });
+    
+    // Input type toggle
+    panel.querySelectorAll('.input-type-btn').forEach(btn => {
+        btn.onclick = () => toggleInputType(btn.dataset.type);
+    });
+    
+    // Button-to-axis mapping buttons (new structure)
+    panel.querySelectorAll('.map-btn-axis').forEach(btn => {
+        const directionDiv = btn.closest('.button-direction');
+        const direction = directionDiv.dataset.direction;
+        btn.onclick = () => startButtonToAxisMapping(direction, btn, directionDiv);
+    });
+    
+    // Strength sliders for button mode
+    panel.querySelectorAll('.strength-slider').forEach(slider => {
+        slider.oninput = (e) => {
+            const value = parseInt(e.target.value);
+            const axis = e.target.dataset.axis;
+            e.target.nextElementSibling.textContent = `${value}%`;
+            
+            // Store strength in state
+            if (axis === 'x') {
+                stickPanelState.xStrength = value;
+            } else {
+                stickPanelState.yStrength = value;
+            }
+        };
+    });
+    
+    // Deadzone slider
+    const deadzoneSlider = panel.querySelector('.stick-deadzone-slider');
+    if (deadzoneSlider) {
+        deadzoneSlider.oninput = (e) => {
+            stickPanelState.deadzone = parseInt(e.target.value);
+            e.target.nextElementSibling.textContent = `${stickPanelState.deadzone}%`;
+            updateDeadzoneRingVisual();
+        };
+    }
+    
+    // Sensitivity slider
+    const sensitivitySlider = panel.querySelector('.stick-sensitivity-slider');
+    if (sensitivitySlider) {
+        sensitivitySlider.oninput = (e) => {
+            stickPanelState.sensitivity = parseInt(e.target.value);
+            e.target.nextElementSibling.textContent = `${stickPanelState.sensitivity}%`;
+        };
+    }
+    
+    // Invert checkboxes
+    const invertX = panel.querySelector('.invert-x');
+    const invertY = panel.querySelector('.invert-y');
+    
+    if (invertX) invertX.onchange = (e) => { stickPanelState.invertX = e.target.checked; };
+    if (invertY) invertY.onchange = (e) => { stickPanelState.invertY = e.target.checked; };
+}
+
+// Toggle input type (axis or button)
+function toggleInputType(type) {
+    const panel = document.getElementById('stick-mapping-panel');
+    
+    // Update button states
+    panel.querySelectorAll('.input-type-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.type === type);
+    });
+    
+    stickPanelState.inputType = type;
+    
+    // Show/hide relevant sections
+    const buttonMode = panel.querySelector('.button-mapping-mode');
+    const axisSections = panel.querySelector('.stick-axis-mappings');
+    
+    if (type === 'button') {
+        buttonMode.style.display = 'flex';
+        axisSections.style.display = 'none';
+    } else {
+        buttonMode.style.display = 'none';
+        axisSections.style.display = 'flex';
+    }
+}
+
+// Start mapping an axis
+// Axis detection state
+let axisDetectionState = {
+    movementTracker: {}, // { usage: { maxAbsValue, port, lastValue } }
+    detectionTimeout: null,
+    detectionWindowMs: 500, // Time window to collect movement data
+    minMovementThresholdPercent: 0.15, // 15% of observed max value
+    absoluteMinThreshold: 20, // Absolute minimum (for 0-255 joysticks: 20 is ~8%)
+    dominanceRatio: 2.0, // Dominant axis must be 2x larger than others (lowered from 2.5)
+    observedMaxValue: 0 // Track the largest value we've seen to adapt threshold
+};
+
+function startAxisMapping(axis) {
+    console.log('Starting axis mapping for:', axis);
+    
+    const panel = document.getElementById('stick-mapping-panel');
+    const btn = panel.querySelector(`.map-axis-btn[data-axis="${axis}"]`);
+    
+    // Set waiting state
+    stickPanelState.waitingForAxis = axis;
+    btn.classList.add('waiting');
+    btn.textContent = axis === 'x' ? 'Beweeg ←→...' : 'Beweeg ↑↓...';
+    
+    // Reset movement tracker and adaptive threshold
+    axisDetectionState.movementTracker = {};
+    axisDetectionState.observedMaxValue = 0;
+    if (axisDetectionState.detectionTimeout) {
+        clearTimeout(axisDetectionState.detectionTimeout);
+    }
+    
+    // Register callback for input
+    window.stickMappingCallback = (usage, value, port) => {
+        if (!stickPanelState.waitingForAxis) return;
+        
+        const absValue = Math.abs(value);
+        
+        // Track movement for each usage
+        if (!axisDetectionState.movementTracker[usage]) {
+            axisDetectionState.movementTracker[usage] = { maxAbsValue: 0, port: port, lastValue: 0 };
+        }
+        
+        // Update max absolute value seen for this usage
+        if (absValue > axisDetectionState.movementTracker[usage].maxAbsValue) {
+            axisDetectionState.movementTracker[usage].maxAbsValue = absValue;
+            axisDetectionState.movementTracker[usage].port = port;
+        }
+        axisDetectionState.movementTracker[usage].lastValue = value;
+        
+        // Check if we have a clear dominant axis
+        checkForDominantAxis(btn);
+    };
+    
+    // Enable monitor
+    const monitorTab = document.getElementById('nav-monitor-tab');
+    if (monitorTab) {
+        const showEvent = new Event('shown.bs.tab', { bubbles: true });
+        monitorTab.dispatchEvent(showEvent);
+    }
+}
+
+// Check if we have a clear dominant axis
+function checkForDominantAxis(btn) {
+    const tracker = axisDetectionState.movementTracker;
+    const usages = Object.keys(tracker);
+    
+    if (usages.length === 0) return;
+    
+    // Find the usage with the highest max value
+    let dominantUsage = null;
+    let dominantValue = 0;
+    let secondHighestValue = 0;
+    let dominantPort = 0;
+    
+    usages.forEach(usage => {
+        const data = tracker[usage];
+        if (data.maxAbsValue > dominantValue) {
+            secondHighestValue = dominantValue;
+            dominantValue = data.maxAbsValue;
+            dominantUsage = usage;
+            dominantPort = data.port;
+        } else if (data.maxAbsValue > secondHighestValue) {
+            secondHighestValue = data.maxAbsValue;
+        }
+    });
+    
+    console.log('Axis detection - Dominant:', dominantUsage, dominantValue, 'Second:', secondHighestValue);
+    
+    // Update observed max value for adaptive threshold
+    if (dominantValue > axisDetectionState.observedMaxValue) {
+        axisDetectionState.observedMaxValue = dominantValue;
+    }
+    
+    // Calculate adaptive threshold based on observed max value
+    // Use percentage of max value, but at least the absolute minimum
+    const adaptiveThreshold = Math.max(
+        axisDetectionState.observedMaxValue * axisDetectionState.minMovementThresholdPercent,
+        axisDetectionState.absoluteMinThreshold
+    );
+    
+    console.log('Adaptive threshold:', adaptiveThreshold, 'Observed max:', axisDetectionState.observedMaxValue);
+    
+    // Check if dominant axis meets our criteria:
+    // 1. Above adaptive minimum threshold
+    // 2. At least dominanceRatio times larger than second highest (or second is 0)
+    const meetsThreshold = dominantValue >= adaptiveThreshold;
+    const isDominant = secondHighestValue === 0 || 
+                       (dominantValue / secondHighestValue) >= axisDetectionState.dominanceRatio;
+    
+    if (meetsThreshold && isDominant && dominantUsage) {
+        console.log('Dominant axis found:', dominantUsage, 'value:', dominantValue);
+        
+        // Accept this axis
+        completeAxisMapping(dominantUsage, dominantPort, btn);
+    }
+}
+
+// Complete the axis mapping
+function completeAxisMapping(usage, port, btn) {
+    const axisMapped = stickPanelState.waitingForAxis;
+    const stick = stickPanelState.currentStick;
+    const targetUsage = axisMapped === 'x' 
+        ? (stick === 'left' ? '0x00010030' : '0x00010032')
+        : (stick === 'left' ? '0x00010031' : '0x00010035');
+    
+    // Create mapping
+    const mapping = {
+        source_usage: usage,
+        source_port: port,
+        target_usage: targetUsage,
+        layer: 0,
+        sticky: false,
+        scaling: stickPanelState.sensitivity * 10,
+        deadzone: stickPanelState.deadzone
+    };
+    
+    // Remove existing mapping for this target
+    const existingIdx = easySetupState.mappings.findIndex(m => m.target_usage === targetUsage);
+    if (existingIdx !== -1) {
+        easySetupState.mappings.splice(existingIdx, 1);
+    }
+    
+    // Add new mapping
+    easySetupState.mappings.push(mapping);
+    
+    // Update state
+    if (axisMapped === 'x') {
+        stickPanelState.xMapping = mapping;
+    } else {
+        stickPanelState.yMapping = mapping;
+    }
+    
+    // Reset button
+    btn.classList.remove('waiting');
+    btn.textContent = 'Map Input';
+    stickPanelState.waitingForAxis = null;
+    
+    // Clear tracking
+    axisDetectionState.movementTracker = {};
+    window.stickMappingCallback = null;
+    
+    // Update UI
+    updateStickPanelUI();
+    updateMappingsPanel();
+    
+    // Mark stick as mapped on controller
+    if (stickPanelState.stickElement) {
+        stickPanelState.stickElement.classList.add('mapped');
+    }
+}
+
+// Start button-to-axis mapping
+function startButtonToAxisMapping(direction, btn, directionDiv) {
+    console.log('Starting button-to-axis mapping for:', direction);
+    
+    stickPanelState.waitingForButton = direction;
+    stickPanelState.waitingButtonElement = btn;
+    stickPanelState.waitingDirectionDiv = directionDiv;
+    
+    btn.textContent = '...';
+    btn.classList.add('waiting');
+    
+    // Register callback
+    window.stickMappingCallback = (usage, value, port) => {
+        // Only accept button presses (value > 0, and it should be a button, not an axis)
+        // Buttons typically have value of 1 when pressed
+        // Axes have large values like thousands
+        if (stickPanelState.waitingForButton && value !== 0) {
+            const dir = stickPanelState.waitingForButton;
+            const currentBtn = stickPanelState.waitingButtonElement;
+            const currentDiv = stickPanelState.waitingDirectionDiv;
+            
+            // Store button mapping
+            stickPanelState.buttonMappings[dir] = { usage, port };
+            
+            // Create the actual mapping
+            createButtonToAxisMapping(dir, usage, port);
+            
+            // Update UI
+            currentBtn.textContent = 'Map';
+            currentBtn.classList.remove('waiting');
+            currentDiv.classList.add('mapped');
+            
+            const statusSpan = currentDiv.querySelector('.btn-status');
+            const shortName = getUsageName(usage) || usage;
+            // Truncate long names
+            statusSpan.textContent = shortName.length > 8 ? shortName.substring(0, 8) + '...' : shortName;
+            statusSpan.classList.add('mapped');
+            statusSpan.title = shortName;
+            
+            stickPanelState.waitingForButton = null;
+            stickPanelState.waitingButtonElement = null;
+            stickPanelState.waitingDirectionDiv = null;
+            window.stickMappingCallback = null;
+            
+            // Mark stick as mapped
+            if (stickPanelState.stickElement) {
+                stickPanelState.stickElement.classList.add('mapped');
+            }
+            
+            updateMappingsPanel();
+        }
+    };
+    
+    // Enable monitor
+    const monitorTab = document.getElementById('nav-monitor-tab');
+    if (monitorTab) {
+        const showEvent = new Event('shown.bs.tab', { bubbles: true });
+        monitorTab.dispatchEvent(showEvent);
+    }
+}
+
+// Create the actual button-to-axis mapping
+function createButtonToAxisMapping(direction, sourceUsage, sourcePort) {
+    const stick = stickPanelState.currentStick;
+    const axis = direction.startsWith('x') ? 'x' : 'y';
+    const isPositive = direction.includes('positive');
+    
+    // Get target usage for this axis
+    const targetUsage = axis === 'x'
+        ? (stick === 'left' ? '0x00010030' : '0x00010032')
+        : (stick === 'left' ? '0x00010031' : '0x00010035');
+    
+    // Get strength percentage
+    const strength = axis === 'x' ? stickPanelState.xStrength : stickPanelState.yStrength;
+    
+    // Calculate scaling value
+    // For button-to-axis: we want pressing the button to output a specific axis value
+    // Positive direction = positive value, Negative direction = negative value
+    // The scaling determines how much of the full range to use
+    // Full range is typically 32767, so at 100% we want to output 32767 (or -32767)
+    const maxValue = 32767;
+    const outputValue = Math.round(maxValue * (strength / 100));
+    
+    // Create mapping
+    // For button-to-axis, we use a special scaling approach:
+    // - Source is a button (value 0 or 1)
+    // - We want to multiply by the output value
+    const scaling = isPositive ? outputValue : -outputValue;
+    
+    const mapping = {
+        source_usage: sourceUsage,
+        source_port: sourcePort,
+        target_usage: targetUsage,
+        layer: 0,
+        sticky: false,
+        scaling: scaling,
+        deadzone: 0, // No deadzone for buttons
+        isButtonToAxis: true, // Mark this as button-to-axis mapping
+        direction: direction,
+        strength: strength
+    };
+    
+    // Remove existing mapping for this exact direction
+    const existingIdx = easySetupState.mappings.findIndex(m => 
+        m.target_usage === targetUsage && 
+        m.isButtonToAxis && 
+        m.direction === direction
+    );
+    if (existingIdx !== -1) {
+        easySetupState.mappings.splice(existingIdx, 1);
+    }
+    
+    // Add new mapping
+    easySetupState.mappings.push(mapping);
+    
+    console.log('Created button-to-axis mapping:', mapping);
+    
+    // Sync to main config
+    syncMappingsToConfig();
+}
+
+// Start live preview for the stick
+function startStickLivePreview() {
+    stickPanelState.livePreviewActive = true;
+    
+    window.stickPreviewCallback = (usage, value, port) => {
+        if (!stickPanelState.livePreviewActive) return;
+        
+        const dot = document.querySelector('.stick-preview-dot');
+        const xValue = document.querySelector('.x-value');
+        const yValue = document.querySelector('.y-value');
+        if (!dot) return;
+        
+        // Check if this usage matches our mapped axes
+        const stick = stickPanelState.currentStick;
+        const xTargetUsage = stick === 'left' ? '0x00010030' : '0x00010032';
+        const yTargetUsage = stick === 'left' ? '0x00010031' : '0x00010035';
+        
+        // Also check source usages from mappings
+        const xSource = stickPanelState.xMapping?.source_usage;
+        const ySource = stickPanelState.yMapping?.source_usage;
+        
+        // Normalize value to -1 to 1 range (assuming 32-bit signed or similar)
+        let normalizedValue = value;
+        if (Math.abs(value) > 1) {
+            normalizedValue = value / 32767; // Common joystick range
+        }
+        
+        // Clamp to -1 to 1
+        normalizedValue = Math.max(-1, Math.min(1, normalizedValue));
+        
+        // Update position based on which axis this is
+        if (usage === xSource || usage === xTargetUsage) {
+            const x = 50 + (normalizedValue * 40); // 40% movement range
+            dot.style.left = `${x}%`;
+            xValue.textContent = `X: ${Math.round(normalizedValue * 100)}`;
+        } else if (usage === ySource || usage === yTargetUsage) {
+            const y = 50 + (normalizedValue * 40); // Inverted for visual
+            dot.style.top = `${y}%`;
+            yValue.textContent = `Y: ${Math.round(normalizedValue * 100)}`;
+        }
+    };
+    
+    // Enable monitor
+    const monitorTab = document.getElementById('nav-monitor-tab');
+    if (monitorTab) {
+        const showEvent = new Event('shown.bs.tab', { bubbles: true });
+        monitorTab.dispatchEvent(showEvent);
+    }
+}
+
+// Stop live preview
+function stopStickLivePreview() {
+    stickPanelState.livePreviewActive = false;
+    window.stickPreviewCallback = null;
+    
+    // Reset dot position
+    const dot = document.querySelector('.stick-preview-dot');
+    if (dot) {
+        dot.style.left = '50%';
+        dot.style.top = '50%';
+    }
+}
+
+// Save stick mappings when closing panel
+function saveStickMappings() {
+    // Update deadzone and sensitivity on existing mappings
+    if (stickPanelState.xMapping) {
+        stickPanelState.xMapping.deadzone = stickPanelState.deadzone;
+        stickPanelState.xMapping.scaling = stickPanelState.sensitivity * 10;
+    }
+    if (stickPanelState.yMapping) {
+        stickPanelState.yMapping.deadzone = stickPanelState.deadzone;
+        stickPanelState.yMapping.scaling = stickPanelState.sensitivity * 10;
+    }
+    
+    // Sync to main config
+    syncMappingsToConfig();
+    updateMappingsPanel();
+}
+
+export { EXPRESSION_TEMPLATES, CONTROLLER_TYPES };

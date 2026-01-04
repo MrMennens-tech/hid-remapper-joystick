@@ -1,14 +1,19 @@
-.0
+<!doctype html>
 <html style="scrollbar-gutter: stable both-edges;">
 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
-    <title>HID Remapper Configuration</title>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js" integrity="sha384-QJHtvGhmr9XOIpI6YVutG+2QOK9T+ZnN4kzFN1RtK3zEFEIsxhlmWl5/YESvpZ13" crossorigin="anonymous"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    <link href="easy-setup.css" rel="stylesheet">
+    <link href="controllers/xbox-style.css" rel="stylesheet">
+    <title>MT Controller Hub Configuration</title>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js"
+        integrity="sha384-QJHtvGhmr9XOIpI6YVutG+2QOK9T+ZnN4kzFN1RtK3zEFEIsxhlmWl5/YESvpZ13"
+        crossorigin="anonymous"></script>
     <script src="code.js" type="module"></script>
-    <script src="easy-setup.js"></script>
+    <script src="easy-setup.js" type="module"></script>
     </script>
 </head>
 
@@ -16,10 +21,7 @@
 
     <div class="container d-flex flex-column" style="max-width: 720px; min-height: 100vh;">
 
-        <div class="d-flex justify-content-between align-items-center mt-sm-5 mt-3">
-            <h1 class="mb-0">HID Remapper Configuration</h1>
-            <a href="simple-ui/simple-mode.html" class="btn btn-success">🎯 Simpele Modus</a>
-        </div>
+        <h1 class="mt-sm-5 mt-3">MT Controller Hub Configuration</h1>
 
         <div class="row my-4">
             <div class="col">
@@ -30,7 +32,8 @@
             </div>
             <div class="col">
                 <button id="save_to_device" type="button" class="btn btn-primary w-100 position-relative">
-                    <span id="save_to_device_checkmark" class="position-absolute top-0 start-100 translate-middle badge bg-success rounded-pill hub_port_badge d-none">&check;</span>
+                    <span id="save_to_device_checkmark"
+                        class="position-absolute top-0 start-100 translate-middle badge bg-success rounded-pill hub_port_badge d-none">&check;</span>
                     <span>Save to device</span>
                 </button>
             </div>
@@ -39,54 +42,287 @@
         <div id="error" class="alert alert-danger d-none"></div>
 
         <div class="nav nav-tabs" id="nav-tab" role="tablist">
-            <button class="nav-link active" id="nav-easy-setup-tab" data-bs-toggle="tab" data-bs-target="#nav-easy-setup" type="button" role="tab">Easy Setup</button>
-            <button class="nav-link" id="nav-mappings-tab" data-bs-toggle="tab" data-bs-target="#nav-mappings" type="button" role="tab">Advanced Setup</button>
-            <button class="nav-link" id="nav-settings-tab" data-bs-toggle="tab" data-bs-target="#nav-settings" type="button" role="tab">Settings</button>
-            <button class="nav-link" id="nav-macros-tab" data-bs-toggle="tab" data-bs-target="#nav-macros" type="button" role="tab">Macros</button>
-            <button class="nav-link" id="nav-expressions-tab" data-bs-toggle="tab" data-bs-target="#nav-expressions" type="button" role="tab">Expressions</button>
-            <button class="nav-link" id="nav-actions-tab" data-bs-toggle="tab" data-bs-target="#nav-actions" type="button" role="tab">Actions</button>
-            <button class="nav-link" id="nav-monitor-tab" data-bs-toggle="tab" data-bs-target="#nav-monitor" type="button" role="tab">Monitor</button>
-            <button class="nav-link" id="nav-examples-tab" data-bs-toggle="tab" data-bs-target="#nav-examples" type="button" role="tab">Examples</button>
+            <button class="nav-link active" id="nav-easy-setup-tab" data-bs-toggle="tab"
+                data-bs-target="#nav-easy-setup" type="button" role="tab">Easy Setup</button>
+            <button class="nav-link" id="nav-mappings-tab" data-bs-toggle="tab" data-bs-target="#nav-mappings"
+                type="button" role="tab">Mappings</button>
+            <button class="nav-link" id="nav-settings-tab" data-bs-toggle="tab" data-bs-target="#nav-settings"
+                type="button" role="tab">Settings</button>
+            <button class="nav-link" id="nav-macros-tab" data-bs-toggle="tab" data-bs-target="#nav-macros" type="button"
+                role="tab">Macros</button>
+            <button class="nav-link" id="nav-expressions-tab" data-bs-toggle="tab" data-bs-target="#nav-expressions"
+                type="button" role="tab">Expressions</button>
+            <button class="nav-link" id="nav-actions-tab" data-bs-toggle="tab" data-bs-target="#nav-actions"
+                type="button" role="tab">Actions</button>
+            <button class="nav-link" id="nav-monitor-tab" data-bs-toggle="tab" data-bs-target="#nav-monitor"
+                type="button" role="tab">Monitor</button>
+            <button class="nav-link" id="nav-examples-tab" data-bs-toggle="tab" data-bs-target="#nav-examples"
+                type="button" role="tab">Examples</button>
         </div>
 
         <div class="tab-content flex-grow-1">
 
+            <!-- Easy Setup Tab -->
             <div class="tab-pane active" id="nav-easy-setup" role="tabpanel" tabindex="0">
-                
-                <div class="row mt-4">
-                    <div class="col-12">
-                        <h4>Eenvoudige Button Mapping</h4>
-                        <p class="text-muted">Klik op een knop in de virtuele controller hieronder en druk vervolgens op de fysieke knop die je wilt mappen. Je hebt 5 seconden de tijd.</p>
-                    </div>
+                <div class="easy-setup-header">
+                    <h3>🎮 Easy Setup</h3>
+                    <p>Klik op een knop op de controller en druk daarna op je fysieke input om te mappen</p>
                 </div>
 
-                <div class="row mt-3">
-                    <div class="col-12 text-center">
-                        <div id="easy-setup-controller-container" class="d-inline-block">
-                            <!-- Controller wordt hier dynamisch geladen -->
+                <!-- Output Type Selector (Emulated device type) -->
+                <div class="output-type-selector">
+                    <label for="easy-setup-device-type-dropdown">Emulated device type:</label>
+                    <select class="form-select" id="easy-setup-device-type-dropdown">
+                        <option value="0">Mouse and keyboard</option>
+                        <option value="1">Absolute mouse and keyboard</option>
+                        <option value="2">Switch gamepad</option>
+                        <option value="3">PS4 arcade stick</option>
+                        <option value="4">Stadia controller</option>
+                        <option value="5" selected>XAC/Flex compatible</option>
+                    </select>
+                </div>
+
+                <!-- Controller Type Selector -->
+                <div class="controller-selector">
+                    <!-- Buttons generated by JavaScript -->
+                </div>
+
+                <!-- Controller Display Area -->
+                <div class="controller-display">
+                    <div class="controller-svg-container">
+                        <!-- Xbox Controller HTML Structure (GamepadViewer style) -->
+                        <div class="controller xbox" id="controller-xac">
+                            <!-- Triggers -->
+                            <div class="triggers">
+                                <div class="trigger left" data-btn-id="btn-lt"></div>
+                                <div class="trigger right" data-btn-id="btn-rt"></div>
+                            </div>
+                            
+                            <!-- Bumpers -->
+                            <div class="bumpers">
+                                <div class="bumper left" data-btn-id="btn-lb"></div>
+                                <div class="bumper right" data-btn-id="btn-rb"></div>
+                            </div>
+                            
+                            <!-- Quadrant (center decorative element) -->
+                            <div class="quadrant"></div>
+                            
+                            <!-- Xbox Home Button -->
+                            <div class="xbox-home" data-btn-id="btn-home"></div>
+                            
+                            <!-- Menu Buttons (Back/Start) -->
+                            <div class="arrows">
+                                <div class="back" data-btn-id="btn-back"></div>
+                                <div class="start" data-btn-id="btn-start"></div>
+                            </div>
+                            
+                            <!-- Face Buttons (ABXY) -->
+                            <div class="abxy">
+                                <div class="button a" data-btn-id="btn-a"></div>
+                                <div class="button b" data-btn-id="btn-b"></div>
+                                <div class="button x" data-btn-id="btn-x"></div>
+                                <div class="button y" data-btn-id="btn-y"></div>
+                            </div>
+                            
+                            <!-- Analog Sticks -->
+                            <div class="sticks">
+                                <div class="stick left" data-btn-id="stick-left" data-stick="left"></div>
+                                <div class="stick right" data-btn-id="stick-right" data-stick="right"></div>
+                            </div>
+                            
+                            <!-- D-Pad -->
+                            <div class="dpad">
+                                <div class="face up" data-btn-id="dpad-up"></div>
+                                <div class="face down" data-btn-id="dpad-down"></div>
+                                <div class="face left" data-btn-id="dpad-left"></div>
+                                <div class="face right" data-btn-id="dpad-right"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Other controller types will be loaded dynamically or added here -->
+                    </div>
+
+                    <!-- Mapping Overlay -->
+                    <div class="mapping-overlay">
+                        <h4>Wacht op input...</h4>
+                        <p>Mapping: <span class="target-button-name">Button</span></p>
+                        <div class="countdown-circle">3</div>
+                        <p class="mapping-status" style="color: var(--es-text-muted); font-size: 0.85rem;">Druk nu een knop in op je hardware</p>
+                        <button class="cancel-btn">Annuleren</button>
+                    </div>
+
+                    <!-- Stick Mapping Panel -->
+                    <div class="stick-mapping-panel" id="stick-mapping-panel">
+                        <div class="stick-panel-header">
+                            <h4>🕹️ <span class="stick-panel-title">Stick Configuratie</span></h4>
+                            <button class="stick-panel-close">×</button>
+                        </div>
+                        
+                        <div class="stick-panel-content">
+                            <!-- Input Type Toggle - TOP -->
+                            <div class="input-type-toggle-top">
+                                <button class="input-type-btn active" data-type="axis">🕹️ Joystick/As</button>
+                                <button class="input-type-btn" data-type="button">🔘 Knoppen</button>
+                            </div>
+                            
+                            <!-- Live Preview Area -->
+                            <div class="stick-preview-area">
+                                <div class="stick-preview-container">
+                                    <div class="stick-deadzone-ring"></div>
+                                    <div class="stick-preview-crosshair"></div>
+                                    <div class="stick-preview-dot"></div>
+                                </div>
+                                <div class="stick-preview-values">
+                                    <span class="axis-value x-value">X: 0</span>
+                                    <span class="axis-value y-value">Y: 0</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Axis Mapping Sections (shown when axis mode active) -->
+                            <div class="stick-axis-mappings">
+                                <div class="axis-mapping-section" data-axis="x">
+                                    <div class="axis-header">
+                                        <span class="axis-icon">←→</span>
+                                        <span class="axis-label">Horizontaal (X-as)</span>
+                                    </div>
+                                    <div class="axis-mapping-row">
+                                        <button class="map-axis-btn" data-axis="x">Map Input</button>
+                                        <span class="axis-status">Niet gemapped</span>
+                                    </div>
+                                    <div class="axis-source-info"></div>
+                                </div>
+                                
+                                <div class="axis-mapping-section" data-axis="y">
+                                    <div class="axis-header">
+                                        <span class="axis-icon">↑↓</span>
+                                        <span class="axis-label">Verticaal (Y-as)</span>
+                                    </div>
+                                    <div class="axis-mapping-row">
+                                        <button class="map-axis-btn" data-axis="y">Map Input</button>
+                                        <span class="axis-status">Niet gemapped</span>
+                                    </div>
+                                    <div class="axis-source-info"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Button mapping mode (hidden by default) -->
+                            <div class="button-mapping-mode" style="display: none;">
+                                <p class="button-mode-intro">Map knoppen naar as bewegingen. Elke richting heeft een aparte knop nodig.</p>
+                                
+                                <!-- X-axis button mapping -->
+                                <div class="button-axis-group" data-axis="x">
+                                    <div class="button-axis-header">←→ Horizontaal (X-as)</div>
+                                    <div class="button-axis-row">
+                                        <div class="button-direction" data-direction="x-negative">
+                                            <span class="dir-icon">←</span>
+                                            <span class="dir-label">Links</span>
+                                            <button class="map-btn-axis">Map</button>
+                                            <span class="btn-status">-</span>
+                                        </div>
+                                        <div class="button-direction" data-direction="x-positive">
+                                            <span class="dir-icon">→</span>
+                                            <span class="dir-label">Rechts</span>
+                                            <button class="map-btn-axis">Map</button>
+                                            <span class="btn-status">-</span>
+                                        </div>
+                                    </div>
+                                    <div class="axis-strength-slider">
+                                        <label>Sterkte:</label>
+                                        <input type="range" class="strength-slider" data-axis="x" min="10" max="100" value="100">
+                                        <span class="strength-value">100%</span>
+                                    </div>
+                                </div>
+                                    
+                                    <!-- Y-axis button mapping -->
+                                    <div class="button-axis-group" data-axis="y">
+                                        <div class="button-axis-header">↑↓ Verticaal (Y-as)</div>
+                                        <div class="button-axis-row">
+                                            <div class="button-direction" data-direction="y-negative">
+                                                <span class="dir-icon">↑</span>
+                                                <span class="dir-label">Omhoog</span>
+                                                <button class="map-btn-axis">Map</button>
+                                                <span class="btn-status">-</span>
+                                            </div>
+                                            <div class="button-direction" data-direction="y-positive">
+                                                <span class="dir-icon">↓</span>
+                                                <span class="dir-label">Omlaag</span>
+                                                <button class="map-btn-axis">Map</button>
+                                                <span class="btn-status">-</span>
+                                            </div>
+                                        </div>
+                                    <div class="axis-strength-slider">
+                                        <label>Sterkte:</label>
+                                        <input type="range" class="strength-slider" data-axis="y" min="10" max="100" value="100">
+                                        <span class="strength-value">100%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Axis Settings -->
+                            <div class="stick-settings">
+                                <div class="stick-slider-group">
+                                    <label>Deadzone</label>
+                                    <input type="range" class="stick-deadzone-slider" min="0" max="50" value="15">
+                                    <span class="stick-slider-value">15%</span>
+                                </div>
+                                <div class="stick-slider-group">
+                                    <label>Gevoeligheid</label>
+                                    <input type="range" class="stick-sensitivity-slider" min="10" max="200" value="100">
+                                    <span class="stick-slider-value">100%</span>
+                                </div>
+                                <div class="stick-invert-options">
+                                    <label class="invert-checkbox">
+                                        <input type="checkbox" class="invert-x"> Inverteer X
+                                    </label>
+                                    <label class="invert-checkbox">
+                                        <input type="checkbox" class="invert-y"> Inverteer Y
+                                    </label>
+                                </div>
+                            </div>
+                    </div>
+
+                        <div class="stick-panel-footer">
+                            <button class="stick-panel-done">✓ Klaar</button>
                         </div>
                     </div>
                 </div>
 
-                <div id="easy-setup-status" class="alert alert-info mt-3 d-none">
-                    <strong>Wachten op input...</strong> Druk nu op de fysieke knop die je wilt mappen op <span id="easy-setup-target-button-name"></span>.
-                    <div class="progress mt-2" style="height: 4px;">
-                        <div id="easy-setup-progress" class="progress-bar" role="progressbar" style="width: 100%"></div>
+                <!-- Settings Sliders -->
+                <div class="slider-controls">
+                    <div class="slider-group">
+                        <label for="easy-sensitivity">Gevoeligheid</label>
+                        <input type="range" id="easy-sensitivity" min="10" max="200" value="100">
+                        <div class="slider-value" id="sensitivity-value">100%</div>
+                    </div>
+                    <div class="slider-group">
+                        <label for="easy-deadzone">Dead Zone</label>
+                        <input type="range" id="easy-deadzone" min="0" max="50" value="10">
+                        <div class="slider-value" id="deadzone-value">10%</div>
                     </div>
                 </div>
 
-                <div class="row mt-4">
-                    <div class="col-12">
-                        <h5>Quick Actions</h5>
-                        <div class="btn-group mt-2" role="group">
-                            <button id="easy-setup-clear-all" type="button" class="btn btn-outline-danger">Wis alle mappings</button>
-                            <button id="easy-setup-swap-sticks" type="button" class="btn btn-outline-primary">Wissel sticks</button>
-                            <button id="easy-setup-mirror-buttons" type="button" class="btn btn-outline-primary">Spiegel knoppen</button>
-                            <button id="easy-setup-reset-defaults" type="button" class="btn btn-outline-secondary">Reset naar standaard</button>
-                        </div>
+                <!-- Expression Templates -->
+                <div class="template-section">
+                    <h5>🔧 Snelle Templates</h5>
+                    <select id="template-select" class="template-select">
+                        <option value="">-- Selecteer een template --</option>
+                        <!-- Options populated by JavaScript -->
+                    </select>
+                    <button class="template-apply-btn">Template Toepassen</button>
+                </div>
+
+                <!-- Mappings Summary -->
+                <div class="mappings-panel">
+                    <h5>📋 Geconfigureerde Mappings</h5>
+                    <div class="mappings-list">
+                        <div class="text-muted text-center py-3">Nog geen mappings geconfigureerd</div>
                     </div>
                 </div>
 
+                <!-- Advanced Toggle -->
+                <div class="advanced-toggle">
+                    <button class="advanced-toggle-btn">⚙️ Geavanceerde Instellingen (Mappings tab)</button>
+                </div>
             </div>
 
             <div class="tab-pane" id="nav-mappings" role="tabpanel" tabindex="0">
@@ -95,12 +331,17 @@
                     <div style="min-width: 720px; width: 100%;">
                         <div class="row my-2 align-items-end">
                             <div class="col-1"></div>
-                            <div class="col-3 text-center"><a href="#" id="input-column-header" class="text-decoration-none text-reset d-block">Input</a></div>
-                            <div class="col-3 text-center"><a href="#" id="output-column-header" class="text-decoration-none text-reset d-block">Output</a></div>
+                            <div class="col-3 text-center"><a href="#" id="input-column-header"
+                                    class="text-decoration-none text-reset d-block">Input</a></div>
+                            <div class="col-3 text-center"><a href="#" id="output-column-header"
+                                    class="text-decoration-none text-reset d-block">Output</a></div>
                             <div class="col-3">
                                 <div class="d-flex align-items-end">
-                                    <div class="flex-fill text-center"><a href="#" id="layer-column-header" class="text-decoration-none text-reset d-block">Layer</a></div>
-                                    <div class="text-start pt-1" style="writing-mode: vertical-rl; transform: rotate(180deg); line-height: 1.2em;">Sticky<br>Tap<br>Hold</div>
+                                    <div class="flex-fill text-center"><a href="#" id="layer-column-header"
+                                            class="text-decoration-none text-reset d-block">Layer</a></div>
+                                    <div class="text-start pt-1"
+                                        style="writing-mode: vertical-rl; transform: rotate(180deg); line-height: 1.2em;">
+                                        Sticky<br>Tap<br>Hold</div>
                                 </div>
                             </div>
                             <div class="col-2 text-center">Scaling</div>
@@ -164,7 +405,8 @@
                     </div>
                     <div class="col-auto">
                         <div class="input-group">
-                            <input type="number" id="partial_scroll_timeout_input" class="form-control text-end" style="max-width: 100px;">
+                            <input type="number" id="partial_scroll_timeout_input" class="form-control text-end"
+                                style="max-width: 100px;">
                             <span class="input-group-text">ms</span>
                         </div>
                     </div>
@@ -175,7 +417,8 @@
                     </div>
                     <div class="col-auto">
                         <div class="input-group">
-                            <input type="number" id="tap_hold_threshold_input" class="form-control text-end" style="max-width: 100px;">
+                            <input type="number" id="tap_hold_threshold_input" class="form-control text-end"
+                                style="max-width: 100px;">
                             <span class="input-group-text">ms</span>
                         </div>
                     </div>
@@ -186,7 +429,8 @@
                     </div>
                     <div class="col-auto">
                         <div class="input-group">
-                            <input type="number" id="gpio_debounce_time_input" class="form-control text-end" style="max-width: 100px;">
+                            <input type="number" id="gpio_debounce_time_input" class="form-control text-end"
+                                style="max-width: 100px;">
                             <span class="input-group-text">ms</span>
                         </div>
                     </div>
@@ -197,7 +441,8 @@
                     </div>
                     <div class="col-auto">
                         <div class="input-group">
-                            <input type="number" min="1" max="256" id="macro_entry_duration_input" class="form-control text-end" style="max-width: 100px;">
+                            <input type="number" min="1" max="256" id="macro_entry_duration_input"
+                                class="form-control text-end" style="max-width: 100px;">
                             <span class="input-group-text">ms</span>
                         </div>
                     </div>
@@ -228,7 +473,7 @@
                             <option value="2">Switch gamepad</option>
                             <option value="3">PS4 arcade stick</option>
                             <option value="4">Stadia controller</option>
-                            <option value="5">XAC/Flex compatible</option>
+                            <option value="5" selected>XAC/Flex compatible</option>
                         </select>
                     </div>
                 </div>
@@ -256,23 +501,29 @@
                 </div>
                 <div class="row mt-3">
                     <div class="col-4 text-end">
-                        <label for="ignore_auth_dev_inputs_checkbox" class="col-form-label">Ignore auth device inputs</label>
+                        <label for="ignore_auth_dev_inputs_checkbox" class="col-form-label">Ignore auth device
+                            inputs</label>
                     </div>
                     <div class="col-auto">
-                        <input type="checkbox" id="ignore_auth_dev_inputs_checkbox" class="form-check-input align-middle">
+                        <input type="checkbox" id="ignore_auth_dev_inputs_checkbox"
+                            class="form-check-input align-middle">
                     </div>
                 </div>
                 <div class="row mt-3">
                     <div class="col-4 text-end">
-                        <label for="normalize_gamepad_inputs_checkbox" class="col-form-label">Normalize gamepad inputs</label>
+                        <label for="normalize_gamepad_inputs_checkbox" class="col-form-label">Normalize gamepad
+                            inputs</label>
                     </div>
                     <div class="col-auto">
-                        <input type="checkbox" id="normalize_gamepad_inputs_checkbox" class="form-check-input align-middle">
+                        <input type="checkbox" id="normalize_gamepad_inputs_checkbox"
+                            class="form-check-input align-middle">
                     </div>
                 </div>
                 <div class="row mt-3">
-                    <p><em>Changes to the emulated device type become active after disconnecting and reconnecting HID Remapper.</em></p>
-                    <p><em>Changes to gamepad input normalization are applied after re-plugging the device or HID Remapper.</em></p>
+                    <p><em>Changes to the emulated device type become active after disconnecting and reconnecting HID
+                            Remapper.</em></p>
+                    <p><em>Changes to gamepad input normalization are applied after re-plugging the device or HID
+                            Remapper.</em></p>
                 </div>
 
                 <h5 class="mt-4">Custom usages</h5>
@@ -286,8 +537,8 @@
 
                 <div class="row mt-3">
                     <em>If both Vendor ID and Product ID are zero, usage applies to all interfaces on all devices.<br>
-                    Set size to zero to remove an existing usage.<br>
-                    Custom usages are only applied after re-plugging the device or HID Remapper.</em>
+                        Set size to zero to remove an existing usage.<br>
+                        Custom usages are only applied after re-plugging the device or HID Remapper.</em>
                 </div>
             </div>
 
@@ -306,7 +557,8 @@
                 </div>
 
                 <div class="row mt-4">
-                    <em>Expression /* comments */ are not saved to device, but they are preserved in exported JSON files.</em>
+                    <em>Expression /* comments */ are not saved to device, but they are preserved in exported JSON
+                        files.</em>
                 </div>
             </div>
 
@@ -332,7 +584,8 @@
 
                 <div class="row mt-4">
                     <div class="col-4 d-none" id="pair_new_device_container">
-                        <button id="pair_new_device" type="button" class="btn btn-primary w-100">Pair new device</button>
+                        <button id="pair_new_device" type="button" class="btn btn-primary w-100">Pair new
+                            device</button>
                     </div>
                     <div class="col-4 d-none" id="clear_bonds_container">
                         <button id="clear_bonds" type="button" class="btn btn-primary w-100">Forget all devices</button>
@@ -343,7 +596,8 @@
 
             <div class="tab-pane" id="nav-monitor" role="tabpanel" tabindex="0">
 
-                <p class="mt-4">Interact with the device connected to HID Remapper to see what usage codes it generates.</p>
+                <p class="mt-4">Interact with the device connected to HID Remapper to see what usage codes it generates.
+                </p>
 
                 <div>
                     <button id="monitor_clear" type="button" class="btn btn-primary">Clear</button>
@@ -384,13 +638,15 @@
             <div class="col-1"><button type="button" class="btn btn-primary delete_button">×</button></div>
             <div class="col-3">
                 <button type="button" class="btn btn-primary w-100 source_button position-relative">
-                    <span class="position-absolute top-50 start-0 translate-middle badge bg-info rounded-pill hub_port_badge">0</span>
+                    <span
+                        class="position-absolute top-50 start-0 translate-middle badge bg-info rounded-pill hub_port_badge">0</span>
                     <span class="button_label">source</span>
                 </button>
             </div>
             <div class="col-3">
                 <button type="button" class="btn btn-primary w-100 target_button position-relative">
-                    <span class="position-absolute top-50 start-0 translate-middle badge bg-info rounded-pill hub_port_badge">0</span>
+                    <span
+                        class="position-absolute top-50 start-0 translate-middle badge bg-info rounded-pill hub_port_badge">0</span>
                     <span class="button_label">target</span>
                 </button>
             </div>
@@ -461,7 +717,8 @@
     <template id="macro_template">
         <div class="accordion-item" id="macro_N">
             <h2 class="accordion-header">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse_X">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#collapse_X">
                     <span class="macro_name flex-shrink-0">Macro N</span>
                     <span class="macro_preview text-muted px-3 flex-fill text-truncate"></span>
                 </button>
@@ -499,15 +756,18 @@
     <template id="expression_template">
         <div class="mb-3">
             <label class="form-label expression_label">Expression</label>
-            <textarea type="text" class="form-control expression_input font-monospace" rows="1" spellcheck="false"></textarea>
+            <textarea type="text" class="form-control expression_input font-monospace" rows="1"
+                spellcheck="false"></textarea>
         </div>
     </template>
 
     <template id="monitor_template">
         <div class="row monitor_row p-1 my-2 rounded">
-            <div class="col-1"><button type="button" title="map this" class="btn btn-sm btn-primary map_this_button" style="padding: 0rem 0.4rem;">+</button></div>
+            <div class="col-1"><button type="button" title="map this" class="btn btn-sm btn-primary map_this_button"
+                    style="padding: 0rem 0.4rem;">+</button></div>
             <div class="col-2 text-center monitor_usage position-relative">
-                <span class="position-absolute top-50 start-0 translate-middle badge bg-info rounded-pill hub_port_badge">0</span>
+                <span
+                    class="position-absolute top-50 start-0 translate-middle badge bg-info rounded-pill hub_port_badge">0</span>
                 <span class="font-monospace usage_label"></span>
             </div>
             <div class="col-3 text-center monitor_readable_name"></div>
@@ -624,7 +884,9 @@
                         <div class="col">
                         </div>
                         <div class="col-3 position-relative">
-                            <span class="position-absolute top-50 start-100 badge bg-success rounded-pill have_preferred_result_checkmark d-none" style="translate: -100% -50%">&check;</span>
+                            <span
+                                class="position-absolute top-50 start-100 badge bg-success rounded-pill have_preferred_result_checkmark d-none"
+                                style="translate: -100% -50%">&check;</span>
                             <input type="text" class="form-control usage_search_box" placeholder="Search">
                         </div>
                     </div>
@@ -680,7 +942,9 @@
                         <div class="col">
                         </div>
                         <div class="col-3 position-relative">
-                            <span class="position-absolute top-50 start-100 badge bg-success rounded-pill have_preferred_result_checkmark d-none" style="translate: -100% -50%">&check;</span>
+                            <span
+                                class="position-absolute top-50 start-100 badge bg-success rounded-pill have_preferred_result_checkmark d-none"
+                                style="translate: -100% -50%">&check;</span>
                             <input type="text" class="form-control usage_search_box" placeholder="Search">
                         </div>
                     </div>

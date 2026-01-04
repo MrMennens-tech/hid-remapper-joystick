@@ -1,6 +1,7 @@
 import crc32 from './crc.js';
 import usages from './usages.js';
 import examples from './examples.js';
+import { initEasySetup, EXPRESSION_TEMPLATES, getEasySetupMappings, clearAllMappings } from './easy-setup.js';
 
 const REPORT_ID_CONFIG = 100;
 const REPORT_ID_MONITOR = 101;
@@ -135,15 +136,14 @@ let device = null;
 let source_modal = null;
 let target_modal = null;
 let extra_usages = { 'source': [], 'target': [] };
-// Make config globally available for easy-setup.js
-let config = window.config = {
+let config = {
     'version': CONFIG_VERSION,
     'unmapped_passthrough_layers': [0, 1, 2, 3, 4, 5, 6, 7],
     'partial_scroll_timeout': DEFAULT_PARTIAL_SCROLL_TIMEOUT,
     'tap_hold_threshold': DEFAULT_TAP_HOLD_THRESHOLD,
     'gpio_debounce_time_ms': DEFAULT_GPIO_DEBOUNCE_TIME,
     'interval_override': 0,
-    'our_descriptor_number': 0,
+    'our_descriptor_number': 5, // Default to XAC/Flex compatible
     'ignore_auth_dev_inputs': false,
     'macro_entry_duration': DEFAULT_MACRO_ENTRY_DURATION,
     'gpio_output_mode': 0,
@@ -170,8 +170,6 @@ let config = window.config = {
     quirks: [],
 };
 let monitor_enabled = false;
-// Make monitor_enabled globally available for easy-setup.js
-window.monitor_enabled = monitor_enabled;
 let monitor_min_val = {};
 let monitor_max_val = {};
 let unique_id_counter = 0;
@@ -224,36 +222,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if ("hid" in navigator) {
         navigator.hid.addEventListener('disconnect', hid_on_disconnect);
     } else {
-        const userAgent = navigator.userAgent.toLowerCase();
-        let browserName = "deze browser";
-        let suggestion = "";
-        
-        if (userAgent.includes("firefox")) {
-            browserName = "Firefox";
-            suggestion = "<p><strong>Oplossing:</strong> Gebruik Google Chrome of Microsoft Edge (desktop versie). Firefox ondersteunt WebHID nog niet.</p>";
-        } else if (userAgent.includes("safari") && !userAgent.includes("chrome")) {
-            browserName = "Safari";
-            suggestion = "<p><strong>Oplossing:</strong> Gebruik Google Chrome of Microsoft Edge (desktop versie). Safari ondersteunt WebHID nog niet.</p>";
-        } else if (userAgent.includes("mobile") || userAgent.includes("android")) {
-            suggestion = "<p><strong>Oplossing:</strong> WebHID werkt alleen op desktop browsers. Gebruik Google Chrome of Microsoft Edge op Windows, Mac of Linux.</p>";
-        } else {
-            suggestion = "<p><strong>Oplossing:</strong> Download en installeer <a href='https://www.google.com/chrome/' target='_blank'>Google Chrome</a> of <a href='https://www.microsoft.com/edge' target='_blank'>Microsoft Edge</a> (desktop versie).</p>";
-        }
-        
-        // Check if not using HTTPS or localhost
-        const isSecureContext = window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        let secureContextWarning = "";
-        if (!isSecureContext) {
-            secureContextWarning = "<div class='alert alert-warning mt-2'><strong>Belangrijk:</strong> WebHID werkt alleen via HTTPS of localhost. Je gebruikt momenteel: <code>" + window.location.protocol + "//" + window.location.hostname + "</code></div>";
-        }
-        
-        display_error_html(
-            "<h5>WebHID niet ondersteund in " + browserName + "</h5>" +
-            "<p>Het HID Remapper configuratie tool heeft WebHID nodig om met je apparaat te communiceren.</p>" +
-            secureContextWarning +
-            suggestion +
-            "<p class='mb-0'><strong>Ondersteunde browsers:</strong> Google Chrome 89+, Microsoft Edge 89+, Opera 75+, of andere Chromium-gebaseerde browsers.</p>"
-        );
+        display_error("Your browser doesn't support WebHID. Try Chrome (desktop version) or a Chrome-based browser.");
     }
 
     setup_examples();
@@ -262,11 +231,73 @@ document.addEventListener("DOMContentLoaded", function () {
     setup_macros();
     setup_expressions();
     set_ui_state();
-    
-    // Initialize easy setup
-    if (typeof easy_setup_init === 'function') {
-        easy_setup_init();
-    }
+
+    // Initialize Easy Setup UI
+    initEasySetup();
+
+    // Listen for Easy Setup mapping changes
+    document.addEventListener('easySetupMappingsChanged', (event) => {
+        const easyMappings = event.detail.mappings;
+        // Merge Easy Setup mappings with existing config
+        for (const mapping of easyMappings) {
+            // Check if mapping already exists
+            const exists = config.mappings.some(m =>
+                m.source_usage === mapping.source_usage &&
+                m.target_usage === mapping.target_usage
+            );
+            if (!exists) {
+                config.mappings.push({
+                    source_usage: mapping.source_usage,
+                    target_usage: mapping.target_usage,
+                    layers: [mapping.layer || 0],
+                    sticky: mapping.sticky || false,
+                    tap: false,
+                    hold: false,
+                    scaling: mapping.scaling || DEFAULT_SCALING,
+                    source_port: mapping.source_port || 0,
+                    target_port: 0
+                });
+            }
+        }
+        set_mappings_ui_state();
+    });
+
+    // Listen for Easy Setup template applications
+    document.addEventListener('easySetupApplyTemplate', (event) => {
+        const template = event.detail;
+
+        // Add expressions if template has them
+        if (template.expressions) {
+            for (let i = 0; i < template.expressions.length && i < NEXPRESSIONS; i++) {
+                // Find first empty expression slot
+                const emptyIdx = config.expressions.findIndex(e => !e || e.trim() === '');
+                if (emptyIdx !== -1) {
+                    config.expressions[emptyIdx] = template.expressions[i];
+                }
+            }
+            set_expressions_ui_state();
+        }
+
+        // Add mappings if template has them
+        if (template.mappings) {
+            for (const mapping of template.mappings) {
+                config.mappings.push({
+                    source_usage: mapping.source.startsWith('Expression')
+                        ? '0xfff3' + (parseInt(mapping.source.match(/\d+/)[0]) - 1).toString(16).padStart(4, '0')
+                        : mapping.source,
+                    target_usage: mapping.target,
+                    layers: [0],
+                    sticky: false,
+                    tap: false,
+                    hold: false,
+                    scaling: mapping.scaling || DEFAULT_SCALING,
+                    source_port: 0,
+                    target_port: 0
+                });
+            }
+            set_mappings_ui_state();
+        }
+    });
 });
 
 async function open_device() {
@@ -276,19 +307,6 @@ async function open_device() {
     busy = true;
 
     clear_error();
-    
-    // Check if WebHID is supported
-    if (!("hid" in navigator) || !navigator.hid) {
-        const isSecureContext = window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        let errorMsg = "WebHID wordt niet ondersteund in deze browser. Gebruik Chrome of Edge (desktop versie).";
-        if (!isSecureContext) {
-            errorMsg += "\n\nLet op: WebHID werkt alleen via HTTPS of localhost. Je gebruikt momenteel: " + window.location.protocol + "//" + window.location.hostname;
-        }
-        display_error(errorMsg);
-        busy = false;
-        return;
-    }
-    
     let success = false;
 
     try {
@@ -675,7 +693,9 @@ function set_config_ui_state() {
             config['unmapped_passthrough_layers'].includes(i);
     }
     document.getElementById('interval_override_dropdown').value = config['interval_override'];
-    document.getElementById('our_descriptor_number_dropdown').value = config['our_descriptor_number'];
+    // Default to 5 (XAC/Flex) if value is 0 (Mouse/keyboard) or not set
+    const descriptorValue = (config['our_descriptor_number'] === 0 || config['our_descriptor_number'] === undefined) ? 5 : config['our_descriptor_number'];
+    document.getElementById('our_descriptor_number_dropdown').value = descriptorValue;
     document.getElementById('ignore_auth_dev_inputs_checkbox').checked = config['ignore_auth_dev_inputs'];
     document.getElementById('macro_entry_duration_input').value = config['macro_entry_duration'];
     document.getElementById('gpio_output_mode_dropdown').value = config['gpio_output_mode'];
@@ -824,11 +844,6 @@ function set_ui_state() {
     set_expressions_ui_state();
     set_quirks_ui_state();
     setup_usages_modals();
-    
-    // Re-render easy setup controller if it exists
-    if (typeof render_controller === 'function') {
-        render_controller();
-    }
 }
 
 function set_port_badge(button_element, port) {
@@ -1468,10 +1483,6 @@ function interval_override_onchange() {
 function our_descriptor_number_onchange() {
     config['our_descriptor_number'] = parseInt(document.getElementById("our_descriptor_number_dropdown").value, 10);
     set_ui_state();
-    // Re-render easy setup controller if it exists
-    if (typeof render_controller === 'function') {
-        render_controller();
-    }
 }
 
 function gpio_output_mode_onchange() {
@@ -1679,26 +1690,6 @@ function validate_ui_expressions() {
 
 function input_report_received(event) {
     if (event.reportId == REPORT_ID_MONITOR) {
-        // Check if easy setup is listening for input
-        if (typeof window !== 'undefined' && window.easy_setup_listening && window.easy_setup_mapping_target) {
-            for (let i = 0; i < 7; i++) {
-                const usage = "0x" + event.data.getUint32(i * 9, true).toString(16).padStart(8, "0");
-                const value = event.data.getInt32(i * 9 + 4, true);
-                
-                // Check if this is a button press or axis movement (non-zero value)
-                // For buttons, value should be > 0, for axes any non-zero is movement
-                if (usage !== '0x00000000' && value != 0) {
-                    // Found input! Complete the mapping via easy setup
-                    if (typeof easy_setup_complete_mapping === 'function') {
-                        easy_setup_complete_mapping(usage);
-                    } else if (typeof window.easy_setup_complete_mapping === 'function') {
-                        window.easy_setup_complete_mapping(usage);
-                    }
-                    return; // Exit early, don't update monitor UI
-                }
-            }
-        }
-        
         document.querySelectorAll('.monitor_row').forEach((element) => {
             element.classList.remove('bg-light');
         });
@@ -1714,6 +1705,26 @@ function input_report_received(event) {
 }
 
 function update_monitor_ui(usage, value, hub_port) {
+    // Call Easy Setup monitor callback if it exists and is waiting for input
+    if (window.easySetupMonitorCallback && typeof window.easySetupMonitorCallback === 'function') {
+        window.easySetupMonitorCallback(usage, value, hub_port);
+    }
+    
+    // Call Easy Setup live visualization callback if it exists
+    if (window.easySetupLiveCallback && typeof window.easySetupLiveCallback === 'function') {
+        window.easySetupLiveCallback(usage, value, hub_port);
+    }
+    
+    // Call Stick mapping callback if it exists
+    if (window.stickMappingCallback && typeof window.stickMappingCallback === 'function') {
+        window.stickMappingCallback(usage, value, hub_port);
+    }
+    
+    // Call Stick preview callback if it exists
+    if (window.stickPreviewCallback && typeof window.stickPreviewCallback === 'function') {
+        window.stickPreviewCallback(usage, value, hub_port);
+    }
+    
     const element_id = 'monitor_usage_' + usage + '_' + hub_port;
     let element = document.getElementById(element_id);
     if (element == null) {
@@ -1758,7 +1769,6 @@ function monitor_clear() {
 
 async function set_monitor_enabled(enabled) {
     monitor_enabled = enabled;
-    window.monitor_enabled = enabled;
     if (device != null) {
         await send_feature_command(SET_MONITOR_ENABLED, [[UINT8, monitor_enabled ? 1 : 0]]);
     }

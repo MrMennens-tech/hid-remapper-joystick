@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 500 340" xmlns="http://www.w3.org/2000/svg" class="controller-svg" id="svg-stadia" style="display:none;">
+  <defs>
+    <linearGradient id="stadiaBodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#3a3a3a"/>
+      <stop offset="50%" style="stop-color:#2a2a2a"/>
+      <stop offset="100%" style="stop-color:#1a1a1a"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Controller Body -->
+  <g id="stadia-body">
+    <!-- Left Handle -->
+    <path d="M 70 145 Q 30 185 40 260 Q 50 305 90 315 Q 130 325 150 275 Q 160 235 155 175 Z" 
+          fill="url(#stadiaBodyGrad)" stroke="#4a4a4a" stroke-width="2"/>
+    <!-- Right Handle -->
+    <path d="M 430 145 Q 470 185 460 260 Q 450 305 410 315 Q 370 325 350 275 Q 340 235 345 175 Z" 
+          fill="url(#stadiaBodyGrad)" stroke="#4a4a4a" stroke-width="2"/>
+    <!-- Main Body (more rounded like Stadia) -->
+    <ellipse cx="250" cy="155" rx="190" ry="90" fill="url(#stadiaBodyGrad)" stroke="#4a4a4a" stroke-width="2"/>
+  </g>
+  
+  <!-- Left Analog Stick (higher position like Stadia) -->
+  <g id="stadia-left-stick" data-btn-id="stick-left" class="btn-region">
+    <circle cx="145" cy="155" r="32" fill="#1a1a1a" stroke="#3a3a3a" stroke-width="2"/>
+    <circle cx="145" cy="155" r="22" fill="#252525" stroke="#4a4a4a" stroke-width="1"/>
+  </g>
+  
+  <!-- Right Analog Stick -->
+  <g id="stadia-right-stick" data-btn-id="stick-right" class="btn-region">
+    <circle cx="355" cy="155" r="32" fill="#1a1a1a" stroke="#3a3a3a" stroke-width="2"/>
+    <circle cx="355" cy="155" r="22" fill="#252525" stroke="#4a4a4a" stroke-width="1"/>
+  </g>
+  
+  <!-- D-Pad -->
+  <g id="stadia-dpad" data-btn-id="dpad" class="btn-region">
+    <circle cx="195" cy="210" r="28" fill="#2a2a2a" stroke="#4a4a4a" stroke-width="2"/>
+    <line x1="175" y1="210" x2="215" y2="210" stroke="#555" stroke-width="2"/>
+    <line x1="195" y1="190" x2="195" y2="230" stroke="#555" stroke-width="2"/>
+  </g>
+  
+  <!-- Face Buttons (Stadia style - same colors as Xbox) -->
+  <g id="stadia-face-buttons">
+    <!-- Y Button -->
+    <circle data-btn-id="btn-y" class="btn-region" cx="305" cy="190" r="14" fill="#e6b800" stroke="#b38f00" stroke-width="2"/>
+    <text x="305" y="195" text-anchor="middle" fill="#1a1a1a" font-size="12" font-weight="bold" font-family="Arial">Y</text>
+    
+    <!-- X Button -->
+    <circle data-btn-id="btn-x" class="btn-region" cx="275" cy="210" r="14" fill="#0066cc" stroke="#004d99" stroke-width="2"/>
+    <text x="275" y="215" text-anchor="middle" fill="white" font-size="12" font-weight="bold" font-family="Arial">X</text>
+    
+    <!-- B Button -->
+    <circle data-btn-id="btn-b" class="btn-region" cx="335" cy="210" r="14" fill="#cc0000" stroke="#990000" stroke-width="2"/>
+    <text x="335" y="215" text-anchor="middle" fill="white" font-size="12" font-weight="bold" font-family="Arial">B</text>
+    
+    <!-- A Button -->
+    <circle data-btn-id="btn-a" class="btn-region" cx="305" cy="230" r="14" fill="#00cc00" stroke="#009900" stroke-width="2"/>
+    <text x="305" y="235" text-anchor="middle" fill="white" font-size="12" font-weight="bold" font-family="Arial">A</text>
+  </g>
+  
+  <!-- Shoulder Buttons -->
+  <g id="stadia-shoulders">
+    <rect data-btn-id="btn-l1" class="btn-region" x="90" y="75" width="70" height="18" rx="6" fill="#2a2a2a" stroke="#4a4a4a" stroke-width="2"/>
+    <text x="125" y="88" text-anchor="middle" fill="#aaa" font-size="10" font-family="Arial">L1</text>
+    
+    <rect data-btn-id="btn-r1" class="btn-region" x="340" y="75" width="70" height="18" rx="6" fill="#2a2a2a" stroke="#4a4a4a" stroke-width="2"/>
+    <text x="375" y="88" text-anchor="middle" fill="#aaa" font-size="10" font-family="Arial">R1</text>
+  </g>
+  
+  <!-- Triggers -->
+  <g id="stadia-triggers">
+    <path data-btn-id="btn-l2" class="btn-region" d="M 90 60 Q 105 35 145 35 Q 170 35 160 60 L 155 70 Q 125 65 95 70 Z" 
+          fill="#2a2a2a" stroke="#4a4a4a" stroke-width="2"/>
+    <text x="125" y="52" text-anchor="middle" fill="#aaa" font-size="9" font-family="Arial">L2</text>
+    
+    <path data-btn-id="btn-r2" class="btn-region" d="M 340 60 Q 330 35 355 35 Q 395 35 410 60 L 405 70 Q 375 65 345 70 Z" 
+          fill="#2a2a2a" stroke="#4a4a4a" stroke-width="2"/>
+    <text x="375" y="52" text-anchor="middle" fill="#aaa" font-size="9" font-family="Arial">R2</text>
+  </g>
+  
+  <!-- Menu Buttons -->
+  <g id="stadia-menu">
+    <!-- Options (three dots) -->
+    <circle data-btn-id="btn-select" class="btn-region" cx="215" cy="130" r="8" fill="#2a2a2a" stroke="#4a4a4a" stroke-width="1"/>
+    <circle cx="210" cy="130" r="1.5" fill="#aaa"/>
+    <circle cx="215" cy="130" r="1.5" fill="#aaa"/>
+    <circle cx="220" cy="130" r="1.5" fill="#aaa"/>
+    
+    <!-- Menu (three lines) -->
+    <circle data-btn-id="btn-start" class="btn-region" cx="285" cy="130" r="8" fill="#2a2a2a" stroke="#4a4a4a" stroke-width="1"/>
+    <line x1="280" y1="127" x2="290" y2="127" stroke="#aaa" stroke-width="1.5"/>
+    <line x1="280" y1="130" x2="290" y2="130" stroke="#aaa" stroke-width="1.5"/>
+    <line x1="280" y1="133" x2="290" y2="133" stroke="#aaa" stroke-width="1.5"/>
+  </g>
+  
+  <!-- Stadia Button (center logo) -->
+  <g id="stadia-button" data-btn-id="btn-stadia" class="btn-region">
+    <circle cx="250" cy="110" r="16" fill="#2a2a2a" stroke="#e94560" stroke-width="2"/>
+    <text x="250" y="115" text-anchor="middle" fill="#e94560" font-size="10" font-weight="bold" font-family="Arial">S</text>
+  </g>
+  
+  <!-- Google Assistant Button -->
+  <circle data-btn-id="btn-assistant" class="btn-region" cx="230" cy="250" r="10" fill="#2a2a2a" stroke="#4285f4" stroke-width="2"/>
+  <circle cx="230" cy="250" r="5" fill="none" stroke="#4285f4" stroke-width="1.5"/>
+  
+  <!-- Capture Button -->
+  <circle data-btn-id="btn-capture" class="btn-region" cx="270" cy="250" r="10" fill="#2a2a2a" stroke="#ea4335" stroke-width="2"/>
+  <rect x="266" y="246" width="8" height="8" rx="1" fill="none" stroke="#ea4335" stroke-width="1.5"/>
+</svg>
