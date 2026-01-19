@@ -47,6 +47,7 @@ add_executable(remapper
     src/app_driver.cc
     src/xbox.cc
     src/switch_pro.cc
+    src/ws2812_led.cc
 )
 
 if((PICO_BOARD STREQUAL "pico") OR (PICO_BOARD STREQUAL "pico2"))
@@ -84,6 +85,7 @@ elseif(PICO_PLATFORM STREQUAL "rp2350-arm-s")
 else()
     message(FATAL_ERROR "Unknown PICO_PLATFORM.")
 endif()
+pico_generate_pio_header(remapper ${CMAKE_CURRENT_LIST_DIR}/src/ws2812.pio)
 pico_add_extra_outputs(remapper)
 
 
@@ -137,6 +139,7 @@ add_executable(remapper_dual_b
     src/app_driver.cc
     src/xbox.cc
     src/switch_pro.cc
+    src/ws2812_led.cc
 )
 target_include_directories(remapper_dual_b PRIVATE
     src
@@ -144,10 +147,12 @@ target_include_directories(remapper_dual_b PRIVATE
 )
 target_link_libraries(remapper_dual_b
     pico_stdlib
+    hardware_pio
     tinyusb_host
     tinyusb_board
     usb_midi_host
 )
+pico_generate_pio_header(remapper_dual_b ${CMAKE_CURRENT_LIST_DIR}/src/ws2812.pio)
 pico_add_extra_outputs(remapper_dual_b)
 pico_add_hex_output(remapper_dual_b)
 

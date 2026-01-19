@@ -12,6 +12,7 @@
 #include "interval_override.h"
 #include "out_report.h"
 #include "serial.h"
+#include "ws2812_led.h"
 
 uint8_t buffer[SERIAL_MAX_PAYLOAD_SIZE + sizeof(device_connected_t)];
 bool initialized = false;
@@ -55,6 +56,7 @@ void request_b_init() {
 int main() {
     serial_init();
     board_init();
+    ws2812_led_init();  // Initialize WS2812 LED if available
     stdio_init_all();
 
     while (!initialized) {

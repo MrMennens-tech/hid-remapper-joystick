@@ -1,6 +1,7 @@
 #include "switch_pro.h"
 #include "constants.h"
 #include "remapper.h"
+#include "ws2812_led.h"
 
 #include <cstring>
 
@@ -154,8 +155,12 @@ bool switch_proh_open(uint8_t rhport, uint8_t dev_addr, tusb_desc_interface_t co
     uint16_t vid, pid;
     tuh_vid_pid_get(dev_addr, &vid, &pid);
     
+    printf("Switch Pro: Checking device VID=%04x PID=%04x (class=%02x sub=%02x proto=%02x)\n", 
+           vid, pid, desc_itf->bInterfaceClass, desc_itf->bInterfaceSubClass, desc_itf->bInterfaceProtocol);
+    
     // Check for Nintendo controllers
     if (vid != VENDOR_ID_NINTENDO) {
+        printf("Switch Pro: Not Nintendo VID, skipping\n");
         return false;
     }
     
@@ -164,6 +169,7 @@ bool switch_proh_open(uint8_t rhport, uint8_t dev_addr, tusb_desc_interface_t co
         pid != PRODUCT_ID_NINTENDO_SWITCH_JOYCON_L &&
         pid != PRODUCT_ID_NINTENDO_SWITCH_JOYCON_R &&
         pid != PRODUCT_ID_NINTENDO_SWITCH_JOYCON_GRIP) {
+        printf("Switch Pro: Not Switch controller PID, skipping\n");
         return false;
     }
     
@@ -229,7 +235,11 @@ bool switch_proh_open(uint8_t rhport, uint8_t dev_addr, tusb_desc_interface_t co
     swdev->vid = vid;
     swdev->pid = pid;
     
-    printf("Switch Pro Controller connected: VID=%04x PID=%04x\n", vid, pid);
+    printf("Switch Pro Controller connected: VID=%04x PID=%04x itf=%d in_ep=%02x out_ep=%02x\n", 
+           vid, pid, desc_itf->bInterfaceNumber, in_ep, out_ep);
+    
+    // LED: Purple = Nintendo device detected
+    ws2812_led_set(LED_COLOR_DETECTED);
     
     return true;
 }
@@ -265,21 +275,25 @@ static void process_setup(struct swdev_t* swdev) {
         case 1:
             // Step 1: USB handshake - tells controller we're ready
             printf("Switch Pro: Sending handshake (0x80 0x01)\n");
+            ws2812_led_set(LED_COLOR_HANDSHAKE);  // Yellow
             swxfer_out(swdev, usb_handshake, sizeof(usb_handshake));
             break;
         case 2:
             // Step 2: USB enable (baud rate) - some controllers need this
             printf("Switch Pro: Sending USB enable (0x80 0x02)\n");
+            ws2812_led_set(LED_COLOR_USB_ENABLE);  // Orange
             swxfer_out(swdev, usb_enable, sizeof(usb_enable));
             break;
         case 3:
             // Step 3: Force HID-only mode - this makes the controller send simple HID reports
             printf("Switch Pro: Sending HID-only mode (0x80 0x04)\n");
+            ws2812_led_set(LED_COLOR_HID_MODE);  // Dim Green
             swxfer_out(swdev, usb_hid_only, sizeof(usb_hid_only));
             break;
         case 4: {
             // Setup complete, register the descriptor and start receiving reports
             printf("Switch Pro: Initialization complete, starting input\n");
+            ws2812_led_set(LED_COLOR_CONNECTED);  // Green
             swdev->setup_stage = 0;
             swxfer_in(swdev);
             
@@ -306,6 +320,8 @@ bool switch_proh_set_config(uint8_t dev_addr, uint8_t itf_num) {
         return false;
     }
     
+    // Start setup sequence - same pattern as Xbox driver
+    // Send all commands first, then start receiving input
     swdev->setup_stage = 1;
     process_setup(swdev);
     
@@ -323,6 +339,8 @@ bool switch_proh_xfer_cb(uint8_t dev_addr, uint8_t ep_addr, xfer_result_t result
             // Check the report ID
             uint8_t report_id = swdev->buf[0];
             
+            printf("Switch Pro: IN report: 0x%02x (%lu bytes)\n", report_id, (unsigned long)xferred_bytes);
+            
             // 0x3F is the simple HID mode report (what we want after 0x80 0x04)
             // 0x30 is the full input report (standard mode)
             // 0x21 is a subcommand reply
@@ -332,8 +350,9 @@ bool switch_proh_xfer_cb(uint8_t dev_addr, uint8_t ep_addr, xfer_result_t result
                 // Standard input report - pass it on
                 report_received_callback(swdev->dev_addr, swdev->itf_num, swdev->buf, xferred_bytes);
             } else if (report_id == 0x81) {
-                // USB command reply - we can check if our commands succeeded
-                printf("Switch Pro: USB reply received: 0x%02x\n", swdev->buf[1]);
+                // USB command reply - just log it
+                uint8_t reply_type = swdev->buf[1];
+                printf("Switch Pro: USB reply: 0x%02x\n", reply_type);
             }
         }
         
@@ -341,7 +360,9 @@ bool switch_proh_xfer_cb(uint8_t dev_addr, uint8_t ep_addr, xfer_result_t result
         swxfer_in(swdev);
     }
     
+    // OUT transfer completed - advance to next setup stage
     if (ep_addr == swdev->out_ep) {
+        printf("Switch Pro: OUT complete (stage %d)\n", swdev->setup_stage);
         if (swdev->setup_stage != 0) {
             swdev->setup_stage++;
             process_setup(swdev);
@@ -355,6 +376,7 @@ void switch_proh_close(uint8_t dev_addr) {
     for (int i = 0; i < NSWDEVS; i++) {
         if (swdevs[i].dev_addr == dev_addr) {
             printf("Switch Pro Controller disconnected\n");
+            ws2812_led_set(LED_COLOR_SEARCHING);  // Back to dim blue
             umount_callback(dev_addr, swdevs[i].itf_num);
             swdevs[i] = {};
         }

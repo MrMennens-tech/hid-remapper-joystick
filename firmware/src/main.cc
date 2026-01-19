@@ -28,6 +28,7 @@
 #include "platform.h"
 #include "remapper.h"
 #include "tick.h"
+#include "ws2812_led.h"
 
 // RP2350 UF2s wipe the last sector of flash every time
 // because of RP2350-E10 errata mitigation. So we put
@@ -246,6 +247,7 @@ int main() {
     parse_our_descriptor();
     set_mapping_from_config();
     board_init();
+    ws2812_led_init();  // Initialize WS2812 LED if available
     extra_init();
     tusb_init();
     stdio_init_all();
