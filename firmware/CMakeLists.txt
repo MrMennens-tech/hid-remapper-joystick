@@ -109,6 +109,7 @@ add_executable(remapper_dual_a
     src/pico_debug/adi.c
     dual_b_binary.c
     src/ps_auth.cc
+    src/ws2812_led.cc
     $<$<STREQUAL:${PICO_BOARD},remapper_v7>:src/i2c.cc>
     $<$<STREQUAL:${PICO_BOARD},remapper_v7>:src/mcp4651.cc>
 )
@@ -127,6 +128,7 @@ target_link_libraries(remapper_dual_a
     pico_unique_id
 )
 pico_generate_pio_header(remapper_dual_a ${CMAKE_CURRENT_LIST_DIR}/src/pico_debug/swd.pio)
+pico_generate_pio_header(remapper_dual_a ${CMAKE_CURRENT_LIST_DIR}/src/ws2812.pio)
 pico_add_extra_outputs(remapper_dual_a)
 
 add_executable(remapper_dual_b
@@ -178,6 +180,7 @@ add_executable(remapper_serial
     src/tick.cc
     src/activity_led.cc
     src/ps_auth.cc
+    src/ws2812_led.cc
 )
 target_include_directories(remapper_serial PRIVATE
     src
@@ -187,9 +190,11 @@ target_link_libraries(remapper_serial
     pico_stdlib
     pico_unique_id
     hardware_flash
+    hardware_pio
     tinyusb_device
     tinyusb_board
 )
+pico_generate_pio_header(remapper_serial ${CMAKE_CURRENT_LIST_DIR}/src/ws2812.pio)
 pico_add_extra_outputs(remapper_serial)
 
 add_executable(flash_b_side
