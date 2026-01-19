@@ -23,7 +23,7 @@ static uint8_t usb_enable[] = { 0x80, 0x02 };
 static uint8_t usb_handshake[] = { 0x80, 0x01 };
 
 // Command to request device info (for verification, optional)
-static uint8_t usb_device_info[] = { 0x80, 0x03 };
+// static uint8_t usb_device_info[] = { 0x80, 0x03 };
 
 // Command to force USB HID mode (required for input reports)
 static uint8_t usb_hid_only[] = { 0x80, 0x04 };
@@ -192,15 +192,12 @@ bool switch_proh_open(uint8_t rhport, uint8_t dev_addr, tusb_desc_interface_t co
     for (int i = 0; i < desc_itf->bNumEndpoints; i++) {
         p_desc = tu_desc_next(p_desc);
         
-        // Skip HID descriptor if present
-        while (tu_desc_type(p_desc) == HID_DESC_TYPE_HID) {
+        // Skip non-endpoint descriptors (like HID descriptor which has type 0x21)
+        while (tu_desc_type(p_desc) != TUSB_DESC_ENDPOINT) {
             p_desc = tu_desc_next(p_desc);
         }
         
         tusb_desc_endpoint_t const* desc_ep = (tusb_desc_endpoint_t const*) p_desc;
-        if (desc_ep->bDescriptorType != TUSB_DESC_ENDPOINT) {
-            continue;
-        }
         
         if (!tuh_edpt_open(dev_addr, desc_ep)) {
             return false;
