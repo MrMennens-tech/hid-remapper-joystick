@@ -1,5 +1,6 @@
 #include "usb_midi_host.h"
 #include "xbox.h"
+#include "switch_pro.h"
 
 usbh_class_driver_t const* usbh_app_driver_get_cb(uint8_t* driver_count) {
     static usbh_class_driver_t host_driver[] = {
@@ -15,6 +16,16 @@ usbh_class_driver_t const* usbh_app_driver_get_cb(uint8_t* driver_count) {
         },
         {
 #if CFG_TUSB_DEBUG >= 2
+            .name = "SWITCHPROH",
+#endif
+            .init = switch_proh_init,
+            .open = switch_proh_open,
+            .set_config = switch_proh_set_config,
+            .xfer_cb = switch_proh_xfer_cb,
+            .close = switch_proh_close,
+        },
+        {
+#if CFG_TUSB_DEBUG >= 2
             .name = "MIDIH",
 #endif
             .init = midih_init,
@@ -24,6 +35,6 @@ usbh_class_driver_t const* usbh_app_driver_get_cb(uint8_t* driver_count) {
             .close = midih_close,
         },
     };
-    *driver_count = 2;
+    *driver_count = 3;
     return host_driver;
 }

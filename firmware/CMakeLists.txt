@@ -46,6 +46,7 @@ add_executable(remapper
     src/ps_auth.cc
     src/app_driver.cc
     src/xbox.cc
+    src/switch_pro.cc
 )
 
 if((PICO_BOARD STREQUAL "pico") OR (PICO_BOARD STREQUAL "pico2"))
@@ -135,6 +136,7 @@ add_executable(remapper_dual_b
     src/activity_led.cc
     src/app_driver.cc
     src/xbox.cc
+    src/switch_pro.cc
 )
 target_include_directories(remapper_dual_b PRIVATE
     src
