@@ -1,0 +1,6 @@
+# Ensure Python scripts have Unix line endings for shebang compatibility
+*.py text eol=lf
+
+# Shell scripts should also have Unix line endings
+*.sh text eol=lf
+
