@@ -63,29 +63,11 @@ bool ws2812_led_init(void) {
     ws2812_initialized = true;
     printf("WS2812: Initialization COMPLETE on pin %d\n", ws2812_pin);
     
-    // Do a startup test sequence - cycle through colors
-    printf("WS2812: Running startup test (Red-Green-Blue-White)...\n");
-    
-    // RED
-    ws2812_led_set(0x00400000);  // Bright red
-    sleep_ms(200);
-    
-    // GREEN  
-    ws2812_led_set(0x00004000);  // Bright green
-    sleep_ms(200);
-    
-    // BLUE
-    ws2812_led_set(0x00000040);  // Bright blue
-    sleep_ms(200);
-    
-    // WHITE (all on)
-    ws2812_led_set(0x00404040);  // White
-    sleep_ms(200);
-    
-    // Set initial color (blue = searching/ready)
-    ws2812_led_set(LED_COLOR_SEARCHING);
-    printf("WS2812: Startup test complete, LED set to SEARCHING (blue)\n");
-    printf("=================================\n");
+    // Quick flash to show LED is working (no long delays that break USB!)
+    ws2812_led_set(0x00200000);  // Brief red flash
+    sleep_ms(50);
+    ws2812_led_set(LED_COLOR_SEARCHING);  // Blue = ready
+    printf("WS2812: LED ready (blue)\n");
     
     return true;
 }
