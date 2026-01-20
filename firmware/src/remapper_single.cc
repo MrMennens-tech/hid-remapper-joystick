@@ -6,10 +6,13 @@
 #include "pico/platform.h"
 #include "pico/time.h"
 
+#include "constants.h"
 #include "descriptor_parser.h"
 #include "out_report.h"
 #include "remapper.h"
+#include "switch_pro.h"
 #include "tick.h"
+#include "ws2812_led.h"
 
 static bool __no_inline_not_in_flash_func(manual_sof)(repeating_timer_t* rt) {
     pio_usb_host_frame();
@@ -76,6 +79,14 @@ void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* desc_re
     tuh_hid_itf_get_info(dev_addr, instance, &itf_info);
     uint8_t itf_num = itf_info.desc.bInterfaceNumber;
 
+    printf("HID mount: VID=%04x PID=%04x dev=%d inst=%d\n", vid, pid, dev_addr, instance);
+
+    // Check if this is a Nintendo Switch controller - needs special initialization
+    if (switch_pro_is_nintendo_controller(vid, pid)) {
+        printf("Nintendo Switch controller detected! Starting initialization...\n");
+        switch_pro_init_controller(dev_addr, instance);
+    }
+
     descriptor_received_callback(vid, pid, desc_report, desc_len, (uint16_t) (dev_addr << 8) | instance, hub_port, itf_num);
 
     tuh_hid_receive_report(dev_addr, instance);
@@ -87,6 +98,7 @@ void umount_callback(uint8_t dev_addr, uint8_t instance) {
 
 void tuh_hid_umount_cb(uint8_t dev_addr, uint8_t instance) {
     printf("tuh_hid_umount_cb\n");
+    switch_pro_unmount(dev_addr, instance);
     umount_callback(dev_addr, instance);
 }
 
@@ -99,6 +111,13 @@ void report_received_callback(uint8_t dev_addr, uint8_t instance, uint8_t const*
 }
 
 void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* report, uint16_t len) {
+    // Check if this is a Switch Pro Controller setup reply
+    if (switch_pro_process_report(dev_addr, instance, report, len)) {
+        // It was a setup reply, continue receiving
+        tuh_hid_receive_report(dev_addr, instance);
+        return;
+    }
+
     report_received_callback(dev_addr, instance, report, len);
 
     tuh_hid_receive_report(dev_addr, instance);

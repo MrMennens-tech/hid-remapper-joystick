@@ -247,10 +247,11 @@ int main() {
     parse_our_descriptor();
     set_mapping_from_config();
     board_init();
+    stdio_init_all();  // Initialize stdio FIRST for debug output
+    printf("\n\n=== HID Remapper Starting ===\n");
     ws2812_led_init();  // Initialize WS2812 LED if available
     extra_init();
     tusb_init();
-    stdio_init_all();
 
     tud_sof_isr_set(sof_handler);
 

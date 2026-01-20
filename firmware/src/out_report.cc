@@ -4,6 +4,7 @@
 #include <tusb.h>
 
 #include "out_report.h"
+#include "switch_pro.h"
 
 struct outgoing_out_report_t {
     uint8_t dev_addr;
@@ -80,6 +81,10 @@ void do_send_out_report() {
 
 void tuh_hid_set_report_complete_cb(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len) {
     ready_to_send = true;
+    
+    // Let Switch Pro driver know about completed set_report
+    switch_pro_set_report_complete(dev_addr, instance, report_id);
+    
     set_report_complete_cb(dev_addr, instance, report_id);
 }
 

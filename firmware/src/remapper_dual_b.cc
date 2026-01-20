@@ -8,10 +8,12 @@
 #include "pico/time.h"
 
 #include "activity_led.h"
+#include "constants.h"
 #include "dual.h"
 #include "interval_override.h"
 #include "out_report.h"
 #include "serial.h"
+#include "switch_pro.h"
 #include "ws2812_led.h"
 
 uint8_t buffer[SERIAL_MAX_PAYLOAD_SIZE + sizeof(device_connected_t)];
@@ -56,8 +58,9 @@ void request_b_init() {
 int main() {
     serial_init();
     board_init();
+    stdio_init_all();  // Initialize stdio FIRST for debug output
+    printf("\n\n=== HID Remapper Dual B Starting ===\n");
     ws2812_led_init();  // Initialize WS2812 LED if available
-    stdio_init_all();
 
     while (!initialized) {
         request_b_init();
@@ -88,6 +91,13 @@ void report_received_callback(uint8_t dev_addr, uint8_t instance, uint8_t const*
 }
 
 void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* report, uint16_t len) {
+    // Check if this is a Switch Pro Controller setup reply
+    if (switch_pro_process_report(dev_addr, instance, report, len)) {
+        // It was a setup reply, continue receiving
+        tuh_hid_receive_report(dev_addr, instance);
+        return;
+    }
+
     report_received_callback(dev_addr, instance, report, len);
 
     tuh_hid_receive_report(dev_addr, instance);
@@ -121,6 +131,14 @@ void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* desc_re
     tuh_hid_itf_get_info(dev_addr, instance, &itf_info);
     uint8_t itf_num = itf_info.desc.bInterfaceNumber;
 
+    printf("HID mount: VID=%04x PID=%04x dev=%d inst=%d\n", vid, pid, dev_addr, instance);
+
+    // Check if this is a Nintendo Switch controller - needs special initialization
+    if (switch_pro_is_nintendo_controller(vid, pid)) {
+        printf("Nintendo Switch controller detected! Starting initialization...\n");
+        switch_pro_init_controller(dev_addr, instance);
+    }
+
     descriptor_received_callback(vid, pid, desc_report, desc_len, (uint16_t) (dev_addr << 8) | instance, hub_port, itf_num);
     tuh_hid_receive_report(dev_addr, instance);
 }
@@ -134,6 +152,7 @@ void umount_callback(uint8_t dev_addr, uint8_t instance) {
 
 void tuh_hid_umount_cb(uint8_t dev_addr, uint8_t instance) {
     printf("tuh_hid_umount_cb %d %d\n", dev_addr, instance);
+    switch_pro_unmount(dev_addr, instance);
     umount_callback(dev_addr, instance);
 }
 
