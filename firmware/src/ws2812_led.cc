@@ -101,23 +101,15 @@ bool ws2812_led_init(void) {
     printf("WS2812: Initialization COMPLETE on PIO%d SM%d pin %d\n", 
            get_pio_index(ws2812_pio), ws2812_sm, ws2812_pin);
     
-    // Color test - each channel separately to verify color order
-    // If you see: RED then GREEN then BLUE = correct (GRB mode)
-    // If you see: GREEN then RED then BLUE = wrong, need RGB mode
-    // If you see: BLUE then GREEN then RED = wrong, need BGR mode
-    printf("WS2812: Color test - should be RED, GREEN, BLUE\n");
+    // Quick color test - should show RED, GREEN, BLUE in sequence
+    printf("WS2812: Color test - RED, GREEN, BLUE\n");
     
-    // Test RED channel (0x00RR0000)
-    ws2812_led_set(0x00400000);  // Should be RED
-    sleep_ms(400);
-    
-    // Test GREEN channel (0x0000GG00)
-    ws2812_led_set(0x00004000);  // Should be GREEN
-    sleep_ms(400);
-    
-    // Test BLUE channel (0x000000BB)
-    ws2812_led_set(0x00000040);  // Should be BLUE
-    sleep_ms(400);
+    ws2812_led_set(0x00400000);  // RED
+    sleep_ms(300);
+    ws2812_led_set(0x00004000);  // GREEN
+    sleep_ms(300);
+    ws2812_led_set(0x00000040);  // BLUE
+    sleep_ms(300);
     
     ws2812_led_set(LED_COLOR_SEARCHING);  // Blue = ready
     printf("WS2812: LED ready (blue)\n");
@@ -131,16 +123,12 @@ void ws2812_led_set(uint32_t color) {
         return;
     }
     
-    // WS2812 expects GRB format, we receive RGB in 0x00RRGGBB format
-    uint8_t r = (color >> 16) & 0xFF;
-    uint8_t g = (color >> 8) & 0xFF;
-    uint8_t b = color & 0xFF;
+    // Waveshare boards use RGB format LEDs (not GRB like standard WS2812)
+    // Input is in 0x00RRGGBB format
+    // Shift left 8 bits so RGB is in the upper 24 bits (MSB first)
+    uint32_t rgb = color << 8;
     
-    // Convert to GRB format and shift left 8 bits
-    // The PIO program shifts out MSB first, expecting 24 bits in upper part of 32-bit word
-    uint32_t grb = ((uint32_t)g << 24) | ((uint32_t)r << 16) | ((uint32_t)b << 8);
-    
-    put_pixel(grb);
+    put_pixel(rgb);
 }
 
 bool ws2812_led_available(void) {
