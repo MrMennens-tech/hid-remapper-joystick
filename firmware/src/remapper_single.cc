@@ -64,8 +64,32 @@ void descriptor_received_callback(uint16_t vendor_id, uint16_t product_id, const
     device_connected_callback(interface, vendor_id, product_id, hub_port);
 }
 
+// Called when ANY USB device is mounted (before class drivers)
+void tuh_mount_cb(uint8_t dev_addr) {
+    uint16_t vid, pid;
+    tuh_vid_pid_get(dev_addr, &vid, &pid);
+    printf(">>> USB Device mounted: dev_addr=%d VID=%04x PID=%04x <<<\n", dev_addr, vid, pid);
+    
+    // Flash WHITE briefly to show ANY USB device was detected
+    ws2812_led_set(0x00404040);  // White flash
+    sleep_ms(100);
+    
+    // Check for Nintendo controllers
+    if (switch_pro_is_nintendo_controller(vid, pid)) {
+        printf(">>> Nintendo controller detected at USB level! <<<\n");
+        ws2812_led_set(LED_COLOR_DETECTED);  // Purple = Nintendo detected!
+    } else {
+        ws2812_led_set(LED_COLOR_SEARCHING);  // Back to blue for non-Nintendo
+    }
+}
+
+// Called when ANY USB device is unmounted
+void tuh_umount_cb(uint8_t dev_addr) {
+    printf(">>> USB Device unmounted: dev_addr=%d <<<\n", dev_addr);
+}
+
 void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* desc_report, uint16_t desc_len) {
-    printf("tuh_hid_mount_cb\n");
+    printf("tuh_hid_mount_cb: dev=%d inst=%d\n", dev_addr, instance);
 
     uint8_t hub_addr;
     uint8_t hub_port;
