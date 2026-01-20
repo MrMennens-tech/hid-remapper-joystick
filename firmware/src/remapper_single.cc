@@ -107,22 +107,28 @@ void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* desc_re
 
     printf("HID mount: VID=%04x PID=%04x dev=%d inst=%d\n", vid, pid, dev_addr, instance);
 
+    descriptor_received_callback(vid, pid, desc_report, desc_len, (uint16_t) (dev_addr << 8) | instance, hub_port, itf_num);
+    
     // Check if this is a Nintendo Switch controller - needs special initialization
+    // We do this AFTER descriptor_received so the remapper knows the device exists,
+    // but we start the init sequence which will override the LED color.
     if (switch_pro_is_nintendo_controller(vid, pid)) {
-        printf("Nintendo Switch controller detected! Preparing initialization...\n");
+        printf("Nintendo Switch controller detected! Starting initialization...\n");
         switch_pro_init_controller(dev_addr, instance);
     }
 
-    descriptor_received_callback(vid, pid, desc_report, desc_len, (uint16_t) (dev_addr << 8) | instance, hub_port, itf_num);
-
     // Start receiving reports
     tuh_hid_receive_report(dev_addr, instance);
-    
-    // NOW start the Switch Pro init (after HID driver is ready)
-    if (switch_pro_is_nintendo_controller(vid, pid)) {
-        printf("Starting Switch Pro init sequence...\n");
-        switch_pro_start_init(dev_addr, instance);
+}
+
+void tuh_hid_set_report_complete_cb(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t type, uint16_t len) {
+    // Forward to Switch Pro driver if needed
+    if (type == HID_REPORT_TYPE_OUTPUT) {
+        switch_pro_set_report_complete(dev_addr, instance, report_id);
     }
+
+    // Also call the generic remapper callback
+    set_report_complete_cb(dev_addr, instance, report_id);
 }
 
 void umount_callback(uint8_t dev_addr, uint8_t instance) {
