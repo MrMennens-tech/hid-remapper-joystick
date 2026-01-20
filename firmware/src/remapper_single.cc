@@ -72,16 +72,19 @@ void tuh_mount_cb(uint8_t dev_addr) {
     tuh_vid_pid_get(dev_addr, &vid, &pid);
     printf(">>> USB Device mounted: dev_addr=%d VID=%04x PID=%04x <<<\n", dev_addr, vid, pid);
     
-    // Flash WHITE briefly to show ANY USB device was detected
-    ws2812_led_set(0x00404040);  // White flash
-    sleep_ms(100);
+    // Flash WHITE to show USB device was detected
+    ws2812_led_set(0x00404040);  // White
+    sleep_ms(300);  // Longer flash so user can see it
     
-    // Check for Nintendo controllers
-    if (switch_pro_is_nintendo_controller(vid, pid)) {
-        printf(">>> Nintendo controller detected at USB level! <<<\n");
-        ws2812_led_set(LED_COLOR_DETECTED);  // Purple = Nintendo detected!
+    // Check for Nintendo controllers (VID 0x057e)
+    if (vid == 0x057e) {
+        printf(">>> Nintendo VID detected! PID=%04x <<<\n", pid);
+        // Keep PURPLE for Nintendo
+        ws2812_led_set(LED_COLOR_DETECTED);  // Purple
     } else {
-        ws2812_led_set(LED_COLOR_SEARCHING);  // Back to blue for non-Nintendo
+        // CYAN for other devices (so we know the callback worked)
+        ws2812_led_set(0x00004040);  // Cyan = non-Nintendo device connected
+        printf(">>> Non-Nintendo device, LED set to CYAN <<<\n");
     }
 }
 
@@ -121,15 +124,8 @@ void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* desc_re
     tuh_hid_receive_report(dev_addr, instance);
 }
 
-void tuh_hid_set_report_complete_cb(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t type, uint16_t len) {
-    // Forward to Switch Pro driver if needed
-    if (type == HID_REPORT_TYPE_OUTPUT) {
-        switch_pro_set_report_complete(dev_addr, instance, report_id);
-    }
-
-    // Also call the generic remapper callback
-    set_report_complete_cb(dev_addr, instance, report_id);
-}
+// NOTE: tuh_hid_set_report_complete_cb is defined in out_report.cc
+// It calls switch_pro_set_report_complete() for Switch Pro init
 
 void umount_callback(uint8_t dev_addr, uint8_t instance) {
     device_disconnected_callback(dev_addr);
