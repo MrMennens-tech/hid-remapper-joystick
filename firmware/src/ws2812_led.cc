@@ -101,9 +101,24 @@ bool ws2812_led_init(void) {
     printf("WS2812: Initialization COMPLETE on PIO%d SM%d pin %d\n", 
            get_pio_index(ws2812_pio), ws2812_sm, ws2812_pin);
     
-    // Quick flash to show LED is working (no long delays that break USB!)
-    ws2812_led_set(0x00200000);  // Brief red flash
-    sleep_ms(50);
+    // Color test - each channel separately to verify color order
+    // If you see: RED then GREEN then BLUE = correct (GRB mode)
+    // If you see: GREEN then RED then BLUE = wrong, need RGB mode
+    // If you see: BLUE then GREEN then RED = wrong, need BGR mode
+    printf("WS2812: Color test - should be RED, GREEN, BLUE\n");
+    
+    // Test RED channel (0x00RR0000)
+    ws2812_led_set(0x00400000);  // Should be RED
+    sleep_ms(400);
+    
+    // Test GREEN channel (0x0000GG00)
+    ws2812_led_set(0x00004000);  // Should be GREEN
+    sleep_ms(400);
+    
+    // Test BLUE channel (0x000000BB)
+    ws2812_led_set(0x00000040);  // Should be BLUE
+    sleep_ms(400);
+    
     ws2812_led_set(LED_COLOR_SEARCHING);  // Blue = ready
     printf("WS2812: LED ready (blue)\n");
     printf("=================================\n");

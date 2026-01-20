@@ -74,17 +74,21 @@ void tuh_mount_cb(uint8_t dev_addr) {
     
     // Flash WHITE to show USB device was detected
     ws2812_led_set(0x00404040);  // White
-    sleep_ms(300);  // Longer flash so user can see it
+    sleep_ms(300);
     
-    // Check for Nintendo controllers (VID 0x057e)
-    if (vid == 0x057e) {
-        printf(">>> Nintendo VID detected! PID=%04x <<<\n", pid);
-        // Keep PURPLE for Nintendo
+    // Show VID via LED color for debugging:
+    // Nintendo (0x057e) = PURPLE
+    // Microsoft (0x045e) = CYAN  
+    // Other = YELLOW
+    if (vid == VENDOR_ID_NINTENDO) {  // 0x057e
+        printf(">>> Nintendo VID (0x057e) detected! <<<\n");
         ws2812_led_set(LED_COLOR_DETECTED);  // Purple
+    } else if (vid == VENDOR_ID_MICROSOFT) {  // 0x045e
+        printf(">>> Microsoft VID (0x045e) detected! <<<\n");
+        ws2812_led_set(0x00004040);  // Cyan
     } else {
-        // CYAN for other devices (so we know the callback worked)
-        ws2812_led_set(0x00004040);  // Cyan = non-Nintendo device connected
-        printf(">>> Non-Nintendo device, LED set to CYAN <<<\n");
+        printf(">>> Unknown VID: 0x%04x <<<\n", vid);
+        ws2812_led_set(0x00404000);  // Yellow = unknown VID
     }
 }
 
