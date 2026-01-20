@@ -77,25 +77,34 @@ bool switch_pro_is_nintendo_controller(uint16_t vid, uint16_t pid) {
             pid == PRODUCT_ID_NINTENDO_SWITCH_JOYCON_GRIP);
 }
 
+static bool send_setup_report(switch_hid_dev_t* dev, uint8_t* data, size_t len) {
+    bool result = tuh_hid_set_report(dev->dev_addr, dev->instance, 0, HID_REPORT_TYPE_OUTPUT, data, len);
+    if (!result) {
+        printf("Switch Pro [%d:%d]: tuh_hid_set_report FAILED!\n", dev->dev_addr, dev->instance);
+        ws2812_led_set(LED_COLOR_ERROR);  // Red = error
+    }
+    return result;
+}
+
 static void send_next_setup_command(switch_hid_dev_t* dev) {
     switch (dev->setup_stage) {
         case 1:
             // Step 1: USB handshake - tells controller we're ready
             printf("Switch Pro [%d:%d]: Sending handshake (0x80 0x01)\n", dev->dev_addr, dev->instance);
             ws2812_led_set(LED_COLOR_HANDSHAKE);  // Yellow
-            tuh_hid_set_report(dev->dev_addr, dev->instance, 0, HID_REPORT_TYPE_OUTPUT, usb_handshake, sizeof(usb_handshake));
+            send_setup_report(dev, usb_handshake, sizeof(usb_handshake));
             break;
         case 2:
             // Step 2: USB enable (baud rate) - some controllers need this
             printf("Switch Pro [%d:%d]: Sending USB enable (0x80 0x02)\n", dev->dev_addr, dev->instance);
             ws2812_led_set(LED_COLOR_USB_ENABLE);  // Orange
-            tuh_hid_set_report(dev->dev_addr, dev->instance, 0, HID_REPORT_TYPE_OUTPUT, usb_enable, sizeof(usb_enable));
+            send_setup_report(dev, usb_enable, sizeof(usb_enable));
             break;
         case 3:
             // Step 3: Force HID-only mode - this makes the controller send simple HID reports
             printf("Switch Pro [%d:%d]: Sending HID-only mode (0x80 0x04)\n", dev->dev_addr, dev->instance);
             ws2812_led_set(LED_COLOR_HID_MODE);  // Dim Green
-            tuh_hid_set_report(dev->dev_addr, dev->instance, 0, HID_REPORT_TYPE_OUTPUT, usb_hid_only, sizeof(usb_hid_only));
+            send_setup_report(dev, usb_hid_only, sizeof(usb_hid_only));
             break;
         case 4:
             // Setup complete!
@@ -123,6 +132,9 @@ void switch_pro_set_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t 
     }
 }
 
+// Flag to delay init until after HID driver is ready
+static switch_hid_dev_t* pending_init_dev = nullptr;
+
 bool switch_pro_init_controller(uint8_t dev_addr, uint8_t instance) {
     // Check if already tracked
     switch_hid_dev_t* dev = find_switch_hid_dev(dev_addr, instance);
@@ -138,14 +150,38 @@ bool switch_pro_init_controller(uint8_t dev_addr, uint8_t instance) {
         return false;
     }
     
-    printf("Switch Pro [%d:%d]: Starting initialization sequence\n", dev_addr, instance);
+    printf("Switch Pro [%d:%d]: Detected, will init after HID driver ready\n", dev_addr, instance);
     ws2812_led_set(LED_COLOR_DETECTED);  // Purple = detected
     
-    // Start the initialization sequence
-    dev->setup_stage = 1;
-    send_next_setup_command(dev);
+    // Don't start immediately - wait for HID driver to be fully ready
+    // The init will be triggered by the first received report or a timeout
+    dev->setup_stage = 0;  // Not started yet
+    pending_init_dev = dev;
     
     return true;
+}
+
+// Call this to actually start the init sequence (after HID driver is ready)
+void switch_pro_start_init(uint8_t dev_addr, uint8_t instance) {
+    switch_hid_dev_t* dev = find_switch_hid_dev(dev_addr, instance);
+    if (dev == nullptr || dev->setup_stage != 0) {
+        return;  // Not found or already started
+    }
+    
+    printf("Switch Pro [%d:%d]: Starting initialization sequence NOW\n", dev->dev_addr, dev->instance);
+    dev->setup_stage = 1;
+    send_next_setup_command(dev);
+    pending_init_dev = nullptr;
+}
+
+// Check if there's a pending init that needs to be started
+void switch_pro_check_pending_init(void) {
+    if (pending_init_dev != nullptr && pending_init_dev->setup_stage == 0) {
+        printf("Switch Pro: Starting pending init\n");
+        pending_init_dev->setup_stage = 1;
+        send_next_setup_command(pending_init_dev);
+        pending_init_dev = nullptr;
+    }
 }
 
 bool switch_pro_process_report(uint8_t dev_addr, uint8_t instance, uint8_t const* report, uint16_t len) {

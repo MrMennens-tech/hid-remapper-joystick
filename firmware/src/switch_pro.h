@@ -27,6 +27,12 @@ void switch_pro_unmount(uint8_t dev_addr, uint8_t instance);
 // Called when SET_REPORT completes - advance to next setup stage
 void switch_pro_set_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id);
 
+// Start the init sequence (call after HID driver is fully ready)
+void switch_pro_start_init(uint8_t dev_addr, uint8_t instance);
+
+// Check and start any pending init (call from main loop)
+void switch_pro_check_pending_init(void);
+
 // Custom driver functions (fallback for vendor-specific interface)
 bool switch_proh_init(void);
 bool switch_proh_open(uint8_t rhport, uint8_t dev_addr, tusb_desc_interface_t const* desc_itf, uint16_t max_len);

@@ -26,8 +26,10 @@ void extra_init() {
     pio_usb_configuration_t pio_cfg = PIO_USB_DEFAULT_CONFIG;
     pio_cfg.pin_dp = PICO_DEFAULT_PIO_USB_DP_PIN;
     pio_cfg.skip_alarm_pool = true;
+    printf("USB Host: Configuring PIO USB on pin %d\n", PICO_DEFAULT_PIO_USB_DP_PIN);
     tuh_configure(BOARD_TUH_RHPORT, TUH_CFGID_RPI_PIO_USB_CONFIGURATION, &pio_cfg);
     add_repeating_timer_us(-1000, manual_sof, NULL, &sof_timer);
+    printf("USB Host: Ready and waiting for devices\n");
 }
 
 uint32_t get_gpio_valid_pins_mask() {
@@ -107,13 +109,20 @@ void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* desc_re
 
     // Check if this is a Nintendo Switch controller - needs special initialization
     if (switch_pro_is_nintendo_controller(vid, pid)) {
-        printf("Nintendo Switch controller detected! Starting initialization...\n");
+        printf("Nintendo Switch controller detected! Preparing initialization...\n");
         switch_pro_init_controller(dev_addr, instance);
     }
 
     descriptor_received_callback(vid, pid, desc_report, desc_len, (uint16_t) (dev_addr << 8) | instance, hub_port, itf_num);
 
+    // Start receiving reports
     tuh_hid_receive_report(dev_addr, instance);
+    
+    // NOW start the Switch Pro init (after HID driver is ready)
+    if (switch_pro_is_nintendo_controller(vid, pid)) {
+        printf("Starting Switch Pro init sequence...\n");
+        switch_pro_start_init(dev_addr, instance);
+    }
 }
 
 void umount_callback(uint8_t dev_addr, uint8_t instance) {
