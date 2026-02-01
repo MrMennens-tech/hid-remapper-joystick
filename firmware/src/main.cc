@@ -277,6 +277,9 @@ int main() {
             read_adc();
 #endif
             process_mapping(true);
+            if (ws2812_led_available()) {
+                ws2812_led_set_for_layer(get_layer_state_mask());
+            }
             write_gpio();
 #ifdef MCP4651_ENABLED
             mcp4651_write();

@@ -135,6 +135,28 @@ bool ws2812_led_available(void) {
     return ws2812_initialized;
 }
 
+// Default colors per layer (0x00RRGGBB): Layer 0 blue, 1 green, 2 yellow, 3 red
+static const uint32_t layer_colors[4] = {
+    0x00000040,  // Layer 0: Blue
+    0x00004000,  // Layer 1: Green
+    0x00404000,  // Layer 2: Yellow
+    0x00400000,  // Layer 3: Red
+};
+
+void ws2812_led_set_for_layer(uint8_t layer_state_mask) {
+    if (!ws2812_initialized) {
+        return;
+    }
+    // Use lowest active layer index (layer_state_mask: bit 0 = layer 0, etc.)
+    for (int i = 0; i < 4; i++) {
+        if (layer_state_mask & (1u << i)) {
+            ws2812_led_set(layer_colors[i]);
+            return;
+        }
+    }
+    ws2812_led_set(layer_colors[0]);  // Fallback: layer 0
+}
+
 #else
 
 // No WS2812 on this board - stub functions
@@ -149,6 +171,10 @@ void ws2812_led_set(uint32_t color) {
 
 bool ws2812_led_available(void) {
     return false;
+}
+
+void ws2812_led_set_for_layer(uint8_t layer_state_mask) {
+    (void)layer_state_mask;
 }
 
 #endif

@@ -97,7 +97,11 @@ void tuh_umount_cb(uint8_t dev_addr) {
     printf(">>> USB Device unmounted: dev_addr=%d <<<\n", dev_addr);
 }
 
+static int hid_device_count = 0;
+static bool controller_connected_led_done = false;
+
 void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* desc_report, uint16_t desc_len) {
+    hid_device_count++;
     printf("tuh_hid_mount_cb: dev=%d inst=%d\n", dev_addr, instance);
 
     uint8_t hub_addr;
@@ -140,6 +144,14 @@ void tuh_hid_umount_cb(uint8_t dev_addr, uint8_t instance) {
     printf("tuh_hid_umount_cb\n");
     switch_pro_unmount(dev_addr, instance);
     umount_callback(dev_addr, instance);
+    hid_device_count--;
+    if (hid_device_count <= 0) {
+        hid_device_count = 0;
+        controller_connected_led_done = false;
+        if (ws2812_led_available()) {
+            ws2812_led_set(LED_COLOR_SEARCHING);
+        }
+    }
 }
 
 void report_received_callback(uint8_t dev_addr, uint8_t instance, uint8_t const* report, uint16_t len) {
@@ -147,6 +159,12 @@ void report_received_callback(uint8_t dev_addr, uint8_t instance, uint8_t const*
         handle_received_report(report, len, (uint16_t) (dev_addr << 8) | instance);
 
         reports_received = true;
+
+        // Boot sequence: set LED to "controller connected" on first usable report
+        if (ws2812_led_available() && !controller_connected_led_done) {
+            controller_connected_led_done = true;
+            ws2812_led_set(LED_COLOR_CONTROLLER_CONNECTED);
+        }
     }
 }
 

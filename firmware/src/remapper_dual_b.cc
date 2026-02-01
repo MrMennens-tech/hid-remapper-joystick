@@ -79,8 +79,16 @@ int main() {
     return 0;
 }
 
+static bool controller_connected_led_done = false;
+
 void report_received_callback(uint8_t dev_addr, uint8_t instance, uint8_t const* report, uint16_t len) {
     activity_led_on();
+
+    // Boot sequence: set LED to "controller connected" on first usable report
+    if (ws2812_led_available() && !controller_connected_led_done) {
+        controller_connected_led_done = true;
+        ws2812_led_set(LED_COLOR_CONTROLLER_CONNECTED);
+    }
 
     report_received_t* msg = (report_received_t*) buffer;
     msg->command = DualCommand::REPORT_RECEIVED;
@@ -103,7 +111,10 @@ void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t cons
     tuh_hid_receive_report(dev_addr, instance);
 }
 
+static int hid_device_count = 0;
+
 void descriptor_received_callback(uint16_t vendor_id, uint16_t product_id, const uint8_t* report_descriptor, int len, uint16_t interface, uint8_t hub_port, uint8_t itf_num) {
+    hid_device_count++;
     device_connected_t* msg = (device_connected_t*) buffer;
     msg->command = DualCommand::DEVICE_CONNECTED;
     msg->vid = vendor_id;
@@ -186,6 +197,14 @@ void tuh_hid_umount_cb(uint8_t dev_addr, uint8_t instance) {
     printf("tuh_hid_umount_cb %d %d\n", dev_addr, instance);
     switch_pro_unmount(dev_addr, instance);
     umount_callback(dev_addr, instance);
+    hid_device_count--;
+    if (hid_device_count <= 0) {
+        hid_device_count = 0;
+        controller_connected_led_done = false;
+        if (ws2812_led_available()) {
+            ws2812_led_set(LED_COLOR_SEARCHING);
+        }
+    }
 }
 
 void tuh_sof_cb() {

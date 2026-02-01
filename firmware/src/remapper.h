@@ -29,6 +29,7 @@ void interval_override_updated();
 
 void parse_our_descriptor();
 void process_mapping(bool auto_repeat);
+uint8_t get_layer_state_mask(void);
 void update_their_descriptor_derivates();
 bool send_report(send_report_t do_send_report);
 void queue_out_report(uint16_t interface, uint8_t report_id, const uint8_t* buffer, uint8_t len);

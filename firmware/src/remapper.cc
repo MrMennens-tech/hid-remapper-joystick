@@ -1087,6 +1087,10 @@ int32_t eval_expr(uint8_t expr, uint64_t now, bool auto_repeat) {
     return 0;
 }
 
+uint8_t get_layer_state_mask(void) {
+    return layer_state_mask;
+}
+
 void process_mapping(bool auto_repeat) {
     if (suspended) {
         return;
