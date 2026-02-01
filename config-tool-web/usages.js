@@ -531,6 +531,7 @@ const usages = {
 
 const common_target_usages = {
     "0x00000000": { 'name': 'Nothing', 'class': 'other' },
+    "0xfff10000": { 'name': 'Layer 0', 'class': 'other' },
     "0xfff10001": { 'name': 'Layer 1', 'class': 'other' },
     "0xfff10002": { 'name': 'Layer 2', 'class': 'other' },
     "0xfff10003": { 'name': 'Layer 3', 'class': 'other' },
@@ -538,6 +539,7 @@ const common_target_usages = {
     "0xfff10005": { 'name': 'Layer 5', 'class': 'other' },
     "0xfff10006": { 'name': 'Layer 6', 'class': 'other' },
     "0xfff10007": { 'name': 'Layer 7', 'class': 'other' },
+    "0xfff100fe": { 'name': 'Cycle layer', 'class': 'other' },
     "0xfff20001": { 'name': 'Macro 1', 'class': 'other' },
     "0xfff20002": { 'name': 'Macro 2', 'class': 'other' },
     "0xfff20003": { 'name': 'Macro 3', 'class': 'other' },

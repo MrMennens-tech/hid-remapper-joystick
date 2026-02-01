@@ -1556,6 +1556,10 @@ function set_forced_layers(mapping, mapping_container) {
         mapping_container.querySelector(".layer_checkbox" + i).disabled = false;
     }
     const usage_int = parseInt(mapping['target_usage'], 16);
+    // Cycle layer (0xFE) is not a specific layer; do not force layer checkboxes
+    if ((usage_int & 0xFFFF) === 0xfe) {
+        return;
+    }
     if (((usage_int & 0xFFFF0000) >>> 0) == LAYERS_USAGE_PAGE) {
         const layer = usage_int & 0xFFFF;
         const layer_checkbox = mapping_container.querySelector(".layer_checkbox" + layer);
