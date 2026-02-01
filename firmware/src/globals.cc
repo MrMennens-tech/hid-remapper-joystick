@@ -35,6 +35,8 @@ bool normalize_gamepad_inputs = true;
 
 std::vector<mapping_config11_t> config_mappings;
 
+uint32_t layer_colors[4] = { 0x00000040, 0x00004000, 0x00404000, 0x00400000 };  // Layer 0 blue, 1 green, 2 yellow, 3 red
+
 uint8_t resolution_multiplier = 0;
 
 std::vector<std::vector<uint32_t>> macros[NMACROS];

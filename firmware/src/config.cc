@@ -10,7 +10,7 @@
 #include "platform.h"
 #include "remapper.h"
 
-const uint8_t CONFIG_VERSION = 18;
+const uint8_t CONFIG_VERSION = 19;
 
 const uint8_t CONFIG_FLAG_UNMAPPED_PASSTHROUGH = 0x01;
 const uint8_t CONFIG_FLAG_UNMAPPED_PASSTHROUGH_MASK = 0b00001111;
@@ -616,7 +616,73 @@ void load_config(const uint8_t* persisted_config) {
         return;
     }
 
-    persist_config_v18_t* config = (persist_config_v18_t*) persisted_config;
+    if (version == 18) {
+        persist_config_v18_t* config = (persist_config_v18_t*) persisted_config;
+        unmapped_passthrough_layer_mask = config->unmapped_passthrough_layer_mask;
+        ignore_auth_dev_inputs = config->flags & (1 << CONFIG_FLAG_IGNORE_AUTH_DEV_INPUTS_BIT);
+        gpio_output_mode = !!(config->flags & (1 << CONFIG_FLAG_GPIO_OUTPUT_MODE_BIT));
+        normalize_gamepad_inputs = !!(config->flags & (1 << CONFIG_FLAG_NORMALIZE_GAMEPAD_INPUTS_BIT));
+        partial_scroll_timeout = config->partial_scroll_timeout;
+        tap_hold_threshold = config->tap_hold_threshold;
+        gpio_debounce_time = config->gpio_debounce_time_ms * 1000;
+        interval_override = config->interval_override;
+        our_descriptor_number = config->our_descriptor_number;
+        if (our_descriptor_number >= NOUR_DESCRIPTORS) {
+            our_descriptor_number = 0;
+        }
+        macro_entry_duration = config->macro_entry_duration;
+        mapping_config11_t* buffer_mappings = (mapping_config11_t*) (persisted_config + sizeof(persist_config_v18_t));
+        for (uint32_t i = 0; i < config->mapping_count; i++) {
+            config_mappings.push_back(buffer_mappings[i]);
+        }
+        const uint8_t* macros_config_ptr = (persisted_config + sizeof(persist_config_v18_t) + config->mapping_count * sizeof(mapping_config11_t));
+        my_mutex_enter(MutexId::MACROS);
+        for (int i = 0; i < NMACROS; i++) {
+            macros[i].clear();
+            uint8_t macro_len = *macros_config_ptr;
+            macros_config_ptr++;
+            macros[i].reserve(macro_len);
+            for (int j = 0; j < macro_len; j++) {
+                uint8_t entry_len = *macros_config_ptr;
+                macros_config_ptr++;
+                for (int k = 0; k < entry_len; k++) {
+                    macros[i].back().push_back(((macro_item_t*) macros_config_ptr)->usage);
+                    macros_config_ptr += sizeof(macro_item_t);
+                }
+            }
+        }
+        my_mutex_exit(MutexId::MACROS);
+        uint8_t* expr_config_ptr = (uint8_t*) macros_config_ptr;
+        my_mutex_enter(MutexId::EXPRESSIONS);
+        for (int i = 0; i < NEXPRESSIONS; i++) {
+            uint16_t expr_len = ((uint16_val_t*) expr_config_ptr)->val;
+            expr_config_ptr += 2;
+            expressions[i].clear();
+            expressions[i].reserve(expr_len);
+            for (int j = 0; j < expr_len; j++) {
+                Op op = (Op) *expr_config_ptr;
+                expr_config_ptr++;
+                if ((op == Op::PUSH) || (op == Op::PUSH_USAGE)) {
+                    expressions[i].push_back((expr_elem_t){ .op = op, .val = ((expr_val_t*) expr_config_ptr)->val });
+                    expr_config_ptr += sizeof(expr_val_t);
+                } else {
+                    expressions[i].push_back((expr_elem_t){ .op = op });
+                }
+            }
+        }
+        my_mutex_exit(MutexId::EXPRESSIONS);
+        my_mutex_enter(MutexId::QUIRKS);
+        quirk_t* quirk_config_ptr = (quirk_t*) expr_config_ptr;
+        quirks.clear();
+        for (uint16_t i = 0; i < config->quirk_count; i++) {
+            quirks.push_back(quirk_config_ptr[i]);
+        }
+        my_mutex_exit(MutexId::QUIRKS);
+        return;
+    }
+
+    if (version == 19) {
+        persist_config_v19_t* config = (persist_config_v19_t*) persisted_config;
     unmapped_passthrough_layer_mask = config->unmapped_passthrough_layer_mask;
     ignore_auth_dev_inputs = config->flags & (1 << CONFIG_FLAG_IGNORE_AUTH_DEV_INPUTS_BIT);
     gpio_output_mode = !!(config->flags & (1 << CONFIG_FLAG_GPIO_OUTPUT_MODE_BIT));
@@ -630,12 +696,13 @@ void load_config(const uint8_t* persisted_config) {
         our_descriptor_number = 0;
     }
     macro_entry_duration = config->macro_entry_duration;
-    mapping_config11_t* buffer_mappings = (mapping_config11_t*) (persisted_config + sizeof(persist_config_v18_t));
+    memcpy(layer_colors, config->layer_colors, sizeof(layer_colors));
+    mapping_config11_t* buffer_mappings = (mapping_config11_t*) (persisted_config + sizeof(persist_config_v19_t));
     for (uint32_t i = 0; i < config->mapping_count; i++) {
         config_mappings.push_back(buffer_mappings[i]);
     }
 
-    const uint8_t* macros_config_ptr = (persisted_config + sizeof(persist_config_v18_t) + config->mapping_count * sizeof(mapping_config11_t));
+    const uint8_t* macros_config_ptr = (persisted_config + sizeof(persist_config_v19_t) + config->mapping_count * sizeof(mapping_config11_t));
     my_mutex_enter(MutexId::MACROS);
     for (int i = 0; i < NMACROS; i++) {
         macros[i].clear();
@@ -682,6 +749,7 @@ void load_config(const uint8_t* persisted_config) {
         quirk_config_ptr++;
     }
     my_mutex_exit(MutexId::QUIRKS);
+    }
 }
 
 void fill_get_config(get_config_t* config) {
@@ -703,6 +771,7 @@ void fill_get_config(get_config_t* config) {
     my_mutex_enter(MutexId::QUIRKS);
     config->quirk_count = quirks.size();
     my_mutex_exit(MutexId::QUIRKS);
+    memcpy(config->layer_colors, layer_colors, sizeof(config->layer_colors));
 }
 
 void fill_persist_config(persist_config_t* config) {
@@ -722,6 +791,7 @@ void fill_persist_config(persist_config_t* config) {
     my_mutex_enter(MutexId::QUIRKS);
     config->quirk_count = quirks.size();
     my_mutex_exit(MutexId::QUIRKS);
+    memcpy(config->layer_colors, layer_colors, sizeof(config->layer_colors));
 }
 
 PersistConfigReturnCode persist_config() {
@@ -984,6 +1054,7 @@ void handle_set_report1(uint8_t report_id, uint8_t const* buffer, uint16_t bufsi
                         our_descriptor_number = 0;
                     }
                     macro_entry_duration = config->macro_entry_duration;
+                    memcpy(layer_colors, config->layer_colors, sizeof(layer_colors));
                     break;
                 }
                 case ConfigCommand::GET_CONFIG:

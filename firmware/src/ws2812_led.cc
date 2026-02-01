@@ -1,6 +1,7 @@
 #include "ws2812_led.h"
 
 #include <cstdio>
+#include "globals.h"
 #include "pico/time.h"  // for sleep_ms
 
 // Check if WS2812 is configured for this board
@@ -134,14 +135,6 @@ void ws2812_led_set(uint32_t color) {
 bool ws2812_led_available(void) {
     return ws2812_initialized;
 }
-
-// Default colors per layer (0x00RRGGBB): Layer 0 blue, 1 green, 2 yellow, 3 red
-static const uint32_t layer_colors[4] = {
-    0x00000040,  // Layer 0: Blue
-    0x00004000,  // Layer 1: Green
-    0x00404000,  // Layer 2: Yellow
-    0x00400000,  // Layer 3: Red
-};
 
 void ws2812_led_set_for_layer(uint8_t layer_state_mask) {
     if (!ws2812_initialized) {

@@ -30,7 +30,6 @@ const uint32_t H_SCROLL_USAGE = 0x000C0238;
 
 const uint8_t NLAYERS = 4;
 const uint32_t LAYERS_USAGE_PAGE = 0xFFF10000;
-#define LAYER_CYCLE_USAGE 0xFFF100FE
 const uint32_t MACRO_USAGE_PAGE = 0xFFF20000;
 const uint32_t EXPR_USAGE_PAGE = 0xFFF30000;
 const uint32_t REGISTER_USAGE_PAGE = 0xFFF50000;
@@ -48,7 +47,6 @@ const uint8_t resolution_multiplier_masks[] = {
 std::vector<reverse_mapping_t> reverse_mapping;
 std::vector<reverse_mapping_t> reverse_mapping_macros;
 std::vector<reverse_mapping_t> reverse_mapping_layers;
-std::vector<map_source_t> reverse_mapping_cycle_layer;
 
 std::unordered_map<uint8_t, std::unordered_map<uint32_t, usage_def_t>> our_usages;  // report_id -> usage -> usage_def
 std::unordered_map<uint32_t, usage_def_t> our_usages_flat;
@@ -394,7 +392,6 @@ void set_mapping_from_config() {
     reverse_mapping.clear();
     reverse_mapping_macros.clear();
     reverse_mapping_layers.clear();
-    reverse_mapping_cycle_layer.clear();
     used_state_slots = 0;
     usage_state_ptr.clear();
     register_ptrs.clear();
@@ -415,7 +412,7 @@ void set_mapping_from_config() {
             source_port = 0;
         }
         uint8_t target_port = (mapping.hub_ports >> 4) & 0x0F;
-        if ((mapping.target_usage & 0xFFFF0000) == LAYERS_USAGE_PAGE && mapping.target_usage != LAYER_CYCLE_USAGE) {
+        if ((mapping.target_usage & 0xFFFF0000) == LAYERS_USAGE_PAGE) {
             uint16_t layer = mapping.target_usage & 0xFFFF;
             if (mapping.flags & MAPPING_FLAG_STICKY) {
                 // sticky layer-triggering mappings are forces to NOT be present on the layer they trigger
@@ -439,7 +436,7 @@ void set_mapping_from_config() {
         }
 
         if (assign_state_slot(mapping.source_usage, source_port, false)) {
-            map_source_t map_source = (map_source_t){
+            reverse_mapping_map[((uint64_t) target_port << 32) | mapping.target_usage].push_back((map_source_t){
                 .usage = mapping.source_usage,
                 .scaling = mapping.scaling,
                 .sticky = (mapping.flags & MAPPING_FLAG_STICKY) != 0,
@@ -450,12 +447,7 @@ void set_mapping_from_config() {
                 .input_state = get_state_ptr(mapping.source_usage, source_port),
                 .tap_hold_state = get_tap_hold_state_ptr(mapping.source_usage, source_port),
                 .sticky_state = get_sticky_state_ptr(mapping.source_usage, source_port),
-            };
-            if (mapping.target_usage == LAYER_CYCLE_USAGE) {
-                reverse_mapping_cycle_layer.push_back(map_source);
-            } else {
-                reverse_mapping_map[((uint64_t) target_port << 32) | mapping.target_usage].push_back(map_source);
-            }
+            });
 
             if ((mapping.source_usage & 0xFFFF0000) == REGISTER_USAGE_PAGE) {
                 register_ptrs.push_back((register_ptrs_t){
@@ -1168,22 +1160,6 @@ void process_mapping(bool auto_repeat) {
                     new_layer_state_mask |= 1 << i;
                 }
             }
-        }
-    }
-
-    // cycle layer: on tap (rising edge), advance to next layer 0->1->2->3->0
-    for (auto const& map_source : reverse_mapping_cycle_layer) {
-        if ((map_source.layer_mask & layer_state_mask) &&
-            (map_source.tap ? map_source.tap_hold_state->tap
-                           : ((*(map_source.input_state + PREV_STATE_OFFSET) == 0) && (*map_source.input_state != 0)))) {
-            uint8_t current_index = 0;
-            while (current_index < NLAYERS && !(layer_state_mask & (1 << current_index))) {
-                current_index++;
-            }
-            if (current_index < NLAYERS) {
-                new_layer_state_mask = 1 << ((current_index + 1) % NLAYERS);
-            }
-            break;  // first triggered source wins
         }
     }
 

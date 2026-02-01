@@ -42,6 +42,8 @@ extern bool normalize_gamepad_inputs;
 
 extern std::vector<mapping_config11_t> config_mappings;
 
+extern uint32_t layer_colors[4];  // 0x00RRGGBB per layer for WS2812 LED
+
 extern uint8_t resolution_multiplier;
 
 #define NMACROS_8 8

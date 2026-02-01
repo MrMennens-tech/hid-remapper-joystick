@@ -7,8 +7,8 @@ const REPORT_ID_MONITOR = 101;
 const STICKY_FLAG = 1 << 0;
 const TAP_FLAG = 1 << 1;
 const HOLD_FLAG = 1 << 2;
-const CONFIG_SIZE = 32;
-const CONFIG_VERSION = 18;
+const CONFIG_SIZE = 64;
+const CONFIG_VERSION = 19;
 const VENDOR_ID = 0xCAFE;
 const PRODUCT_ID = 0xBAF2;
 const DEFAULT_PARTIAL_SCROLL_TIMEOUT = 1000000;
@@ -137,6 +137,7 @@ let target_modal = null;
 let extra_usages = { 'source': [], 'target': [] };
 let config = {
     'version': CONFIG_VERSION,
+    'layer_colors': [0x00000040, 0x00004000, 0x00404000, 0x00400000],
     'unmapped_passthrough_layers': [0, 1, 2, 3, 4, 5, 6, 7],
     'partial_scroll_timeout': DEFAULT_PARTIAL_SCROLL_TIMEOUT,
     'tap_hold_threshold': DEFAULT_TAP_HOLD_THRESHOLD,
@@ -290,21 +291,30 @@ async function load_from_device() {
 
     try {
         await send_feature_command(GET_CONFIG);
-        const [config_version, flags, unmapped_passthrough_layer_mask, partial_scroll_timeout, mapping_count, our_usage_count, their_usage_count, interval_override, tap_hold_threshold, gpio_debounce_time_ms, our_descriptor_number, macro_entry_duration, quirk_count] =
-            await read_config_feature([UINT8, UINT8, UINT8, UINT32, UINT16, UINT32, UINT32, UINT8, UINT32, UINT8, UINT8, UINT8, UINT16]);
+        const get_config_fields = [UINT8, UINT8, UINT8, UINT32, UINT16, UINT32, UINT32, UINT8, UINT32, UINT8, UINT8, UINT8, UINT16];
+        if (CONFIG_VERSION >= 19) {
+            get_config_fields.push(UINT32, UINT32, UINT32, UINT32);
+        }
+        const get_config_result = await read_config_feature(get_config_fields);
+        const config_version = get_config_result[0];
         check_received_version(config_version);
 
         config['version'] = config_version;
-        config['unmapped_passthrough_layers'] = mask_to_layer_list(unmapped_passthrough_layer_mask);
-        config['partial_scroll_timeout'] = partial_scroll_timeout;
-        config['tap_hold_threshold'] = tap_hold_threshold;
-        config['gpio_debounce_time_ms'] = gpio_debounce_time_ms;
-        config['interval_override'] = interval_override;
-        config['our_descriptor_number'] = our_descriptor_number;
-        config['ignore_auth_dev_inputs'] = !!(flags & IGNORE_AUTH_DEV_INPUTS_FLAG);
-        config['gpio_output_mode'] = (flags & GPIO_OUTPUT_MODE_FLAG) ? 1 : 0;
-        config['normalize_gamepad_inputs'] = !!(flags & NORMALIZE_GAMEPAD_INPUTS_FLAG);
-        config['macro_entry_duration'] = macro_entry_duration + 1;
+        config['unmapped_passthrough_layers'] = mask_to_layer_list(get_config_result[2]);
+        config['partial_scroll_timeout'] = get_config_result[3];
+        config['tap_hold_threshold'] = get_config_result[7];
+        config['gpio_debounce_time_ms'] = get_config_result[9];
+        config['interval_override'] = get_config_result[8];
+        config['our_descriptor_number'] = get_config_result[10];
+        config['ignore_auth_dev_inputs'] = !!(get_config_result[1] & IGNORE_AUTH_DEV_INPUTS_FLAG);
+        config['gpio_output_mode'] = (get_config_result[1] & GPIO_OUTPUT_MODE_FLAG) ? 1 : 0;
+        config['normalize_gamepad_inputs'] = !!(get_config_result[1] & NORMALIZE_GAMEPAD_INPUTS_FLAG);
+        config['macro_entry_duration'] = get_config_result[11] + 1;
+        if (CONFIG_VERSION >= 19 && get_config_result.length >= 17) {
+            config['layer_colors'] = get_config_result.slice(13, 17);
+        } else {
+            config['layer_colors'] = [0x00000040, 0x00004000, 0x00404000, 0x00400000];
+        }
         config['mappings'] = [];
 
         for (let i = 0; i < mapping_count; i++) {
@@ -443,7 +453,16 @@ async function save_to_device() {
         const flags = (config['ignore_auth_dev_inputs'] ? IGNORE_AUTH_DEV_INPUTS_FLAG : 0) |
             (config['gpio_output_mode'] ? GPIO_OUTPUT_MODE_FLAG : 0) |
             (config['normalize_gamepad_inputs'] ? NORMALIZE_GAMEPAD_INPUTS_FLAG : 0);
-        await send_feature_command(SET_CONFIG, [
+        if (CONFIG_VERSION >= 19) {
+            config['layer_colors'] = [];
+            const defaults = [0x00000040, 0x00004000, 0x00404000, 0x00400000];
+            for (let i = 0; i < 4; i++) {
+                const el = document.getElementById('layer_color_' + i);
+                const hex = el ? el.value : null;
+                config['layer_colors'][i] = hex ? (parseInt(hex.slice(1), 16) >>> 0) : defaults[i];
+            }
+        }
+        const set_config_payload = [
             [UINT8, flags],
             [UINT8, layer_list_to_mask(config['unmapped_passthrough_layers'])],
             [UINT32, config['partial_scroll_timeout']],
@@ -452,7 +471,15 @@ async function save_to_device() {
             [UINT8, config['gpio_debounce_time_ms']],
             [UINT8, config['our_descriptor_number']],
             [UINT8, config['macro_entry_duration'] - 1],
-        ]);
+        ];
+        if (CONFIG_VERSION >= 19) {
+            const defaults = [0x00000040, 0x00004000, 0x00404000, 0x00400000];
+            const lc = config['layer_colors'] || defaults;
+            for (let i = 0; i < 4; i++) {
+                set_config_payload.push([UINT32, (lc[i] != null ? lc[i] >>> 0 : defaults[i])]);
+            }
+        }
+        await send_feature_command(SET_CONFIG, set_config_payload);
         await send_feature_command(CLEAR_MAPPING);
 
         for (const mapping of config['mappings']) {
@@ -606,14 +633,18 @@ async function do_get_usages_from_device(command, rle_count) {
 
 async function get_usages_from_device() {
     await send_feature_command(GET_CONFIG);
-    const [config_version, flags, unmapped_passthrough_layer_mask, partial_scroll_timeout, mapping_count, our_usage_count, their_usage_count, interval_override, tap_hold_threshold, gpio_debounce_time_ms, our_descriptor_number, macro_entry_duration, quirk_count] =
-        await read_config_feature([UINT8, UINT8, UINT8, UINT32, UINT16, UINT32, UINT32, UINT8, UINT32, UINT8, UINT8, UINT8, UINT16]);
+    const get_config_fields_usages = [UINT8, UINT8, UINT8, UINT32, UINT16, UINT32, UINT32, UINT8, UINT32, UINT8, UINT8, UINT8, UINT16];
+    if (CONFIG_VERSION >= 19) {
+        get_config_fields_usages.push(UINT32, UINT32, UINT32, UINT32);
+    }
+    const get_config_result = await read_config_feature(get_config_fields_usages);
+    const config_version = get_config_result[0];
     check_received_version(config_version);
 
     extra_usages['target'] =
-        await do_get_usages_from_device(GET_OUR_USAGES, our_usage_count);
+        await do_get_usages_from_device(GET_OUR_USAGES, get_config_result[5]);
     extra_usages['source'] =
-        await do_get_usages_from_device(GET_THEIR_USAGES, their_usage_count);
+        await do_get_usages_from_device(GET_THEIR_USAGES, get_config_result[6]);
 }
 
 function set_config_ui_state() {
@@ -632,6 +663,14 @@ function set_config_ui_state() {
     document.getElementById('input_labels_dropdown').value = config['input_labels'];
     document.getElementById('input_labels_modal_dropdown').value = config['input_labels'];
     document.getElementById('normalize_gamepad_inputs_checkbox').checked = config['normalize_gamepad_inputs'];
+    if (CONFIG_VERSION >= 19 && config['layer_colors']) {
+        for (let i = 0; i < 4; i++) {
+            const el = document.getElementById('layer_color_' + i);
+            if (el) {
+                el.value = '#' + (config['layer_colors'][i] >>> 0).toString(16).padStart(6, '0');
+            }
+        }
+    }
 }
 
 function set_mappings_ui_state() {
@@ -766,6 +805,9 @@ function set_ui_state() {
     }
     if (config['version'] < CONFIG_VERSION) {
         config['version'] = CONFIG_VERSION;
+    }
+    if (CONFIG_VERSION >= 19 && !config['layer_colors']) {
+        config['layer_colors'] = [0x00000040, 0x00004000, 0x00404000, 0x00400000];
     }
 
     set_config_ui_state();
@@ -989,7 +1031,7 @@ function add_crc(data) {
 }
 
 function check_json_version(config_version) {
-    if (!([3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18].includes(config_version))) {
+    if (!([3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19].includes(config_version))) {
         throw new Error("Incompatible version.");
     }
 }
@@ -1556,10 +1598,6 @@ function set_forced_layers(mapping, mapping_container) {
         mapping_container.querySelector(".layer_checkbox" + i).disabled = false;
     }
     const usage_int = parseInt(mapping['target_usage'], 16);
-    // Cycle layer (0xFE) is not a specific layer; do not force layer checkboxes
-    if ((usage_int & 0xFFFF) === 0xfe) {
-        return;
-    }
     if (((usage_int & 0xFFFF0000) >>> 0) == LAYERS_USAGE_PAGE) {
         const layer = usage_int & 0xFFFF;
         const layer_checkbox = mapping_container.querySelector(".layer_checkbox" + layer);
