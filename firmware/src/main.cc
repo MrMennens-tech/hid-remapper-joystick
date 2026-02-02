@@ -250,6 +250,9 @@ int main() {
     stdio_init_all();  // Initialize stdio FIRST for debug output
     printf("\n\n=== HID Remapper Starting ===\n");
     ws2812_led_init();  // Initialize WS2812 LED if available
+    if (ws2812_led_available()) {
+        ws2812_led_set(LED_COLOR_WAITING);  // Purple = waiting for HID device
+    }
     extra_init();
     tusb_init();
 
@@ -278,7 +281,11 @@ int main() {
 #endif
             process_mapping(true);
             if (ws2812_led_available()) {
-                ws2812_led_set_for_layer(get_layer_state_mask());
+                if (connected_led_ticks > 0) {
+                    connected_led_ticks--;
+                } else {
+                    ws2812_led_set_for_layer(get_layer_state_mask());
+                }
             }
             write_gpio();
 #ifdef MCP4651_ENABLED

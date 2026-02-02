@@ -84,10 +84,10 @@ static bool controller_connected_led_done = false;
 void report_received_callback(uint8_t dev_addr, uint8_t instance, uint8_t const* report, uint16_t len) {
     activity_led_on();
 
-    // Boot sequence: set LED to "controller connected" on first usable report
+    // Boot sequence: orange flash on first usable report (A side sets connected_led_ticks via serial)
     if (ws2812_led_available() && !controller_connected_led_done) {
         controller_connected_led_done = true;
-        ws2812_led_set(LED_COLOR_CONTROLLER_CONNECTED);
+        ws2812_led_set(LED_COLOR_USB_ENABLE);  // Orange = connected
     }
 
     report_received_t* msg = (report_received_t*) buffer;
@@ -142,7 +142,7 @@ void tuh_mount_cb(uint8_t dev_addr) {
         printf(">>> Nintendo controller detected at USB level! <<<\n");
         ws2812_led_set(LED_COLOR_DETECTED);  // Purple = Nintendo detected!
     } else {
-        ws2812_led_set(LED_COLOR_SEARCHING);  // Back to blue for non-Nintendo
+        ws2812_led_set(LED_COLOR_WAITING);   // Purple = waiting for HID
     }
 }
 
@@ -202,7 +202,7 @@ void tuh_hid_umount_cb(uint8_t dev_addr, uint8_t instance) {
         hid_device_count = 0;
         controller_connected_led_done = false;
         if (ws2812_led_available()) {
-            ws2812_led_set(LED_COLOR_SEARCHING);
+            ws2812_led_set(LED_COLOR_WAITING);
         }
     }
 }

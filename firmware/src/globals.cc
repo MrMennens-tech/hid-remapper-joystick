@@ -35,7 +35,8 @@ bool normalize_gamepad_inputs = true;
 
 std::vector<mapping_config11_t> config_mappings;
 
-uint32_t layer_colors[4] = { 0x00000040, 0x00004000, 0x00404000, 0x00400000 };  // Layer 0 blue, 1 green, 2 yellow, 3 red
+uint32_t layer_colors[4] = { 0x00000040, 0x00004000, 0x00400000, 0x00404000 };  // Layer 0 blue, 1 green, 2 red, 3 yellow
+uint16_t connected_led_ticks = 0;
 
 uint8_t resolution_multiplier = 0;
 

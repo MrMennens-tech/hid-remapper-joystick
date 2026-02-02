@@ -8,6 +8,7 @@
 
 #include "constants.h"
 #include "descriptor_parser.h"
+#include "globals.h"
 #include "out_report.h"
 #include "remapper.h"
 #include "switch_pro.h"
@@ -149,7 +150,7 @@ void tuh_hid_umount_cb(uint8_t dev_addr, uint8_t instance) {
         hid_device_count = 0;
         controller_connected_led_done = false;
         if (ws2812_led_available()) {
-            ws2812_led_set(LED_COLOR_SEARCHING);
+            ws2812_led_set(LED_COLOR_WAITING);
         }
     }
 }
@@ -160,10 +161,11 @@ void report_received_callback(uint8_t dev_addr, uint8_t instance, uint8_t const*
 
         reports_received = true;
 
-        // Boot sequence: set LED to "controller connected" on first usable report
+        // Boot sequence: orange flash on first usable report, then layer colors after connected_led_ticks
         if (ws2812_led_available() && !controller_connected_led_done) {
             controller_connected_led_done = true;
-            ws2812_led_set(LED_COLOR_CONTROLLER_CONNECTED);
+            ws2812_led_set(LED_COLOR_USB_ENABLE);  // Orange = connected
+            connected_led_ticks = 200;            // ~200 ms before showing layer color
         }
     }
 }

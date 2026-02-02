@@ -9,8 +9,9 @@
 
 // Switch Pro Controller status colors
 #define LED_COLOR_OFF           0x00000000  // Off
-#define LED_COLOR_SEARCHING     0x00000040  // Blue - searching/waiting (brighter)
-#define LED_COLOR_DETECTED      0x00400040  // Purple - Nintendo device detected
+#define LED_COLOR_SEARCHING     0x00000040  // Blue - legacy
+#define LED_COLOR_WAITING       0x00400040  // Purple - waiting for HID device
+#define LED_COLOR_DETECTED      0x00400040  // Purple - Nintendo device detected (same as WAITING)
 #define LED_COLOR_HANDSHAKE     0x00404000  // Yellow - sending handshake
 #define LED_COLOR_USB_ENABLE    0x00401000  // Orange - USB enable
 #define LED_COLOR_HID_MODE      0x00004000  // Dim Green - HID mode

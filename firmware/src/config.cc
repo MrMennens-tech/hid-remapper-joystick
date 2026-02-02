@@ -10,7 +10,7 @@
 #include "platform.h"
 #include "remapper.h"
 
-const uint8_t CONFIG_VERSION = 19;
+const uint8_t CONFIG_VERSION = 18;
 
 const uint8_t CONFIG_FLAG_UNMAPPED_PASSTHROUGH = 0x01;
 const uint8_t CONFIG_FLAG_UNMAPPED_PASSTHROUGH_MASK = 0b00001111;
@@ -29,7 +29,8 @@ bool checksum_ok(const uint8_t* buffer, uint16_t data_size) {
 
 bool persisted_version_ok(const uint8_t* buffer) {
     uint8_t version = ((config_version_t*) buffer)->version;
-    return (version >= 3) && (version <= CONFIG_VERSION);
+    // Allow v19 for backward compat (load from flash); we persist as v18 (no layer_colors)
+    return (version >= 3) && (version <= 19);
 }
 
 bool command_version_ok(const uint8_t* buffer) {
@@ -771,7 +772,6 @@ void fill_get_config(get_config_t* config) {
     my_mutex_enter(MutexId::QUIRKS);
     config->quirk_count = quirks.size();
     my_mutex_exit(MutexId::QUIRKS);
-    memcpy(config->layer_colors, layer_colors, sizeof(config->layer_colors));
 }
 
 void fill_persist_config(persist_config_t* config) {
@@ -791,7 +791,6 @@ void fill_persist_config(persist_config_t* config) {
     my_mutex_enter(MutexId::QUIRKS);
     config->quirk_count = quirks.size();
     my_mutex_exit(MutexId::QUIRKS);
-    memcpy(config->layer_colors, layer_colors, sizeof(config->layer_colors));
 }
 
 PersistConfigReturnCode persist_config() {
@@ -1054,7 +1053,6 @@ void handle_set_report1(uint8_t report_id, uint8_t const* buffer, uint16_t bufsi
                         our_descriptor_number = 0;
                     }
                     macro_entry_duration = config->macro_entry_duration;
-                    memcpy(layer_colors, config->layer_colors, sizeof(layer_colors));
                     break;
                 }
                 case ConfigCommand::GET_CONFIG:

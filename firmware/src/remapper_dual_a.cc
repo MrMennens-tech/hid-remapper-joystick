@@ -5,10 +5,12 @@
 
 #include "descriptor_parser.h"
 #include "dual.h"
+#include "globals.h"
 #include "interval_override.h"
 #include "remapper.h"
 #include "serial.h"
 #include "tick.h"
+#include "ws2812_led.h"
 
 #include "dual_b_binary.h"
 
@@ -17,6 +19,8 @@ extern "C" {
 #include "flash.h"
 #include "swd.h"
 }
+
+static bool first_report_led_done = false;
 
 void send_b_init() {
     b_init_t msg;
@@ -40,11 +44,16 @@ bool serial_callback(const uint8_t* data, uint16_t len) {
         }
         case DualCommand::DEVICE_DISCONNECTED: {
             device_disconnected_t* msg = (device_disconnected_t*) data;
+            first_report_led_done = false;
             device_disconnected_callback(msg->dev_addr);
             break;
         }
         case DualCommand::REPORT_RECEIVED: {
             report_received_t* msg = (report_received_t*) data;
+            if (!first_report_led_done) {
+                first_report_led_done = true;
+                connected_led_ticks = 200;  // ~200 ms orange flash before layer colors
+            }
             handle_received_report(msg->report, len - sizeof(report_received_t), (uint16_t) (msg->dev_addr << 8) | msg->interface);
             ret = true;
             break;

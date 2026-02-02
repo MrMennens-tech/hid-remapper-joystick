@@ -7,8 +7,8 @@ const REPORT_ID_MONITOR = 101;
 const STICKY_FLAG = 1 << 0;
 const TAP_FLAG = 1 << 1;
 const HOLD_FLAG = 1 << 2;
-const CONFIG_SIZE = 64;
-const CONFIG_VERSION = 19;
+const CONFIG_SIZE = 32;
+const CONFIG_VERSION = 18;
 const VENDOR_ID = 0xCAFE;
 const PRODUCT_ID = 0xBAF2;
 const DEFAULT_PARTIAL_SCROLL_TIMEOUT = 1000000;
@@ -137,7 +137,6 @@ let target_modal = null;
 let extra_usages = { 'source': [], 'target': [] };
 let config = {
     'version': CONFIG_VERSION,
-    'layer_colors': [0x00000040, 0x00004000, 0x00404000, 0x00400000],
     'unmapped_passthrough_layers': [0, 1, 2, 3, 4, 5, 6, 7],
     'partial_scroll_timeout': DEFAULT_PARTIAL_SCROLL_TIMEOUT,
     'tap_hold_threshold': DEFAULT_TAP_HOLD_THRESHOLD,
@@ -292,9 +291,6 @@ async function load_from_device() {
     try {
         await send_feature_command(GET_CONFIG);
         const get_config_fields = [UINT8, UINT8, UINT8, UINT32, UINT16, UINT32, UINT32, UINT8, UINT32, UINT8, UINT8, UINT8, UINT16];
-        if (CONFIG_VERSION >= 19) {
-            get_config_fields.push(UINT32, UINT32, UINT32, UINT32);
-        }
         const get_config_result = await read_config_feature(get_config_fields);
         const config_version = get_config_result[0];
         check_received_version(config_version);
@@ -310,11 +306,6 @@ async function load_from_device() {
         config['gpio_output_mode'] = (get_config_result[1] & GPIO_OUTPUT_MODE_FLAG) ? 1 : 0;
         config['normalize_gamepad_inputs'] = !!(get_config_result[1] & NORMALIZE_GAMEPAD_INPUTS_FLAG);
         config['macro_entry_duration'] = get_config_result[11] + 1;
-        if (CONFIG_VERSION >= 19 && get_config_result.length >= 17) {
-            config['layer_colors'] = get_config_result.slice(13, 17);
-        } else {
-            config['layer_colors'] = [0x00000040, 0x00004000, 0x00404000, 0x00400000];
-        }
         config['mappings'] = [];
 
         for (let i = 0; i < mapping_count; i++) {
@@ -453,15 +444,6 @@ async function save_to_device() {
         const flags = (config['ignore_auth_dev_inputs'] ? IGNORE_AUTH_DEV_INPUTS_FLAG : 0) |
             (config['gpio_output_mode'] ? GPIO_OUTPUT_MODE_FLAG : 0) |
             (config['normalize_gamepad_inputs'] ? NORMALIZE_GAMEPAD_INPUTS_FLAG : 0);
-        if (CONFIG_VERSION >= 19) {
-            config['layer_colors'] = [];
-            const defaults = [0x00000040, 0x00004000, 0x00404000, 0x00400000];
-            for (let i = 0; i < 4; i++) {
-                const el = document.getElementById('layer_color_' + i);
-                const hex = el ? el.value : null;
-                config['layer_colors'][i] = hex ? (parseInt(hex.slice(1), 16) >>> 0) : defaults[i];
-            }
-        }
         const set_config_payload = [
             [UINT8, flags],
             [UINT8, layer_list_to_mask(config['unmapped_passthrough_layers'])],
@@ -472,13 +454,6 @@ async function save_to_device() {
             [UINT8, config['our_descriptor_number']],
             [UINT8, config['macro_entry_duration'] - 1],
         ];
-        if (CONFIG_VERSION >= 19) {
-            const defaults = [0x00000040, 0x00004000, 0x00404000, 0x00400000];
-            const lc = config['layer_colors'] || defaults;
-            for (let i = 0; i < 4; i++) {
-                set_config_payload.push([UINT32, (lc[i] != null ? lc[i] >>> 0 : defaults[i])]);
-            }
-        }
         await send_feature_command(SET_CONFIG, set_config_payload);
         await send_feature_command(CLEAR_MAPPING);
 
@@ -663,14 +638,6 @@ function set_config_ui_state() {
     document.getElementById('input_labels_dropdown').value = config['input_labels'];
     document.getElementById('input_labels_modal_dropdown').value = config['input_labels'];
     document.getElementById('normalize_gamepad_inputs_checkbox').checked = config['normalize_gamepad_inputs'];
-    if (CONFIG_VERSION >= 19 && config['layer_colors']) {
-        for (let i = 0; i < 4; i++) {
-            const el = document.getElementById('layer_color_' + i);
-            if (el) {
-                el.value = '#' + (config['layer_colors'][i] >>> 0).toString(16).padStart(6, '0');
-            }
-        }
-    }
 }
 
 function set_mappings_ui_state() {
@@ -805,9 +772,6 @@ function set_ui_state() {
     }
     if (config['version'] < CONFIG_VERSION) {
         config['version'] = CONFIG_VERSION;
-    }
-    if (CONFIG_VERSION >= 19 && !config['layer_colors']) {
-        config['layer_colors'] = [0x00000040, 0x00004000, 0x00404000, 0x00400000];
     }
 
     set_config_ui_state();
