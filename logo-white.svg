@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <!-- Circle ring -->
+  <circle cx="100" cy="100" r="91" stroke="white" stroke-width="9.5"/>
+  <!-- M letterform + double diagonal slashes -->
+  <g stroke="white" stroke-width="14" stroke-linecap="butt" stroke-linejoin="miter">
+    <!-- Left vertical leg -->
+    <line x1="33"  y1="175" x2="33"  y2="28"/>
+    <!-- Left diagonal down to center V -->
+    <line x1="33"  y1="28"  x2="94"  y2="130"/>
+    <!-- Right diagonal from center V upward -->
+    <line x1="94"  y1="130" x2="128" y2="52"/>
+    <!-- Right vertical leg -->
+    <line x1="128" y1="52"  x2="128" y2="175"/>
+    <!-- Slash 1 (parallel diagonal, right of M) -->
+    <line x1="113" y1="150" x2="156" y2="65"/>
+    <!-- Slash 2 (outermost diagonal) -->
+    <line x1="138" y1="155" x2="182" y2="68"/>
+  </g>
+</svg>
