@@ -118,7 +118,7 @@ body {
 }
 .logo-name { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
 .logo-sub  { font-size: 10px; color: var(--text-3); font-weight: 500; margin-top: -2px; }
-.logo-img  { height: 28px; width: auto; object-fit: contain; filter: brightness(0) invert(1); }
+.logo-img  { height: 28px; width: auto; object-fit: contain; }
 .logo-fallback { display: flex; align-items: center; gap: 8px; }
 
 .header-sep { flex: 1; }
@@ -958,7 +958,6 @@ textarea.expr-input:focus { border-color: var(--accent); }
 #connect-screen .connect-logo-img {
     height: 64px; width: auto;
     object-fit: contain;
-    filter: brightness(0) invert(1);
     opacity: 0.95;
 }
 #connect-screen .connect-logo {
