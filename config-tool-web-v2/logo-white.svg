@@ -1,19 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
   <!-- Circle ring -->
-  <circle cx="100" cy="100" r="91" stroke="white" stroke-width="9.5"/>
-  <!-- M letterform + double diagonal slashes -->
-  <g stroke="white" stroke-width="14" stroke-linecap="butt" stroke-linejoin="miter">
+  <circle cx="100" cy="100" r="91" stroke="white" stroke-width="9"/>
+  <!-- MM letterform:
+       Left leg (vertical) + zigzag /\/\
+       P1=(52,38)  V1=(97,162)  P2=(128,38)  V2=(156,110)  P3=(175,38) -->
+  <g stroke="white" stroke-width="8.5" stroke-linecap="butt" stroke-linejoin="miter">
     <!-- Left vertical leg -->
-    <line x1="33"  y1="175" x2="33"  y2="28"/>
-    <!-- Left diagonal down to center V -->
-    <line x1="33"  y1="28"  x2="94"  y2="130"/>
-    <!-- Right diagonal from center V upward -->
-    <line x1="94"  y1="130" x2="128" y2="52"/>
-    <!-- Right vertical leg -->
-    <line x1="128" y1="52"  x2="128" y2="175"/>
-    <!-- Slash 1 (parallel diagonal, right of M) -->
-    <line x1="113" y1="150" x2="156" y2="65"/>
-    <!-- Slash 2 (outermost diagonal) -->
-    <line x1="138" y1="155" x2="182" y2="68"/>
+    <line x1="52"  y1="38"  x2="52"  y2="162"/>
+    <!-- Left diagonal (shares top with left leg) down to V1 -->
+    <line x1="52"  y1="38"  x2="97"  y2="162"/>
+    <!-- V1 up to center peak P2 -->
+    <line x1="97"  y1="162" x2="128" y2="38"/>
+    <!-- P2 down to right-mid valley V2 -->
+    <line x1="128" y1="38"  x2="156" y2="110"/>
+    <!-- V2 up to far-right peak P3 -->
+    <line x1="156" y1="110" x2="175" y2="38"/>
   </g>
 </svg>
