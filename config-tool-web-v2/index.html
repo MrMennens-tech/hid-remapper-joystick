@@ -11,10 +11,13 @@
 <!-- ─── Header ──────────────────────────────────────────────────────────────── -->
 <header id="header">
     <div class="logo">
-        <div class="logo-icon">🎮</div>
-        <div>
-            <div class="logo-name">TechRemap</div>
-            <div class="logo-sub">by Mennens.Tech</div>
+        <img src="logo-white.svg" alt="Mennens.Tech" class="logo-img" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        <div class="logo-fallback" style="display:none">
+            <div class="logo-icon">🎮</div>
+            <div>
+                <div class="logo-name">TechRemap</div>
+                <div class="logo-sub">by Mennens.Tech</div>
+            </div>
         </div>
     </div>
 
@@ -475,7 +478,8 @@
 
 <!-- ─── Connect Screen Overlay ─────────────────────────────────────────────── -->
 <div id="connect-screen">
-    <div class="connect-logo">🎮</div>
+    <img src="logo-white.svg" alt="Mennens.Tech" class="connect-logo-img" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+    <div class="connect-logo" style="display:none">🎮</div>
     <h1>TechRemap</h1>
     <p>Connect your HID Remapper device to get started. Requires Chrome or a Chromium-based browser.</p>
 
@@ -495,6 +499,13 @@
 
 <!-- ─── Notifications ─────────────────────────────────────────────────────── -->
 <div id="notifications"></div>
+
+<!-- ─── Footer ────────────────────────────────────────────────────────────── -->
+<footer id="footer">
+    <span>TechRemap by <a href="https://mennens.tech" target="_blank" rel="noopener">Mennens.Tech</a></span>
+    <span class="footer-sep">·</span>
+    <span>Powered by <a href="https://remapper.org" target="_blank" rel="noopener">HID Remapper</a></span>
+</footer>
 
 <!-- ─── App Bootstrap ─────────────────────────────────────────────────────── -->
 <script type="module">

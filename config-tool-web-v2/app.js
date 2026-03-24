@@ -31,7 +31,9 @@ const state = {
 
 function setDirty(dirty = true) {
     state.dirty = dirty;
-    document.getElementById('save-btn').disabled = !dirty || !state.connected;
+    const disabled = !dirty || !state.connected;
+    document.getElementById('save-btn').disabled = disabled;
+    document.getElementById('header-save-btn').disabled = disabled;
 }
 
 function notify(message, type = 'info', duration = 3000) {
@@ -298,18 +300,19 @@ function applyCurrentMapping() {
     const targetUsage = getActivePanelUsage();
     if (!targetUsage) return;
 
-    const layers = getSelectedLayers();
-    const sticky = document.getElementById('toggle-sticky').checked;
-    const tap    = document.getElementById('toggle-tap').checked;
-    const hold   = document.getElementById('toggle-hold').checked;
-    const scaling = parseInt(document.getElementById('sensitivity-slider').value, 10);
+    const layers   = getSelectedLayers();
+    const sticky   = document.getElementById('toggle-sticky').checked;
+    const tap      = document.getElementById('toggle-tap').checked;
+    const hold     = document.getElementById('toggle-hold').checked;
+    const scaling  = parseInt(document.getElementById('sensitivity-slider').value, 10);
+    const deadzone = parseInt(document.getElementById('deadzone-slider').value, 10);
 
     const existingIdx = state.config.mappings.findIndex(m => m.target_usage === targetUsage);
     if (existingIdx < 0) return;
 
     state.config.mappings[existingIdx] = {
         ...state.config.mappings[existingIdx],
-        layers, sticky, tap, hold, scaling,
+        layers, sticky, tap, hold, scaling, deadzone,
     };
     setDirty();
 }
@@ -339,8 +342,6 @@ async function startCapture() {
     state.captureUsage = targetUsage;
     renderAssignPanel();
 
-    // Track baseline values - first report within 200ms threshold ignored
-    const seen = new Map();
     const startTime = Date.now();
 
     try {
