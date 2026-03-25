@@ -48,6 +48,7 @@
     <div class="tab" data-tab="layers">Layers &amp; LED</div>
     <div class="tab" data-tab="settings">Settings</div>
     <div class="tab" data-tab="advanced">Advanced</div>
+    <div class="tab" data-tab="monitor">&#9654; Monitor</div>
 </nav>
 
 <!-- ─── Main Content ────────────────────────────────────────────────────────── -->
@@ -487,6 +488,23 @@
             <div class="section-title">Mapping Overview</div>
             <div class="section-desc">All configured input → output remappings at a glance.</div>
             <div id="overview-content" style="margin-top:16px"></div>
+        </div>
+    </div>
+
+    <!-- ─── MONITOR TAB ────────────────────────────────────────────────────────── -->
+    <div class="tab-panel" id="panel-monitor">
+        <div id="monitor-header">
+            <div id="monitor-header-left">
+                <button class="btn" id="monitor-toggle-btn" disabled>
+                    <span class="capture-indicator"></span>
+                    Start Monitoring
+                </button>
+                <span id="monitor-status-text">Connect a device first</span>
+            </div>
+            <button class="btn" id="monitor-clear-btn">Clear</button>
+        </div>
+        <div id="monitor-inputs">
+            <div class="mon-empty">Press "Start Monitoring", then move a stick or press a button on your device.</div>
         </div>
     </div>
 

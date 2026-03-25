@@ -381,6 +381,7 @@ function switchTab(tabId) {
         p.classList.toggle('active', p.id === `panel-${tabId}`)
     );
     if (tabId === 'overview') renderOverviewTab();
+    if (tabId === 'monitor')  updateMonitorToggleBtn();
 }
 
 // ─── Layers Tab ───────────────────────────────────────────────────────────────
@@ -557,6 +558,7 @@ async function onConnect() {
         document.getElementById('save-btn').disabled  = true;
         document.getElementById('header-load-btn').disabled = false;
         document.getElementById('header-save-btn').disabled = true;
+        updateMonitorToggleBtn();
         notify('Device connected. Load your config to start.', 'success');
     } catch (e) {
         updateStatusDot('disconnected', 'Disconnected');
@@ -629,6 +631,7 @@ function updateStatusDot(status, label) {
 
 function onHIDDisconnected() {
     state.connected = false;
+    stopMonitor();
     updateStatusDot('disconnected', 'Disconnected');
     document.getElementById('load-btn').disabled = true;
     document.getElementById('save-btn').disabled = true;
@@ -723,6 +726,117 @@ function renderLayerBar() {
     }
 }
 
+// ─── Monitor Tab ──────────────────────────────────────────────────────────────
+
+const monitor = {
+    active:    false,
+    inputs:    new Map(),   // usage → { value, hubPort, timestamp }
+    frameId:   null,
+    cleanupId: null,
+};
+
+function updateMonitorToggleBtn() {
+    const btn = document.getElementById('monitor-toggle-btn');
+    const txt = document.getElementById('monitor-status-text');
+    if (!btn) return;
+    btn.disabled = !state.connected;
+    if (monitor.active) {
+        btn.classList.add('monitoring');
+        btn.innerHTML = '<span class="capture-indicator"></span> Stop Monitoring';
+        if (txt) txt.textContent = 'Listening for inputs…';
+    } else {
+        btn.classList.remove('monitoring');
+        btn.innerHTML = '<span class="capture-indicator"></span> Start Monitoring';
+        if (txt) txt.textContent = state.connected ? 'Ready — press Start to begin' : 'Connect a device first';
+    }
+}
+
+async function toggleMonitor() {
+    if (!state.connected) { notify('Connect a device first', 'error'); return; }
+    if (monitor.active) await stopMonitor();
+    else               await startMonitor();
+}
+
+async function startMonitor() {
+    // Stop capture if running
+    if (state.capturing) await stopCapture();
+    try {
+        await enableMonitor((report) => {
+            monitor.inputs.set(report.usage, {
+                value:     report.value,
+                hubPort:   report.hubPort,
+                timestamp: Date.now(),
+            });
+            scheduleMonitorRender();
+        });
+        monitor.active    = true;
+        monitor.cleanupId = setInterval(cleanupMonitorInputs, 500);
+        updateMonitorToggleBtn();
+    } catch (e) {
+        notify(`Monitor error: ${e.message}`, 'error');
+    }
+}
+
+async function stopMonitor() {
+    if (!monitor.active) return;
+    try { await disableMonitor(); } catch (_) {}
+    monitor.active = false;
+    if (monitor.cleanupId) { clearInterval(monitor.cleanupId); monitor.cleanupId = null; }
+    if (monitor.frameId)   { cancelAnimationFrame(monitor.frameId); monitor.frameId = null; }
+    updateMonitorToggleBtn();
+}
+
+function scheduleMonitorRender() {
+    if (!monitor.frameId) {
+        monitor.frameId = requestAnimationFrame(() => {
+            monitor.frameId = null;
+            renderMonitorDisplay();
+        });
+    }
+}
+
+function cleanupMonitorInputs() {
+    const cutoff = Date.now() - 4000;
+    for (const [usage, info] of monitor.inputs) {
+        if (info.timestamp < cutoff) monitor.inputs.delete(usage);
+    }
+    renderMonitorDisplay();
+}
+
+function renderMonitorDisplay() {
+    const container = document.getElementById('monitor-inputs');
+    if (!container) return;
+
+    if (monitor.inputs.size === 0) {
+        container.innerHTML = '<div class="mon-empty">No inputs detected yet. Move a stick or press a button on your device.</div>';
+        return;
+    }
+
+    const now     = Date.now();
+    const entries = Array.from(monitor.inputs.entries())
+        .map(([usage, info]) => ({ usage, ...info, age: now - info.timestamp }))
+        .sort((a, b) => a.age - b.age);
+
+    const MAX_VAL = 128000000;
+    let html = '<div class="mon-list">';
+    for (const e of entries) {
+        const name    = getUsageName(e.usage);
+        const absVal  = Math.abs(e.value);
+        const pct     = Math.min(100, absVal / MAX_VAL * 100);
+        const isNeg   = e.value < 0;
+        const fresh   = e.age < 150;
+        const fading  = e.age > 1500;
+        html += `<div class="mon-row${fresh ? ' fresh' : ''}${fading ? ' fading' : ''}">
+            <div class="mon-name">${name}</div>
+            <div class="mon-code">${e.usage}</div>
+            <div class="mon-bar-wrap"><div class="mon-bar ${isNeg ? 'negative' : 'positive'}" style="width:${pct.toFixed(1)}%"></div></div>
+            <div class="mon-value">${e.value.toLocaleString()}</div>
+        </div>`;
+    }
+    html += '</div>';
+    container.innerHTML = html;
+}
+
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
 export function init() {
@@ -814,6 +928,13 @@ export function init() {
     // Behavior toggles
     ['toggle-sticky','toggle-tap','toggle-hold'].forEach(id => {
         document.getElementById(id).addEventListener('change', applyCurrentMapping);
+    });
+
+    // Monitor buttons
+    document.getElementById('monitor-toggle-btn').addEventListener('click', toggleMonitor);
+    document.getElementById('monitor-clear-btn').addEventListener('click', () => {
+        monitor.inputs.clear();
+        renderMonitorDisplay();
     });
 
     // Settings
