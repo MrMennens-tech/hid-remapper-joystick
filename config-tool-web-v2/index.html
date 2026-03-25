@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechRemap — by Mennens.Tech</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ─── Header ──────────────────────────────────────────────────────────────── -->
+<header id="header">
+    <div class="logo">
+        <img src="logo-white.svg" alt="Mennens.Tech" class="logo-img" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        <div class="logo-fallback" style="display:none">
+            <div class="logo-icon">🎮</div>
+            <div>
+                <div class="logo-name">TechRemap</div>
+                <div class="logo-sub">by Mennens.Tech</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="device-status">
+        <span class="status-dot disconnected" id="status-dot"></span>
+        <span id="status-label">Disconnected</span>
+        <span id="device-name" style="color:var(--text-3);font-size:12px;margin-left:4px"></span>
+    </div>
+
+    <div class="header-sep"></div>
+
+    <span id="save-check">✓</span>
+
+    <button class="btn" id="header-load-btn" disabled title="Load config from device">
+        ↓ Load
+    </button>
+    <button class="btn btn-primary" id="header-save-btn" disabled title="Save config to device">
+        ↑ Save
+    </button>
+    <button class="btn" id="export-btn" title="Export config as JSON">⬇ Export</button>
+    <button class="btn" id="import-btn" title="Import config from JSON">⬆ Import</button>
+</header>
+
+<!-- ─── Tab Bar ─────────────────────────────────────────────────────────────── -->
+<nav id="tabs">
+    <div class="tab active" data-tab="remap">Remap</div>
+    <div class="tab" data-tab="layers">Layers &amp; LED</div>
+    <div class="tab" data-tab="settings">Settings</div>
+    <div class="tab" data-tab="advanced">Advanced</div>
+</nav>
+
+<!-- ─── Main Content ────────────────────────────────────────────────────────── -->
+<div id="main">
+
+    <!-- ─── REMAP TAB ──────────────────────────────────────────────────────── -->
+    <div class="tab-panel active" id="panel-remap">
+
+        <!-- Controller area -->
+        <div id="controller-area">
+            <div id="controller-wrap">
+
+                <!-- ─── Controller SVG ──────────────────────────────────────── -->
+                <svg id="controller-svg" viewBox="0 0 600 380" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <filter id="inset-shadow" x="-10%" y="-10%" width="120%" height="120%">
+                            <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#000" flood-opacity="0.6"/>
+                        </filter>
+                        <radialGradient id="body-grad" cx="50%" cy="35%" r="60%">
+                            <stop offset="0%"   stop-color="#232338"/>
+                            <stop offset="100%" stop-color="#161624"/>
+                        </radialGradient>
+                        <radialGradient id="grip-grad" cx="50%" cy="30%" r="70%">
+                            <stop offset="0%"   stop-color="#1A1A2C"/>
+                            <stop offset="100%" stop-color="#0E0E1A"/>
+                        </radialGradient>
+                    </defs>
+
+                    <!-- ── Body ───────────────────────────────────────────── -->
+                    <!-- Left grip -->
+                    <rect fill="url(#grip-grad)" x="55" y="196" width="114" height="168" rx="46"/>
+                    <!-- Right grip -->
+                    <rect fill="url(#grip-grad)" x="431" y="196" width="114" height="168" rx="46"/>
+                    <!-- Main body -->
+                    <rect fill="url(#body-grad)" x="76" y="68" width="448" height="202" rx="66"/>
+                    <!-- Grip texture lines (decorative) -->
+                    <rect fill="#0C0C18" opacity="0.5" x="64" y="222" width="96" height="130" rx="38"/>
+                    <rect fill="#0C0C18" opacity="0.5" x="440" y="222" width="96" height="130" rx="38"/>
+
+                    <!-- ── Left Trigger (LT) ─────────────────────────────── -->
+                    <g class="pad-clickable" data-input="btn-lt">
+                        <rect class="pad-trigger" x="60" y="10" width="134" height="64" rx="24"/>
+                        <text class="pad-label" x="127" y="44">LT</text>
+                    </g>
+
+                    <!-- ── Right Trigger (RT) ────────────────────────────── -->
+                    <g class="pad-clickable" data-input="btn-rt">
+                        <rect class="pad-trigger" x="406" y="10" width="134" height="64" rx="24"/>
+                        <text class="pad-label" x="473" y="44">RT</text>
+                    </g>
+
+                    <!-- ── Left Bumper (LB) ─────────────────────────────── -->
+                    <g class="pad-clickable" data-input="btn-lb">
+                        <rect class="pad-bumper" x="72" y="72" width="114" height="30" rx="15"/>
+                        <text class="pad-label" x="129" y="91">LB</text>
+                    </g>
+
+                    <!-- ── Right Bumper (RB) ────────────────────────────── -->
+                    <g class="pad-clickable" data-input="btn-rb">
+                        <rect class="pad-bumper" x="414" y="72" width="114" height="30" rx="15"/>
+                        <text class="pad-label" x="471" y="91">RB</text>
+                    </g>
+
+                    <!-- ── D-Pad ─────────────────────────────────────────── -->
+                    <!-- Center background ring -->
+                    <circle fill="#1A1A2C" cx="168" cy="162" r="52"/>
+
+                    <!-- D-Pad Up -->
+                    <g class="pad-clickable" data-input="dpad-up">
+                        <rect class="pad-dpad" x="150" y="117" width="36" height="45" rx="8"/>
+                        <text class="pad-label" x="168" y="143">↑</text>
+                    </g>
+                    <!-- D-Pad Down -->
+                    <g class="pad-clickable" data-input="dpad-down">
+                        <rect class="pad-dpad" x="150" y="162" width="36" height="45" rx="8"/>
+                        <text class="pad-label" x="168" y="185">↓</text>
+                    </g>
+                    <!-- D-Pad Left -->
+                    <g class="pad-clickable" data-input="dpad-left">
+                        <rect class="pad-dpad" x="104" y="145" width="46" height="34" rx="8"/>
+                        <text class="pad-label" x="127" y="163">←</text>
+                    </g>
+                    <!-- D-Pad Right -->
+                    <g class="pad-clickable" data-input="dpad-right">
+                        <rect class="pad-dpad" x="186" y="145" width="46" height="34" rx="8"/>
+                        <text class="pad-label" x="209" y="163">→</text>
+                    </g>
+                    <!-- D-Pad center dot -->
+                    <circle fill="#2A2A3E" cx="168" cy="162" r="12" pointer-events="none"/>
+
+                    <!-- ── Left Stick ──────────────────────────────────────── -->
+                    <g class="pad-clickable" data-input="stick-left">
+                        <!-- Outer ring (movement indicator) -->
+                        <circle fill="#1E1E30" stroke="#2A2A42" stroke-width="2" cx="248" cy="222" r="42"/>
+                        <!-- Stick nub -->
+                        <circle class="pad-stick-nub" cx="248" cy="222" r="26"/>
+                        <text class="pad-label" x="248" y="227">L</text>
+                    </g>
+
+                    <!-- ── Right Stick ────────────────────────────────────── -->
+                    <g class="pad-clickable" data-input="stick-right">
+                        <!-- Outer ring -->
+                        <circle fill="#1E1E30" stroke="#2A2A42" stroke-width="2" cx="358" cy="222" r="42"/>
+                        <!-- Stick nub -->
+                        <circle class="pad-stick-nub" cx="358" cy="222" r="26"/>
+                        <text class="pad-label" x="358" y="227">R</text>
+                    </g>
+
+                    <!-- ── Center Buttons ─────────────────────────────────── -->
+                    <!-- Back / View -->
+                    <g class="pad-clickable" data-input="btn-back">
+                        <circle class="pad-center-btn" cx="264" cy="152" r="14"/>
+                        <text class="pad-label" style="font-size:10px" x="264" y="156">⊲</text>
+                    </g>
+
+                    <!-- Home / Guide (larger, prominent) -->
+                    <g class="pad-clickable" data-input="btn-home">
+                        <circle class="pad-home-btn" cx="300" cy="138" r="20"/>
+                        <circle fill="#2A2A44" cx="300" cy="138" r="14"/>
+                        <circle fill="#1A1A30" cx="300" cy="138" r="8"/>
+                        <!-- Xbox-style ring decoration -->
+                        <circle fill="none" stroke="#3A3A58" stroke-width="1.5" cx="300" cy="138" r="18"/>
+                    </g>
+
+                    <!-- Start / Menu -->
+                    <g class="pad-clickable" data-input="btn-start">
+                        <circle class="pad-center-btn" cx="336" cy="152" r="14"/>
+                        <text class="pad-label" style="font-size:10px" x="336" y="156">⊳</text>
+                    </g>
+
+                    <!-- ── Face Buttons ───────────────────────────────────── -->
+                    <!-- Y (top, yellow) -->
+                    <g class="pad-clickable" data-input="btn-y">
+                        <circle class="pad-btn-y" cx="432" cy="118" r="22"/>
+                        <circle fill="#4A3C18" opacity="0.3" cx="432" cy="118" r="22"/>
+                        <text class="pad-label pad-label-y" x="432" y="123">Y</text>
+                    </g>
+
+                    <!-- A (bottom, green) -->
+                    <g class="pad-clickable" data-input="btn-a">
+                        <circle class="pad-btn-a" cx="432" cy="202" r="22"/>
+                        <circle fill="#1A4E2C" opacity="0.3" cx="432" cy="202" r="22"/>
+                        <text class="pad-label pad-label-a" x="432" y="207">A</text>
+                    </g>
+
+                    <!-- X (left, blue) -->
+                    <g class="pad-clickable" data-input="btn-x">
+                        <circle class="pad-btn-x" cx="388" cy="160" r="22"/>
+                        <circle fill="#1A2E58" opacity="0.3" cx="388" cy="160" r="22"/>
+                        <text class="pad-label pad-label-x" x="388" y="165">X</text>
+                    </g>
+
+                    <!-- B (right, red) -->
+                    <g class="pad-clickable" data-input="btn-b">
+                        <circle class="pad-btn-b" cx="476" cy="160" r="22"/>
+                        <circle fill="#4E1A1A" opacity="0.3" cx="476" cy="160" r="22"/>
+                        <text class="pad-label pad-label-b" x="476" y="165">B</text>
+                    </g>
+
+                    <!-- Face button cluster subtle bg -->
+                    <circle fill="none" stroke="#222238" stroke-width="1" cx="432" cy="160" r="50" pointer-events="none"/>
+
+                </svg>
+                <!-- /SVG -->
+
+                <!-- Layer selector bar -->
+                <div id="layer-bar"></div>
+
+            </div>
+        </div>
+        <!-- /controller-area -->
+
+        <!-- Assignment Panel -->
+        <aside id="assign-panel">
+            <!-- Empty state -->
+            <div id="assign-empty">
+                <div class="empty-icon">🎮</div>
+                <p>Click any button or stick on the controller to configure its mapping.</p>
+            </div>
+
+            <!-- Content (shown when something is selected) -->
+            <div id="assign-content" class="hidden">
+
+                <div id="assign-header">
+                    <div class="assign-title">
+                        <span id="assign-title">Button</span>
+                        <span class="assign-usage-badge" id="assign-usage-code"></span>
+                    </div>
+                    <div class="assign-subtitle">Configure remapping for this input</div>
+
+                    <!-- Stick sub-mode tabs -->
+                    <div id="stick-tabs" class="hidden mt-8">
+                        <div class="stick-tab active" data-mode="x">X Axis</div>
+                        <div class="stick-tab" data-mode="y">Y Axis</div>
+                        <div class="stick-tab" data-mode="btn">Click (L3/R3)</div>
+                    </div>
+                </div>
+
+                <div id="assign-body">
+
+                    <!-- Current mapping -->
+                    <div class="assign-section">
+                        <label>Currently mapped from</label>
+                        <div class="current-mapping" id="current-mapping">
+                            <span class="mapping-name" id="mapping-source-name">Not remapped</span>
+                            <button class="remove-btn hidden" id="remove-mapping-btn" title="Remove mapping">✕</button>
+                        </div>
+                    </div>
+
+                    <!-- Capture -->
+                    <div class="assign-section">
+                        <label>Capture from hardware</label>
+                        <button id="capture-btn">
+                            <span class="capture-indicator"></span>
+                            Capture from device
+                        </button>
+                    </div>
+
+                    <!-- Source picker -->
+                    <div class="assign-section">
+                        <label>Or choose manually</label>
+                        <input type="text" id="source-search" placeholder="Search inputs…" autocomplete="off">
+                        <div class="picker-cats mt-8">
+                            <div class="picker-cat active" data-cat="gamepad">🎮 Gamepad</div>
+                            <div class="picker-cat" data-cat="keyboard">⌨️ Keys</div>
+                            <div class="picker-cat" data-cat="mouse">🖱️ Mouse</div>
+                            <div class="picker-cat" data-cat="media">🎵 Media</div>
+                            <div class="picker-cat" data-cat="layer">⬡ Layer</div>
+                            <div class="picker-cat" data-cat="special">⚙️ Special</div>
+                        </div>
+                        <div id="usage-list" class="mt-8"></div>
+                    </div>
+
+                    <!-- Axis controls -->
+                    <div class="assign-section hidden" id="axis-controls">
+                        <label>Axis settings</label>
+                        <div class="slider-row">
+                            <div class="slider-label-row">
+                                <span>Sensitivity</span>
+                                <span id="sensitivity-val">100%</span>
+                            </div>
+                            <input type="range" id="sensitivity-slider" min="100" max="5000" step="50" value="1000">
+                        </div>
+                        <div class="slider-row mt-8">
+                            <div class="slider-label-row">
+                                <span>Deadzone</span>
+                                <span id="deadzone-val">0%</span>
+                            </div>
+                            <input type="range" id="deadzone-slider" min="0" max="50" step="1" value="0">
+                        </div>
+                    </div>
+
+                    <!-- Behavior -->
+                    <div class="assign-section">
+                        <label>Behavior</label>
+                        <div class="toggle-group">
+                            <div class="toggle-row">
+                                <div>
+                                    <div class="toggle-label">Sticky</div>
+                                    <div class="toggle-desc">Toggle on/off with each press</div>
+                                </div>
+                                <label class="toggle">
+                                    <input type="checkbox" id="toggle-sticky">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="toggle-row">
+                                <div>
+                                    <div class="toggle-label">Tap</div>
+                                    <div class="toggle-desc">Activate on quick tap</div>
+                                </div>
+                                <label class="toggle">
+                                    <input type="checkbox" id="toggle-tap">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="toggle-row">
+                                <div>
+                                    <div class="toggle-label">Hold</div>
+                                    <div class="toggle-desc">Activate when held down</div>
+                                </div>
+                                <label class="toggle">
+                                    <input type="checkbox" id="toggle-hold">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Layers -->
+                    <div class="assign-section">
+                        <label>Active on layers</label>
+                        <div class="layer-checkboxes" id="layer-checkboxes"></div>
+                    </div>
+
+                </div><!-- /assign-body -->
+
+            </div><!-- /assign-content -->
+        </aside>
+
+    </div><!-- /panel-remap -->
+
+    <!-- ─── LAYERS & LED TAB ────────────────────────────────────────────────── -->
+    <div class="tab-panel" id="panel-layers">
+
+        <div>
+            <div class="section-title">Layer LED Colors</div>
+            <div class="section-desc">
+                Set the WS2812 LED color shown on your Waveshare RP2350 for each active layer.
+                Colors are saved with your config (requires firmware with WS2812 support).
+            </div>
+            <div class="led-grid" id="led-grid"></div>
+        </div>
+
+        <div style="margin-top:24px">
+            <div class="section-title">Unmapped Input Passthrough</div>
+            <div class="section-desc">
+                When enabled for a layer, inputs without an explicit mapping will pass through unchanged on that layer.
+            </div>
+            <div class="passthrough-grid" id="passthrough-grid"></div>
+        </div>
+
+    </div>
+
+    <!-- ─── SETTINGS TAB ────────────────────────────────────────────────────── -->
+    <div class="tab-panel" id="panel-settings">
+
+        <div style="padding:24px;overflow:auto;flex:1">
+            <div class="section-title" style="margin-bottom:16px">Device Settings</div>
+
+            <div class="settings-grid">
+
+                <div class="setting-card">
+                    <label>Polling Rate Override</label>
+                    <div class="setting-desc">Override the USB polling rate. 0 = use device default.</div>
+                    <select class="setting-select" id="polling-rate">
+                        <option value="0">Default (device)</option>
+                        <option value="1">1000 Hz (1ms)</option>
+                        <option value="2">500 Hz (2ms)</option>
+                        <option value="4">250 Hz (4ms)</option>
+                        <option value="8">125 Hz (8ms)</option>
+                        <option value="16">62.5 Hz (16ms)</option>
+                    </select>
+                </div>
+
+                <div class="setting-card">
+                    <label>Emulated Device Type</label>
+                    <div class="setting-desc">What type of HID device the remapper presents to the PC.</div>
+                    <select class="setting-select" id="emulation-mode">
+                        <option value="0">Mouse + Keyboard (default)</option>
+                        <option value="1">Absolute Mouse + Keyboard</option>
+                        <option value="2">Switch Gamepad</option>
+                        <option value="3">PS4 Arcade Stick</option>
+                        <option value="4">Stadia Controller</option>
+                        <option value="5">XAC/Flex Compatible</option>
+                    </select>
+                </div>
+
+                <div class="setting-card">
+                    <label>Tap / Hold Threshold</label>
+                    <div class="setting-desc">How long (ms) to distinguish a tap from a hold.</div>
+                    <input type="number" class="setting-input" id="tap-hold-ms" min="50" max="2000" step="10" value="200">
+                </div>
+
+                <div class="setting-card">
+                    <label>Partial Scroll Timeout</label>
+                    <div class="setting-desc">Scroll accumulation timeout in milliseconds.</div>
+                    <input type="number" class="setting-input" id="scroll-timeout-ms" min="100" max="5000" step="100" value="1000">
+                </div>
+
+            </div>
+
+            <div class="settings-grid mt-16">
+                <div class="setting-card" style="grid-column:1/-1">
+                    <div class="toggle-row" style="border:none;background:none;padding:0">
+                        <div>
+                            <div class="toggle-label">Normalize Gamepad Inputs</div>
+                            <div class="toggle-desc">Normalize analog stick values to a consistent range across different gamepads.</div>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox" id="normalize-gamepad" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top:24px">
+                <div class="section-title" style="margin-bottom:8px">Load / Save Buttons</div>
+                <div class="flex-row">
+                    <button class="btn" id="load-btn" disabled>↓ Load from device</button>
+                    <button class="btn btn-primary" id="save-btn" disabled>↑ Save to device</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ─── ADVANCED TAB ────────────────────────────────────────────────────── -->
+    <div class="tab-panel" id="panel-advanced">
+
+        <div style="padding:24px;overflow:auto;flex:1;display:flex;flex-direction:column;gap:24px">
+
+            <!-- Expressions -->
+            <div class="adv-section">
+                <div class="section-title">Expressions</div>
+                <div class="section-desc">
+                    Advanced input transformations using Reverse Polish Notation (RPN).
+                    Up to 8 expression slots, each evaluated every millisecond.
+                    <a href="https://github.com/jfedor2/hid-remapper/blob/master/EXPRESSIONS.md" target="_blank" style="color:var(--accent)">View documentation →</a>
+                </div>
+                <div id="expressions-container"></div>
+            </div>
+
+            <!-- Import / Export -->
+            <div class="adv-section">
+                <div class="section-title">Import / Export</div>
+                <div class="section-desc">Save or load your full configuration as a JSON file.</div>
+                <div class="io-row">
+                    <button class="btn" onclick="document.getElementById('export-btn').click()">⬇ Export JSON</button>
+                    <button class="btn" onclick="document.getElementById('import-btn').click()">⬆ Import JSON</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div><!-- /main -->
+
+<!-- ─── Connect Screen Overlay ─────────────────────────────────────────────── -->
+<div id="connect-screen">
+    <img src="logo-white.svg" alt="Mennens.Tech" class="connect-logo-img" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+    <div class="connect-logo" style="display:none">🎮</div>
+    <h1>TechRemap</h1>
+    <p>Connect your HID Remapper device to get started. Requires Chrome or a Chromium-based browser.</p>
+
+    <div id="no-webhid-warning">
+        ⚠ Your browser doesn't support WebHID.<br>
+        Please use Chrome, Edge, or another Chromium-based browser (desktop only).
+    </div>
+
+    <button class="connect-btn-big" id="connect-screen-btn">Connect Device</button>
+    <button class="btn" id="connect-btn" style="display:none">Connect</button>
+
+    <p class="connect-note">
+        Make sure your HID Remapper has the latest firmware flashed.<br>
+        Linux users: ensure read/write access to <code>/dev/hidraw*</code>
+    </p>
+</div>
+
+<!-- ─── Notifications ─────────────────────────────────────────────────────── -->
+<div id="notifications"></div>
+
+<!-- ─── Footer ────────────────────────────────────────────────────────────── -->
+<footer id="footer">
+    <span>TechRemap by <a href="https://mennens.tech" target="_blank" rel="noopener">Mennens.Tech</a></span>
+    <span class="footer-sep">·</span>
+    <span>Powered by <a href="https://remapper.org" target="_blank" rel="noopener">HID Remapper</a></span>
+</footer>
+
+<!-- ─── App Bootstrap ─────────────────────────────────────────────────────── -->
+<script type="module">
+    import { init } from './app.js';
+    document.addEventListener('DOMContentLoaded', init);
+</script>
+
+</body>
+</html>
