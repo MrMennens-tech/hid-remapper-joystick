@@ -47,7 +47,7 @@ function notify(message, type = 'info', duration = 3000) {
 // Returns all mappings for a given target usage on the active layer
 function getMappingsFor(targetUsage, layer = state.activeLayer) {
     return state.config.mappings.filter(m =>
-        m.target_usage === targetUsage && m.layers.includes(layer)
+        m.target_usage === targetUsage && (m.layers.length === 0 || m.layers.includes(layer))
     );
 }
 
@@ -380,6 +380,7 @@ function switchTab(tabId) {
     document.querySelectorAll('.tab-panel').forEach(p =>
         p.classList.toggle('active', p.id === `panel-${tabId}`)
     );
+    if (tabId === 'overview') renderOverviewTab();
 }
 
 // ─── Layers Tab ───────────────────────────────────────────────────────────────
@@ -485,6 +486,59 @@ function renderAdvancedTab() {
     });
 }
 
+// ─── Overview Tab ─────────────────────────────────────────────────────────────
+
+function renderOverviewTab() {
+    const container = document.getElementById('overview-content');
+    if (!container) return;
+
+    const mappings = state.config.mappings;
+    if (!mappings || mappings.length === 0) {
+        container.innerHTML = '<p class="ov-empty">No mappings configured. Load a config or add mappings on the Remap tab.</p>';
+        return;
+    }
+
+    const sorted = [...mappings].sort((a, b) => {
+        if (a.layers.length === 0 && b.layers.length > 0) return -1;
+        if (a.layers.length > 0 && b.layers.length === 0) return 1;
+        return (a.layers[0] ?? 0) - (b.layers[0] ?? 0);
+    });
+
+    let html = `<table class="ov-table">
+        <thead><tr>
+            <th>Source (input)</th>
+            <th>Target (output)</th>
+            <th>Layer(s)</th>
+            <th>Scaling</th>
+        </tr></thead>
+        <tbody>`;
+
+    for (const m of sorted) {
+        const srcName  = getUsageName(m.source_usage);
+        const tgtName  = getUsageName(m.target_usage);
+        const isPassthrough = m.source_usage === m.target_usage;
+        const layerText = m.layers.length === 0
+            ? '<span class="ov-badge ov-badge-all">All layers</span>'
+            : m.layers.map(l => `<span class="ov-badge">L${l + 1}</span>`).join('');
+        const scaling   = `${(m.scaling / 10).toFixed(0)}%`;
+        const rowClass  = isPassthrough ? ' class="ov-passthrough"' : '';
+        html += `<tr${rowClass}>
+            <td>
+                <div class="ov-name">${srcName}</div>
+                <div class="ov-code">${m.source_usage}</div>
+            </td>
+            <td>
+                <div class="ov-name">${tgtName}</div>
+                <div class="ov-code">${m.target_usage}</div>
+            </td>
+            <td class="ov-layers">${layerText}</td>
+            <td class="ov-scaling">${scaling}</td>
+        </tr>`;
+    }
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
 // ─── Connect / Load / Save ────────────────────────────────────────────────────
 
 async function onConnect() {
@@ -524,6 +578,7 @@ async function onLoadConfig() {
         renderLayersTab();
         renderSettingsTab();
         renderAdvancedTab();
+        renderOverviewTab();
         notify('Config loaded successfully!', 'success');
     } catch (e) {
         notify(`Load failed: ${e.message}`, 'error', 5000);
@@ -612,6 +667,7 @@ function onImportJSON() {
             renderLayersTab();
             renderSettingsTab();
             renderAdvancedTab();
+            renderOverviewTab();
             notify('Config imported!', 'success');
         } catch (err) {
             notify(`Import failed: ${err.message}`, 'error', 5000);
@@ -772,6 +828,7 @@ export function init() {
     renderLayersTab();
     renderSettingsTab();
     renderAdvancedTab();
+    renderOverviewTab();
     refreshControllerVisual();
 
     // Initial state
