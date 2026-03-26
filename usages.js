@@ -194,6 +194,15 @@ export const NAMED_USAGES = {
     '0xfff10005': { name: 'Layer 6 (toggle)',   category: 'layer', type: 'button' },
     '0xfff10006': { name: 'Layer 7 (toggle)',   category: 'layer', type: 'button' },
     '0xfff10007': { name: 'Layer 8 (toggle)',   category: 'layer', type: 'button' },
+    // HID Remapper vendor-defined source codes (page 0xfff3)
+    '0xfff30001': { name: 'Device Custom Axis 1', category: 'special', type: 'axis' },
+    '0xfff30002': { name: 'Device Custom Axis 2', category: 'special', type: 'axis' },
+    '0xfff30003': { name: 'Device Custom Axis 3', category: 'special', type: 'axis' },
+    '0xfff30004': { name: 'Device Custom Axis 4', category: 'special', type: 'axis' },
+    // Sport Controls (page 0x04)
+    '0x00040009': { name: 'Joystick (Sport Controls)', category: 'gamepad', type: 'axis' },
+    // Game Controls (page 0x05)
+    '0x00050009': { name: 'Select (Game Controls)',    category: 'gamepad', type: 'button' },
     // Nothing
     '0x00000000': { name: 'Nothing (block)',     category: 'special', type: 'button' },
 };
@@ -268,7 +277,7 @@ export const SOURCE_GROUPS = [
         id: 'special',
         label: 'Special',
         icon: '⚙️',
-        codes: ['0x00000000'],
+        codes: ['0x00000000', '0xfff30001', '0xfff30002', '0xfff30003', '0xfff30004'],
     },
 ];
 

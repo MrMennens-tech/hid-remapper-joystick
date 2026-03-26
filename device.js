@@ -229,16 +229,14 @@ export async function disconnectDevice() {
 // ─── Input Monitor ────────────────────────────────────────────────────────────
 function handleInputReport(event) {
     if (!monitorCallback) return;
-    const data = new DataView(event.data.buffer);
-    // Monitor report format: [usage_hi(2), usage_lo(2), hub_port(1), value(4)] * n
+    // Firmware struct monitor_report_item_t: uint32 usage, int32 value, uint8 hub_port (9 bytes)
+    const data = event.data;  // WebHID DataView, report ID already stripped
     let offset = 0;
     while (offset + 9 <= data.byteLength) {
-        const usageHi  = data.getUint16(offset, true);     offset += 2;
-        const usageLo  = data.getUint16(offset, true);     offset += 2;
-        const hubPort  = data.getUint8(offset);             offset += 1;
-        const value    = data.getInt32(offset, true);       offset += 4;
-        const usage    = '0x' + ((usageHi << 16 | usageLo) >>> 0).toString(16).padStart(8, '0');
-        if (usage !== '0x00000000') {
+        const usage   = '0x' + data.getUint32(offset, true).toString(16).padStart(8, '0');  offset += 4;
+        const value   = data.getInt32(offset, true);   offset += 4;
+        const hubPort = data.getUint8(offset);          offset += 1;
+        if (usage !== '0x00000000' && typeof monitorCallback === 'function') {
             monitorCallback({ usage, hubPort, value });
         }
     }

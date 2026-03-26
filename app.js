@@ -5,12 +5,12 @@ import {
     connectDevice, disconnectDevice, loadConfig, saveConfig,
     exportConfigJSON, importConfigJSON, enableMonitor, disableMonitor,
     isConnected, onHIDDisconnect, makeDefaultConfig, NLAYERS
-} from './device.js';
+} from './device.js?v=3';
 import {
     CONTROLLER_VISUAL, NAMED_USAGES, SOURCE_GROUPS,
     getUsageName, getVisualIdForUsage,
     firmwareColorToCSS, cssColorToFirmware, DEFAULT_LAYER_COLORS
-} from './usages.js';
+} from './usages.js?v=3';
 
 // ─── App State ────────────────────────────────────────────────────────────────
 const state = {
@@ -47,7 +47,7 @@ function notify(message, type = 'info', duration = 3000) {
 // Returns all mappings for a given target usage on the active layer
 function getMappingsFor(targetUsage, layer = state.activeLayer) {
     return state.config.mappings.filter(m =>
-        m.target_usage === targetUsage && m.layers.includes(layer)
+        m.target_usage === targetUsage && (m.layers.length === 0 || m.layers.includes(layer))
     );
 }
 
@@ -217,7 +217,10 @@ function renderLayerCheckboxes(mapping) {
     const container = document.getElementById('layer-checkboxes');
     container.innerHTML = '';
     for (let i = 0; i < NLAYERS; i++) {
-        const checked = mapping?.layers.includes(i) ?? (i === state.activeLayer);
+        // layers:[] means "all layers" — show all checkboxes as checked
+        const checked = mapping
+            ? (mapping.layers.length === 0 || mapping.layers.includes(i))
+            : (i === state.activeLayer);
         const lbl = document.createElement('label');
         lbl.className = `layer-check ${checked ? 'checked' : ''}`;
         lbl.innerHTML = `<input type="checkbox" value="${i}" ${checked ? 'checked' : ''}> L${i + 1}`;
@@ -343,15 +346,22 @@ async function startCapture() {
     renderAssignPanel();
 
     const startTime = Date.now();
+    const baseline = {};  // usage → first-seen value (at-rest baseline)
 
     try {
         await enableMonitor((report) => {
             if (!state.capturing) return;
             const { usage, value } = report;
-            // Skip noise
-            if (Math.abs(value) < 5000) return;
+
+            // Record at-rest baseline on first observation of each input
+            if (!(usage in baseline)) { baseline[usage] = value; return; }
+
             // Skip the first 200ms (debounce accidental trigger)
             if (Date.now() - startTime < 200) return;
+
+            // Accept button presses (value === 1) or significant axis movement (delta ≥ 10)
+            const delta = Math.abs(value - baseline[usage]);
+            if (value !== 1 && delta < 10) return;
 
             stopCapture();
             assignSourceUsage(usage);
@@ -380,6 +390,11 @@ function switchTab(tabId) {
     document.querySelectorAll('.tab-panel').forEach(p =>
         p.classList.toggle('active', p.id === `panel-${tabId}`)
     );
+    if (tabId === 'overview') renderOverviewTab();
+    if (tabId === 'monitor') {
+        updateMonitorToggleBtn();
+        if (state.connected && !monitor.active && !state.capturing) startMonitor();
+    }
 }
 
 // ─── Layers Tab ───────────────────────────────────────────────────────────────
@@ -485,6 +500,59 @@ function renderAdvancedTab() {
     });
 }
 
+// ─── Overview Tab ─────────────────────────────────────────────────────────────
+
+function renderOverviewTab() {
+    const container = document.getElementById('overview-content');
+    if (!container) return;
+
+    const mappings = state.config.mappings;
+    if (!mappings || mappings.length === 0) {
+        container.innerHTML = '<p class="ov-empty">No mappings configured. Load a config or add mappings on the Remap tab.</p>';
+        return;
+    }
+
+    const sorted = [...mappings].sort((a, b) => {
+        if (a.layers.length === 0 && b.layers.length > 0) return -1;
+        if (a.layers.length > 0 && b.layers.length === 0) return 1;
+        return (a.layers[0] ?? 0) - (b.layers[0] ?? 0);
+    });
+
+    let html = `<table class="ov-table">
+        <thead><tr>
+            <th>Source (input)</th>
+            <th>Target (output)</th>
+            <th>Layer(s)</th>
+            <th>Scaling</th>
+        </tr></thead>
+        <tbody>`;
+
+    for (const m of sorted) {
+        const srcName  = getUsageName(m.source_usage);
+        const tgtName  = getUsageName(m.target_usage);
+        const isPassthrough = m.source_usage === m.target_usage;
+        const layerText = m.layers.length === 0
+            ? '<span class="ov-badge ov-badge-all">All layers</span>'
+            : m.layers.map(l => `<span class="ov-badge">L${l + 1}</span>`).join('');
+        const scaling   = `${(m.scaling / 10).toFixed(0)}%`;
+        const rowClass  = isPassthrough ? ' class="ov-passthrough"' : '';
+        html += `<tr${rowClass}>
+            <td>
+                <div class="ov-name">${srcName}</div>
+                <div class="ov-code">${m.source_usage}</div>
+            </td>
+            <td>
+                <div class="ov-name">${tgtName}</div>
+                <div class="ov-code">${m.target_usage}</div>
+            </td>
+            <td class="ov-layers">${layerText}</td>
+            <td class="ov-scaling">${scaling}</td>
+        </tr>`;
+    }
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
 // ─── Connect / Load / Save ────────────────────────────────────────────────────
 
 async function onConnect() {
@@ -503,6 +571,7 @@ async function onConnect() {
         document.getElementById('save-btn').disabled  = true;
         document.getElementById('header-load-btn').disabled = false;
         document.getElementById('header-save-btn').disabled = true;
+        updateMonitorToggleBtn();
         notify('Device connected. Load your config to start.', 'success');
     } catch (e) {
         updateStatusDot('disconnected', 'Disconnected');
@@ -524,6 +593,7 @@ async function onLoadConfig() {
         renderLayersTab();
         renderSettingsTab();
         renderAdvancedTab();
+        renderOverviewTab();
         notify('Config loaded successfully!', 'success');
     } catch (e) {
         notify(`Load failed: ${e.message}`, 'error', 5000);
@@ -574,6 +644,7 @@ function updateStatusDot(status, label) {
 
 function onHIDDisconnected() {
     state.connected = false;
+    stopMonitor();
     updateStatusDot('disconnected', 'Disconnected');
     document.getElementById('load-btn').disabled = true;
     document.getElementById('save-btn').disabled = true;
@@ -612,6 +683,7 @@ function onImportJSON() {
             renderLayersTab();
             renderSettingsTab();
             renderAdvancedTab();
+            renderOverviewTab();
             notify('Config imported!', 'success');
         } catch (err) {
             notify(`Import failed: ${err.message}`, 'error', 5000);
@@ -665,6 +737,117 @@ function renderLayerBar() {
         });
         bar.appendChild(btn);
     }
+}
+
+// ─── Monitor Tab ──────────────────────────────────────────────────────────────
+
+const monitor = {
+    active:    false,
+    inputs:    new Map(),   // usage → { value, hubPort, timestamp }
+    frameId:   null,
+    cleanupId: null,
+};
+
+function updateMonitorToggleBtn() {
+    const btn = document.getElementById('monitor-toggle-btn');
+    const txt = document.getElementById('monitor-status-text');
+    if (!btn) return;
+    btn.disabled = !state.connected;
+    if (monitor.active) {
+        btn.classList.add('monitoring');
+        btn.innerHTML = '<span class="capture-indicator"></span> Stop Monitoring';
+        if (txt) txt.textContent = 'Listening for inputs…';
+    } else {
+        btn.classList.remove('monitoring');
+        btn.innerHTML = '<span class="capture-indicator"></span> Start Monitoring';
+        if (txt) txt.textContent = state.connected ? 'Ready — press Start to begin' : 'Connect a device first';
+    }
+}
+
+async function toggleMonitor() {
+    if (!state.connected) { notify('Connect a device first', 'error'); return; }
+    if (monitor.active) await stopMonitor();
+    else               await startMonitor();
+}
+
+async function startMonitor() {
+    // Stop capture if running
+    if (state.capturing) await stopCapture();
+    try {
+        await enableMonitor((report) => {
+            monitor.inputs.set(report.usage, {
+                value:     report.value,
+                hubPort:   report.hubPort,
+                timestamp: Date.now(),
+            });
+            scheduleMonitorRender();
+        });
+        monitor.active    = true;
+        monitor.cleanupId = setInterval(cleanupMonitorInputs, 500);
+        updateMonitorToggleBtn();
+    } catch (e) {
+        notify(`Monitor error: ${e.message}`, 'error');
+    }
+}
+
+async function stopMonitor() {
+    if (!monitor.active) return;
+    try { await disableMonitor(); } catch (_) {}
+    monitor.active = false;
+    if (monitor.cleanupId) { clearInterval(monitor.cleanupId); monitor.cleanupId = null; }
+    if (monitor.frameId)   { cancelAnimationFrame(monitor.frameId); monitor.frameId = null; }
+    updateMonitorToggleBtn();
+}
+
+function scheduleMonitorRender() {
+    if (!monitor.frameId) {
+        monitor.frameId = requestAnimationFrame(() => {
+            monitor.frameId = null;
+            renderMonitorDisplay();
+        });
+    }
+}
+
+function cleanupMonitorInputs() {
+    const cutoff = Date.now() - 4000;
+    for (const [usage, info] of monitor.inputs) {
+        if (info.timestamp < cutoff) monitor.inputs.delete(usage);
+    }
+    renderMonitorDisplay();
+}
+
+function renderMonitorDisplay() {
+    const container = document.getElementById('monitor-inputs');
+    if (!container) return;
+
+    if (monitor.inputs.size === 0) {
+        container.innerHTML = '<div class="mon-empty">No inputs detected yet. Move a stick or press a button on your device.</div>';
+        return;
+    }
+
+    const now     = Date.now();
+    const entries = Array.from(monitor.inputs.entries())
+        .map(([usage, info]) => ({ usage, ...info, age: now - info.timestamp }))
+        .sort((a, b) => a.age - b.age);
+
+    const MAX_VAL = 128000000;
+    let html = '<div class="mon-list">';
+    for (const e of entries) {
+        const name    = getUsageName(e.usage);
+        const absVal  = Math.abs(e.value);
+        const pct     = Math.min(100, absVal / MAX_VAL * 100);
+        const isNeg   = e.value < 0;
+        const fresh   = e.age < 150;
+        const fading  = e.age > 1500;
+        html += `<div class="mon-row${fresh ? ' fresh' : ''}${fading ? ' fading' : ''}">
+            <div class="mon-name">${name}</div>
+            <div class="mon-code">${e.usage}</div>
+            <div class="mon-bar-wrap"><div class="mon-bar ${isNeg ? 'negative' : 'positive'}" style="width:${pct.toFixed(1)}%"></div></div>
+            <div class="mon-value">${e.value.toLocaleString()}</div>
+        </div>`;
+    }
+    html += '</div>';
+    container.innerHTML = html;
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
@@ -760,6 +943,13 @@ export function init() {
         document.getElementById(id).addEventListener('change', applyCurrentMapping);
     });
 
+    // Monitor buttons
+    document.getElementById('monitor-toggle-btn').addEventListener('click', toggleMonitor);
+    document.getElementById('monitor-clear-btn').addEventListener('click', () => {
+        monitor.inputs.clear();
+        renderMonitorDisplay();
+    });
+
     // Settings
     bindSettingsEvents();
 
@@ -772,6 +962,7 @@ export function init() {
     renderLayersTab();
     renderSettingsTab();
     renderAdvancedTab();
+    renderOverviewTab();
     refreshControllerVisual();
 
     // Initial state
