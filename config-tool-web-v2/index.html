@@ -44,9 +44,11 @@
 <!-- ─── Tab Bar ─────────────────────────────────────────────────────────────── -->
 <nav id="tabs">
     <div class="tab active" data-tab="remap">Remap</div>
+    <div class="tab" data-tab="overview">Overview</div>
     <div class="tab" data-tab="layers">Layers &amp; LED</div>
     <div class="tab" data-tab="settings">Settings</div>
     <div class="tab" data-tab="advanced">Advanced</div>
+    <div class="tab" data-tab="monitor">&#9654; Monitor</div>
 </nav>
 
 <!-- ─── Main Content ────────────────────────────────────────────────────────── -->
@@ -299,48 +301,54 @@
                         </div>
                     </div>
 
-                    <!-- Behavior -->
-                    <div class="assign-section">
-                        <label>Behavior</label>
-                        <div class="toggle-group">
-                            <div class="toggle-row">
-                                <div>
-                                    <div class="toggle-label">Sticky</div>
-                                    <div class="toggle-desc">Toggle on/off with each press</div>
+                    <!-- Advanced options (collapsible) -->
+                    <details class="assign-advanced">
+                        <summary>Advanced options</summary>
+
+                        <!-- Behavior -->
+                        <div class="assign-section">
+                            <label>Behavior</label>
+                            <div class="toggle-group">
+                                <div class="toggle-row">
+                                    <div>
+                                        <div class="toggle-label">Sticky</div>
+                                        <div class="toggle-desc">Toggle on/off with each press</div>
+                                    </div>
+                                    <label class="toggle">
+                                        <input type="checkbox" id="toggle-sticky">
+                                        <span class="toggle-slider"></span>
+                                    </label>
                                 </div>
-                                <label class="toggle">
-                                    <input type="checkbox" id="toggle-sticky">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                            <div class="toggle-row">
-                                <div>
-                                    <div class="toggle-label">Tap</div>
-                                    <div class="toggle-desc">Activate on quick tap</div>
+                                <div class="toggle-row">
+                                    <div>
+                                        <div class="toggle-label">Tap</div>
+                                        <div class="toggle-desc">Activate on quick tap</div>
+                                    </div>
+                                    <label class="toggle">
+                                        <input type="checkbox" id="toggle-tap">
+                                        <span class="toggle-slider"></span>
+                                    </label>
                                 </div>
-                                <label class="toggle">
-                                    <input type="checkbox" id="toggle-tap">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                            <div class="toggle-row">
-                                <div>
-                                    <div class="toggle-label">Hold</div>
-                                    <div class="toggle-desc">Activate when held down</div>
+                                <div class="toggle-row">
+                                    <div>
+                                        <div class="toggle-label">Hold</div>
+                                        <div class="toggle-desc">Activate when held down</div>
+                                    </div>
+                                    <label class="toggle">
+                                        <input type="checkbox" id="toggle-hold">
+                                        <span class="toggle-slider"></span>
+                                    </label>
                                 </div>
-                                <label class="toggle">
-                                    <input type="checkbox" id="toggle-hold">
-                                    <span class="toggle-slider"></span>
-                                </label>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Layers -->
-                    <div class="assign-section">
-                        <label>Active on layers</label>
-                        <div class="layer-checkboxes" id="layer-checkboxes"></div>
-                    </div>
+                        <!-- Layers -->
+                        <div class="assign-section">
+                            <label>Active on layers</label>
+                            <div class="layer-checkboxes" id="layer-checkboxes"></div>
+                        </div>
+
+                    </details>
 
                 </div><!-- /assign-body -->
 
@@ -471,6 +479,32 @@
                 </div>
             </div>
 
+        </div>
+    </div>
+
+    <!-- ─── OVERVIEW TAB ────────────────────────────────────────────────────────── -->
+    <div class="tab-panel" id="panel-overview">
+        <div style="padding:24px;overflow:auto;flex:1">
+            <div class="section-title">Mapping Overview</div>
+            <div class="section-desc">All configured input → output remappings at a glance.</div>
+            <div id="overview-content" style="margin-top:16px"></div>
+        </div>
+    </div>
+
+    <!-- ─── MONITOR TAB ────────────────────────────────────────────────────────── -->
+    <div class="tab-panel" id="panel-monitor">
+        <div id="monitor-header">
+            <div id="monitor-header-left">
+                <button class="btn" id="monitor-toggle-btn" disabled>
+                    <span class="capture-indicator"></span>
+                    Start Monitoring
+                </button>
+                <span id="monitor-status-text">Connect a device first</span>
+            </div>
+            <button class="btn" id="monitor-clear-btn">Clear</button>
+        </div>
+        <div id="monitor-inputs">
+            <div class="mon-empty">Press "Start Monitoring", then move a stick or press a button on your device.</div>
         </div>
     </div>
 
