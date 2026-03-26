@@ -5,12 +5,12 @@ import {
     connectDevice, disconnectDevice, loadConfig, saveConfig,
     exportConfigJSON, importConfigJSON, enableMonitor, disableMonitor,
     isConnected, onHIDDisconnect, makeDefaultConfig, NLAYERS
-} from './device.js?v=3';
+} from './device.js?v=4';
 import {
     CONTROLLER_VISUAL, NAMED_USAGES, SOURCE_GROUPS,
     getUsageName, getVisualIdForUsage,
     firmwareColorToCSS, cssColorToFirmware, DEFAULT_LAYER_COLORS
-} from './usages.js?v=3';
+} from './usages.js?v=4';
 
 // ─── App State ────────────────────────────────────────────────────────────────
 const state = {
@@ -93,6 +93,32 @@ function updateLayerLeds() {
 }
 
 // ─── Controller Visual ────────────────────────────────────────────────────────
+
+// Face button labels per emulated device type (our_descriptor_number)
+const FACE_LABELS = {
+    2: { y: 'X',  a: 'B',  b: 'A',  x: 'Y'  },  // Switch
+    3: { y: '△', a: '✕', b: '○', x: '□' },       // PS4 Arcade Stick
+};
+const MODE_NAMES = {
+    0: '🖱️ Mouse + Keyboard',
+    1: '🖱️ Absolute Mouse + Keyboard',
+};
+
+function refreshButtonLabels() {
+    const mode   = state.config?.our_descriptor_number ?? 5;
+    const labels = FACE_LABELS[mode] ?? { y: 'Y', a: 'A', b: 'B', x: 'X' };
+    document.querySelector('.pad-label-y')?.replaceChildren(labels.y);
+    document.querySelector('.pad-label-a')?.replaceChildren(labels.a);
+    document.querySelector('.pad-label-b')?.replaceChildren(labels.b);
+    document.querySelector('.pad-label-x')?.replaceChildren(labels.x);
+
+    const badge = document.getElementById('controller-mode-badge');
+    if (badge) {
+        const name = MODE_NAMES[mode];
+        badge.textContent = name ?? '';
+        badge.classList.toggle('visible', !!name);
+    }
+}
 
 function refreshControllerVisual() {
     // Update which elements show as "mapped"
@@ -345,23 +371,26 @@ async function startCapture() {
     state.captureUsage = targetUsage;
     renderAssignPanel();
 
-    const startTime = Date.now();
-    const baseline = {};  // usage → first-seen value (at-rest baseline)
+    const baseline = {};  // usage → at-rest axis value
 
     try {
         await enableMonitor((report) => {
             if (!state.capturing) return;
             const { usage, value } = report;
 
-            // Record at-rest baseline on first observation of each input
+            if (value === 0) return;  // ignore releases
+
+            if (value === 1) {
+                // Digital button press — capture immediately
+                stopCapture();
+                assignSourceUsage(usage);
+                notify(`Mapped from: ${getUsageName(usage)}`, 'success');
+                return;
+            }
+
+            // Analog axis — record at-rest baseline on first observation
             if (!(usage in baseline)) { baseline[usage] = value; return; }
-
-            // Skip the first 200ms (debounce accidental trigger)
-            if (Date.now() - startTime < 200) return;
-
-            // Accept button presses (value === 1) or significant axis movement (delta ≥ 10)
-            const delta = Math.abs(value - baseline[usage]);
-            if (value !== 1 && delta < 10) return;
+            if (Math.abs(value - baseline[usage]) < 10) return;
 
             stopCapture();
             assignSourceUsage(usage);
@@ -589,6 +618,7 @@ async function onLoadConfig() {
         setDirty(false);
 
         refreshControllerVisual();
+        refreshButtonLabels();
         updateLayerLeds();
         renderLayersTab();
         renderSettingsTab();
@@ -679,6 +709,7 @@ function onImportJSON() {
             state.config = importConfigJSON(text);
             setDirty();
             refreshControllerVisual();
+            refreshButtonLabels();
             updateLayerLeds();
             renderLayersTab();
             renderSettingsTab();
@@ -701,6 +732,7 @@ function bindSettingsEvents() {
     });
     document.getElementById('emulation-mode').addEventListener('change', e => {
         state.config.our_descriptor_number = parseInt(e.target.value, 10);
+        refreshButtonLabels();
         setDirty();
     });
     document.getElementById('normalize-gamepad').addEventListener('change', e => {
