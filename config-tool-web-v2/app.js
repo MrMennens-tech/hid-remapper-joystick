@@ -5,12 +5,12 @@ import {
     connectDevice, disconnectDevice, loadConfig, saveConfig,
     exportConfigJSON, importConfigJSON, enableMonitor, disableMonitor,
     isConnected, onHIDDisconnect, makeDefaultConfig, NLAYERS
-} from './device.js';
+} from './device.js?v=3';
 import {
     CONTROLLER_VISUAL, NAMED_USAGES, SOURCE_GROUPS,
     getUsageName, getVisualIdForUsage,
     firmwareColorToCSS, cssColorToFirmware, DEFAULT_LAYER_COLORS
-} from './usages.js';
+} from './usages.js?v=3';
 
 // ─── App State ────────────────────────────────────────────────────────────────
 const state = {
