@@ -217,7 +217,10 @@ function renderLayerCheckboxes(mapping) {
     const container = document.getElementById('layer-checkboxes');
     container.innerHTML = '';
     for (let i = 0; i < NLAYERS; i++) {
-        const checked = mapping?.layers.includes(i) ?? (i === state.activeLayer);
+        // layers:[] means "all layers" — show all checkboxes as checked
+        const checked = mapping
+            ? (mapping.layers.length === 0 || mapping.layers.includes(i))
+            : (i === state.activeLayer);
         const lbl = document.createElement('label');
         lbl.className = `layer-check ${checked ? 'checked' : ''}`;
         lbl.innerHTML = `<input type="checkbox" value="${i}" ${checked ? 'checked' : ''}> L${i + 1}`;
@@ -348,8 +351,10 @@ async function startCapture() {
         await enableMonitor((report) => {
             if (!state.capturing) return;
             const { usage, value } = report;
-            // Skip noise
-            if (Math.abs(value) < 5000) return;
+            // Skip noise: filter axis jitter (small non-zero values) but always
+            // accept digital button presses which the firmware sends as value=1.
+            if (value === 0) return;
+            if (Math.abs(value) < 5000 && Math.abs(value) !== 1) return;
             // Skip the first 200ms (debounce accidental trigger)
             if (Date.now() - startTime < 200) return;
 
