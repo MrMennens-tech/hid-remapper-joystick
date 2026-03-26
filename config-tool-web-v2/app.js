@@ -346,16 +346,22 @@ async function startCapture() {
     renderAssignPanel();
 
     const startTime = Date.now();
+    const baseline = {};  // usage → first-seen value (at-rest baseline)
 
     try {
         await enableMonitor((report) => {
             if (!state.capturing) return;
             const { usage, value } = report;
-            // Skip zero (neutral/released state); accept any non-zero input.
-            // Raw values: buttons = 0/1, 8-bit axes = 0-255, 16-bit axes = 0-65535 or ±32767.
-            if (value === 0) return;
+
+            // Record at-rest baseline on first observation of each input
+            if (!(usage in baseline)) { baseline[usage] = value; return; }
+
             // Skip the first 200ms (debounce accidental trigger)
             if (Date.now() - startTime < 200) return;
+
+            // Accept button presses (value === 1) or significant axis movement (delta ≥ 10)
+            const delta = Math.abs(value - baseline[usage]);
+            if (value !== 1 && delta < 10) return;
 
             stopCapture();
             assignSourceUsage(usage);
@@ -385,7 +391,10 @@ function switchTab(tabId) {
         p.classList.toggle('active', p.id === `panel-${tabId}`)
     );
     if (tabId === 'overview') renderOverviewTab();
-    if (tabId === 'monitor')  updateMonitorToggleBtn();
+    if (tabId === 'monitor') {
+        updateMonitorToggleBtn();
+        if (state.connected && !monitor.active && !state.capturing) startMonitor();
+    }
 }
 
 // ─── Layers Tab ───────────────────────────────────────────────────────────────
