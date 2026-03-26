@@ -236,7 +236,7 @@ function handleInputReport(event) {
         const usage   = '0x' + data.getUint32(offset, true).toString(16).padStart(8, '0');  offset += 4;
         const value   = data.getInt32(offset, true);   offset += 4;
         const hubPort = data.getUint8(offset);          offset += 1;
-        if (usage !== '0x00000000') {
+        if (usage !== '0x00000000' && typeof monitorCallback === 'function') {
             monitorCallback({ usage, hubPort, value });
         }
     }
