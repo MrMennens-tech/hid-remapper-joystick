@@ -351,10 +351,9 @@ async function startCapture() {
         await enableMonitor((report) => {
             if (!state.capturing) return;
             const { usage, value } = report;
-            // Skip noise: filter axis jitter (small non-zero values) but always
-            // accept digital button presses which the firmware sends as value=1.
+            // Skip zero (neutral/released state); accept any non-zero input.
+            // Raw values: buttons = 0/1, 8-bit axes = 0-255, 16-bit axes = 0-65535 or ±32767.
             if (value === 0) return;
-            if (Math.abs(value) < 5000 && Math.abs(value) !== 1) return;
             // Skip the first 200ms (debounce accidental trigger)
             if (Date.now() - startTime < 200) return;
 
