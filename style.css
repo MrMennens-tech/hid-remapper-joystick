@@ -262,12 +262,6 @@ body {
     max-width: 600px;
 }
 
-<<<<<<< Current (Your changes)
-#controller-svg {
-    width: 100%;
-    height: auto;
-    filter: drop-shadow(0 12px 40px rgba(0,0,0,0.6));
-=======
 .gamepad-art-panel {
     width: 100%;
     display: flex;
@@ -282,7 +276,6 @@ body {
     height: auto;
     max-width: 920px;
     filter: drop-shadow(0 16px 48px rgba(0,0,0,0.55));
->>>>>>> Incoming (Background Agent changes)
 }
 
 /* SVG element base styles */

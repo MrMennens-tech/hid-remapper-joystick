@@ -5,12 +5,14 @@ import {
     connectDevice, disconnectDevice, loadConfig, saveConfig,
     exportConfigJSON, importConfigJSON, enableMonitor, disableMonitor,
     isConnected, onHIDDisconnect, makeDefaultConfig, NLAYERS
-} from './device.js?v=4';
+} from './device.js?v=5';
 import {
     CONTROLLER_VISUAL, NAMED_USAGES, SOURCE_GROUPS,
     getUsageName, getVisualIdForUsage,
-    firmwareColorToCSS, cssColorToFirmware, DEFAULT_LAYER_COLORS
-} from './usages.js?v=4';
+    firmwareColorToCSS, cssColorToFirmware, DEFAULT_LAYER_COLORS,
+    isMouseKeyboardMode, getGamepadSkin, GAMEPAD_SKIN_LABELS,
+    KEYBOARD_VISUAL_KEYS, MOUSE_KEYBOARD_VISUAL,
+} from './usages.js?v=5';
 
 // ─── App State ────────────────────────────────────────────────────────────────
 const state = {
@@ -56,11 +58,16 @@ function getPrimaryMapping(targetUsage) {
     return getMappingsFor(targetUsage)[0] || null;
 }
 
+function getRemapVisualMap() {
+    const d = state.config.our_descriptor_number;
+    return isMouseKeyboardMode(d) ? MOUSE_KEYBOARD_VISUAL : CONTROLLER_VISUAL;
+}
+
 // Returns which target usage is "active" in the assignment panel
 function getActivePanelUsage() {
     const vis = state.selectedVisual;
     if (!vis) return null;
-    const info = CONTROLLER_VISUAL[vis];
+    const info = getRemapVisualMap()[vis];
     if (!info) return null;
     if (info.isStick) {
         if (state.stickSubMode === 'x')   return info.axisX;
@@ -94,23 +101,16 @@ function updateLayerLeds() {
 
 // ─── Controller Visual ────────────────────────────────────────────────────────
 
-// Face button labels per emulated device type (our_descriptor_number)
-const FACE_LABELS = {
-    2: { y: 'X',  a: 'B',  b: 'A',  x: 'Y'  },  // Switch
-    3: { y: '△', a: '✕', b: '○', x: '□' },       // PS4 Arcade Stick
-};
 const MODE_NAMES = {
     0: '🖱️ Mouse + Keyboard',
     1: '🖱️ Absolute Mouse + Keyboard',
 };
 
 function refreshButtonLabels() {
-    const mode   = state.config?.our_descriptor_number ?? 5;
-    const labels = FACE_LABELS[mode] ?? { y: 'Y', a: 'A', b: 'B', x: 'X' };
-    document.querySelector('.pad-label-y')?.replaceChildren(labels.y);
-    document.querySelector('.pad-label-a')?.replaceChildren(labels.a);
-    document.querySelector('.pad-label-b')?.replaceChildren(labels.b);
-    document.querySelector('.pad-label-x')?.replaceChildren(labels.x);
+    const mode = state.config?.our_descriptor_number ?? 5;
+    if (!isMouseKeyboardMode(mode)) {
+        applyGamepadSkin(getGamepadSkin(mode));
+    }
 
     const badge = document.getElementById('controller-mode-badge');
     if (badge) {
@@ -121,10 +121,11 @@ function refreshButtonLabels() {
 }
 
 function refreshControllerVisual() {
+    const map = getRemapVisualMap();
     // Update which elements show as "mapped"
     document.querySelectorAll('.pad-clickable').forEach(el => {
         const vis  = el.dataset.input;
-        const info = CONTROLLER_VISUAL[vis];
+        const info = map[vis];
         if (!info) return;
         const isMapped = info.usages.some(u => getMappingsFor(u).length > 0);
         el.classList.toggle('mapped', isMapped);
@@ -133,7 +134,7 @@ function refreshControllerVisual() {
 }
 
 function handleControllerClick(visId) {
-    const info = CONTROLLER_VISUAL[visId];
+    const info = getRemapVisualMap()[visId];
     if (!info) return;
 
     state.selectedVisual = visId;
@@ -143,8 +144,6 @@ function handleControllerClick(visId) {
 
     refreshControllerVisual();
     renderAssignPanel();
-<<<<<<< Current (Your changes)
-=======
     requestAnimationFrame(() => {
         const search = document.getElementById('source-search');
         if (search) search.focus();
@@ -255,7 +254,6 @@ function updateRemapVisualMode() {
     updateAssignEmptyCopy();
     refreshControllerVisual();
     renderAssignPanel();
->>>>>>> Incoming (Background Agent changes)
 }
 
 // ─── Assignment Panel ─────────────────────────────────────────────────────────
@@ -273,7 +271,7 @@ function renderAssignPanel() {
     emptyEl.classList.add('hidden');
     contentEl.classList.remove('hidden');
 
-    const info       = CONTROLLER_VISUAL[visId];
+    const info       = getRemapVisualMap()[visId];
     const targetUsage = getActivePanelUsage();
     const mapping    = targetUsage ? getPrimaryMapping(targetUsage) : null;
 
@@ -846,6 +844,7 @@ function bindSettingsEvents() {
     document.getElementById('emulation-mode').addEventListener('change', e => {
         state.config.our_descriptor_number = parseInt(e.target.value, 10);
         refreshButtonLabels();
+        updateRemapVisualMode();
         setDirty();
     });
     document.getElementById('normalize-gamepad').addEventListener('change', e => {
@@ -1019,15 +1018,15 @@ export function init() {
     document.getElementById('export-btn').addEventListener('click', onExportJSON);
     document.getElementById('import-btn').addEventListener('click', onImportJSON);
 
-    // Controller SVG clicks — delegate from the SVG element
-    document.getElementById('controller-svg').addEventListener('click', (e) => {
+    // Gamepad / mouse+keyboard visuals — delegate clicks (multi-SVG gamepad skins + MK column)
+    const onPadClick = (e) => {
         const el = e.target.closest('.pad-clickable');
-        if (el) {
-            // Stop capture if active
-            if (state.capturing) stopCapture();
-            handleControllerClick(el.dataset.input);
-        }
-    });
+        if (!el?.dataset?.input) return;
+        if (state.capturing) stopCapture();
+        handleControllerClick(el.dataset.input);
+    };
+    document.getElementById('remap-visual-gamepad')?.addEventListener('click', onPadClick);
+    document.getElementById('remap-visual-mk')?.addEventListener('click', onPadClick);
 
     // Stick sub-tabs
     document.querySelectorAll('.stick-tab').forEach(t => {
@@ -1108,7 +1107,7 @@ export function init() {
     renderSettingsTab();
     renderAdvancedTab();
     renderOverviewTab();
-    refreshControllerVisual();
+    updateRemapVisualMode();
 
     // Initial state
     setDirty(false);
