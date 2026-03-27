@@ -143,6 +143,119 @@ function handleControllerClick(visId) {
 
     refreshControllerVisual();
     renderAssignPanel();
+<<<<<<< Current (Your changes)
+=======
+    requestAnimationFrame(() => {
+        const search = document.getElementById('source-search');
+        if (search) search.focus();
+    });
+}
+
+function applyGamepadSkin(skinKey) {
+    const L = GAMEPAD_SKIN_LABELS[skinKey] || GAMEPAD_SKIN_LABELS.xbox;
+    const gamepad = document.getElementById('remap-visual-gamepad');
+    if (!gamepad) return;
+    const setPart = (part, text) => {
+        gamepad.querySelectorAll(`[data-skin-part="${part}"]`).forEach((el) => {
+            el.textContent = text;
+        });
+    };
+    setPart('y', L.y);
+    setPart('x', L.x);
+    setPart('b', L.b);
+    setPart('a', L.a);
+    setPart('back', L.back);
+    setPart('start', L.start);
+    setPart('home', L.home);
+}
+
+/** Welk gamepad-art-paneel hoort bij firmware-skin (zelfde layout als descriptor-tabel). */
+function gamepadArtPanelIdForSkin(skinKey) {
+    if (skinKey === 'switch') return 'gamepad-art-switch';
+    if (skinKey === 'ps4') return 'gamepad-art-ps4';
+    if (skinKey === 'stadia') return 'gamepad-art-stadia';
+    return 'gamepad-art-xbox';
+}
+
+function updateGamepadArtVisibility() {
+    const d = state.config.our_descriptor_number;
+    if (isMouseKeyboardMode(d)) return;
+    const skin = getGamepadSkin(d);
+    const showId = gamepadArtPanelIdForSkin(skin);
+    document.querySelectorAll('#remap-visual-gamepad .gamepad-art-panel').forEach((panel) => {
+        panel.classList.toggle('hidden', panel.id !== showId);
+        panel.setAttribute('aria-hidden', panel.id !== showId ? 'true' : 'false');
+    });
+}
+
+function updateRemapOutputHint() {
+    const hint = document.getElementById('remap-output-hint');
+    if (!hint) return;
+    const d = state.config.our_descriptor_number;
+    const labels = [
+        'Output: mouse + keyboard',
+        'Output: absolute mouse + keyboard',
+        'Output: Switch-style gamepad',
+        'Output: PS4 / arcade-style gamepad',
+        'Output: Stadia-style gamepad',
+        'Output: Xbox / XAC compatible gamepad',
+    ];
+    hint.textContent = labels[d] ?? labels[0];
+}
+
+function updateAssignEmptyCopy() {
+    const icon = document.getElementById('assign-empty-icon');
+    const text = document.getElementById('assign-empty-text');
+    if (!text) return;
+    if (isMouseKeyboardMode(state.config.our_descriptor_number)) {
+        if (icon) icon.textContent = '🖱️';
+        text.textContent = 'Click a mouse area, scroll control, or keyboard key to map outputs from your inputs.';
+    } else {
+        if (icon) icon.textContent = '🎮';
+        text.textContent = 'Click any button or stick on the controller to configure its mapping.';
+    }
+}
+
+function ensureKeyboardGridRendered() {
+    const grid = document.getElementById('keyboard-grid');
+    if (!grid || grid.dataset.ready === '1') return;
+    grid.innerHTML = '';
+    for (const k of KEYBOARD_VISUAL_KEYS) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'kbd-key pad-clickable';
+        b.dataset.input = k.id;
+        b.textContent = k.label;
+        b.title = k.label;
+        grid.appendChild(b);
+    }
+    grid.dataset.ready = '1';
+}
+
+/** Show mouse+keyboard vs gamepad visuals; refresh highlights. Call after load / emulation change. */
+function updateRemapVisualMode() {
+    state.selectedVisual = null;
+    const d = state.config.our_descriptor_number;
+    const gamepadEl = document.getElementById('remap-visual-gamepad');
+    const mkEl = document.getElementById('remap-visual-mk');
+    if (!gamepadEl || !mkEl) return;
+
+    if (isMouseKeyboardMode(d)) {
+        gamepadEl.classList.add('hidden');
+        mkEl.classList.remove('hidden');
+        ensureKeyboardGridRendered();
+    } else {
+        mkEl.classList.add('hidden');
+        gamepadEl.classList.remove('hidden');
+        applyGamepadSkin(getGamepadSkin(d));
+        updateGamepadArtVisibility();
+    }
+
+    updateRemapOutputHint();
+    updateAssignEmptyCopy();
+    refreshControllerVisual();
+    renderAssignPanel();
+>>>>>>> Incoming (Background Agent changes)
 }
 
 // ─── Assignment Panel ─────────────────────────────────────────────────────────
