@@ -7,9 +7,10 @@ import {
     isConnected, onHIDDisconnect, makeDefaultConfig, NLAYERS
 } from './device.js';
 import {
-    CONTROLLER_VISUAL, NAMED_USAGES, SOURCE_GROUPS,
-    getUsageName, getVisualIdForUsage,
-    firmwareColorToCSS, cssColorToFirmware, DEFAULT_LAYER_COLORS
+    CONTROLLER_VISUAL, MOUSE_KEYBOARD_VISUAL, NAMED_USAGES, SOURCE_GROUPS,
+    getUsageName,
+    firmwareColorToCSS, cssColorToFirmware, DEFAULT_LAYER_COLORS,
+    isMouseKeyboardMode, getGamepadSkin, GAMEPAD_SKIN_LABELS, KEYBOARD_VISUAL_KEYS
 } from './usages.js';
 
 // ─── App State ────────────────────────────────────────────────────────────────
@@ -29,6 +30,25 @@ const state = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+/** All layer indices (firmware has NLAYERS). */
+function allLayerIndices() {
+    return Array.from({ length: NLAYERS }, (_, i) => i);
+}
+
+/** Empty `layers` means active on every layer (same as full bitmask in device.js). */
+function mappingAppliesOnLayer(m, layer) {
+    if (!m.layers || m.layers.length === 0) return true;
+    return m.layers.includes(layer);
+}
+
+/** Whether two layer selections overlap (empty = all layers). */
+function layerSetsOverlap(a, b) {
+    const expand = (x) => (x && x.length ? x : allLayerIndices());
+    const aa = expand(a);
+    const bb = expand(b);
+    return aa.some(x => bb.includes(x));
+}
+
 function setDirty(dirty = true) {
     state.dirty = dirty;
     const disabled = !dirty || !state.connected;
@@ -40,14 +60,19 @@ function notify(message, type = 'info', duration = 3000) {
     const el = document.createElement('div');
     el.className = `notification ${type}`;
     el.textContent = message;
+    el.setAttribute('role', 'status');
+    el.title = 'Click to dismiss';
+    el.style.cursor = 'pointer';
+    const remove = () => { try { el.remove(); } catch (_) {} };
+    el.addEventListener('click', remove);
     document.getElementById('notifications').appendChild(el);
-    setTimeout(() => el.remove(), duration);
+    setTimeout(remove, duration);
 }
 
 // Returns all mappings for a given target usage on the active layer
 function getMappingsFor(targetUsage, layer = state.activeLayer) {
     return state.config.mappings.filter(m =>
-        m.target_usage === targetUsage && m.layers.includes(layer)
+        m.target_usage === targetUsage && mappingAppliesOnLayer(m, layer)
     );
 }
 
@@ -56,16 +81,22 @@ function getPrimaryMapping(targetUsage) {
     return getMappingsFor(targetUsage)[0] || null;
 }
 
+function getRemapVisualMap() {
+    return isMouseKeyboardMode(state.config.our_descriptor_number)
+        ? MOUSE_KEYBOARD_VISUAL
+        : CONTROLLER_VISUAL;
+}
+
 // Returns which target usage is "active" in the assignment panel
 function getActivePanelUsage() {
     const vis = state.selectedVisual;
     if (!vis) return null;
-    const info = CONTROLLER_VISUAL[vis];
+    const info = getRemapVisualMap()[vis];
     if (!info) return null;
     if (info.isStick) {
         if (state.stickSubMode === 'x')   return info.axisX;
         if (state.stickSubMode === 'y')   return info.axisY;
-        if (state.stickSubMode === 'btn') return info.btnUsage;
+        if (state.stickSubMode === 'btn') return info.btnUsage || null;
     }
     return info.usages[0];
 }
@@ -95,10 +126,14 @@ function updateLayerLeds() {
 // ─── Controller Visual ────────────────────────────────────────────────────────
 
 function refreshControllerVisual() {
-    // Update which elements show as "mapped"
-    document.querySelectorAll('.pad-clickable').forEach(el => {
+    const map = getRemapVisualMap();
+    const gamepadRoot = document.getElementById('remap-visual-gamepad');
+    const mkRoot = document.getElementById('remap-visual-mk');
+    const root = (gamepadRoot && !gamepadRoot.classList.contains('hidden')) ? gamepadRoot : mkRoot;
+    if (!root) return;
+    root.querySelectorAll('.pad-clickable').forEach(el => {
         const vis  = el.dataset.input;
-        const info = CONTROLLER_VISUAL[vis];
+        const info = map[vis];
         if (!info) return;
         const isMapped = info.usages.some(u => getMappingsFor(u).length > 0);
         el.classList.toggle('mapped', isMapped);
@@ -107,7 +142,7 @@ function refreshControllerVisual() {
 }
 
 function handleControllerClick(visId) {
-    const info = CONTROLLER_VISUAL[visId];
+    const info = getRemapVisualMap()[visId];
     if (!info) return;
 
     state.selectedVisual = visId;
@@ -115,6 +150,95 @@ function handleControllerClick(visId) {
     // Default stick sub-mode
     if (info.isStick) state.stickSubMode = 'x';
 
+    refreshControllerVisual();
+    renderAssignPanel();
+    requestAnimationFrame(() => {
+        const search = document.getElementById('source-search');
+        if (search) search.focus();
+    });
+}
+
+function applyGamepadSkin(skinKey) {
+    const L = GAMEPAD_SKIN_LABELS[skinKey] || GAMEPAD_SKIN_LABELS.xbox;
+    const pairs = [
+        ['face-label-y', L.y],
+        ['face-label-x', L.x],
+        ['face-label-b', L.b],
+        ['face-label-a', L.a],
+        ['center-label-back', L.back],
+        ['center-label-start', L.start],
+        ['center-label-home', L.home],
+    ];
+    for (const [id, text] of pairs) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text;
+    }
+}
+
+function updateRemapOutputHint() {
+    const hint = document.getElementById('remap-output-hint');
+    if (!hint) return;
+    const d = state.config.our_descriptor_number;
+    const labels = [
+        'Output: mouse + keyboard',
+        'Output: absolute mouse + keyboard',
+        'Output: Switch-style gamepad',
+        'Output: PS4 / arcade-style gamepad',
+        'Output: Stadia-style gamepad',
+        'Output: Xbox / XAC compatible gamepad',
+    ];
+    hint.textContent = labels[d] ?? labels[0];
+}
+
+function updateAssignEmptyCopy() {
+    const icon = document.getElementById('assign-empty-icon');
+    const text = document.getElementById('assign-empty-text');
+    if (!text) return;
+    if (isMouseKeyboardMode(state.config.our_descriptor_number)) {
+        if (icon) icon.textContent = '🖱️';
+        text.textContent = 'Click a mouse area, scroll control, or keyboard key to map outputs from your inputs.';
+    } else {
+        if (icon) icon.textContent = '🎮';
+        text.textContent = 'Click any button or stick on the controller to configure its mapping.';
+    }
+}
+
+function ensureKeyboardGridRendered() {
+    const grid = document.getElementById('keyboard-grid');
+    if (!grid || grid.dataset.ready === '1') return;
+    grid.innerHTML = '';
+    for (const k of KEYBOARD_VISUAL_KEYS) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'kbd-key pad-clickable';
+        b.dataset.input = k.id;
+        b.textContent = k.label;
+        b.title = k.label;
+        grid.appendChild(b);
+    }
+    grid.dataset.ready = '1';
+}
+
+/** Show mouse+keyboard vs gamepad visuals; refresh highlights. Call after load / emulation change. */
+function updateRemapVisualMode() {
+    state.selectedVisual = null;
+    const d = state.config.our_descriptor_number;
+    const gamepadEl = document.getElementById('remap-visual-gamepad');
+    const mkEl = document.getElementById('remap-visual-mk');
+    if (!gamepadEl || !mkEl) return;
+
+    if (isMouseKeyboardMode(d)) {
+        gamepadEl.classList.add('hidden');
+        mkEl.classList.remove('hidden');
+        ensureKeyboardGridRendered();
+    } else {
+        mkEl.classList.add('hidden');
+        gamepadEl.classList.remove('hidden');
+        applyGamepadSkin(getGamepadSkin(d));
+    }
+
+    updateRemapOutputHint();
+    updateAssignEmptyCopy();
     refreshControllerVisual();
     renderAssignPanel();
 }
@@ -134,7 +258,11 @@ function renderAssignPanel() {
     emptyEl.classList.add('hidden');
     contentEl.classList.remove('hidden');
 
-    const info       = CONTROLLER_VISUAL[visId];
+    const info = getRemapVisualMap()[visId];
+    if (info.isStick && state.stickSubMode === 'btn' && !info.btnUsage) {
+        state.stickSubMode = 'x';
+    }
+
     const targetUsage = getActivePanelUsage();
     const mapping    = targetUsage ? getPrimaryMapping(targetUsage) : null;
 
@@ -146,7 +274,17 @@ function renderAssignPanel() {
     const stickTabs = document.getElementById('stick-tabs');
     if (info.isStick) {
         stickTabs.classList.remove('hidden');
+        const btnTab = stickTabs.querySelector('.stick-tab[data-mode="btn"]');
+        if (btnTab) {
+            if (info.btnUsage) {
+                btnTab.classList.remove('hidden');
+            } else {
+                btnTab.classList.add('hidden');
+                if (state.stickSubMode === 'btn') state.stickSubMode = 'x';
+            }
+        }
         stickTabs.querySelectorAll('.stick-tab').forEach(t => {
+            if (t.classList.contains('hidden')) return;
             t.classList.toggle('active', t.dataset.mode === state.stickSubMode);
         });
     } else {
@@ -216,8 +354,43 @@ function renderAssignPanel() {
 function renderLayerCheckboxes(mapping) {
     const container = document.getElementById('layer-checkboxes');
     container.innerHTML = '';
+
+    const toolbar = document.createElement('div');
+    toolbar.className = 'layer-checkboxes-toolbar';
+
+    const allBtn = document.createElement('button');
+    allBtn.type = 'button';
+    allBtn.className = 'btn-link';
+    allBtn.textContent = 'All layers';
+    allBtn.addEventListener('click', () => {
+        container.querySelectorAll('.layer-check input').forEach((inp) => {
+            inp.checked = true;
+            inp.closest('label').classList.add('checked');
+        });
+        applyCurrentMapping();
+    });
+
+    const curBtn = document.createElement('button');
+    curBtn.type = 'button';
+    curBtn.className = 'btn-link';
+    curBtn.textContent = 'This layer only';
+    curBtn.addEventListener('click', () => {
+        container.querySelectorAll('.layer-check input').forEach((inp, idx) => {
+            const on = idx === state.activeLayer;
+            inp.checked = on;
+            inp.closest('label').classList.toggle('checked', on);
+        });
+        applyCurrentMapping();
+    });
+
+    toolbar.appendChild(allBtn);
+    toolbar.appendChild(curBtn);
+    container.appendChild(toolbar);
+
     for (let i = 0; i < NLAYERS; i++) {
-        const checked = mapping?.layers.includes(i) ?? (i === state.activeLayer);
+        const checked = mapping
+            ? (!mapping.layers?.length || mapping.layers.includes(i))
+            : (i === state.activeLayer);
         const lbl = document.createElement('label');
         lbl.className = `layer-check ${checked ? 'checked' : ''}`;
         lbl.innerHTML = `<input type="checkbox" value="${i}" ${checked ? 'checked' : ''}> L${i + 1}`;
@@ -265,8 +438,12 @@ function assignSourceUsage(sourceCode) {
     if (!targetUsage) return;
 
     const layers = getSelectedLayers();
+    if (layers.length === 0) {
+        notify('Select at least one layer', 'error');
+        return;
+    }
     const existingIdx = state.config.mappings.findIndex(
-        m => m.target_usage === targetUsage && m.layers.some(l => layers.includes(l))
+        m => m.target_usage === targetUsage && layerSetsOverlap(m.layers, layers)
     );
 
     const newMapping = {
@@ -301,6 +478,11 @@ function applyCurrentMapping() {
     if (!targetUsage) return;
 
     const layers   = getSelectedLayers();
+    if (layers.length === 0) {
+        notify('Select at least one layer', 'error');
+        renderAssignPanel();
+        return;
+    }
     const sticky   = document.getElementById('toggle-sticky').checked;
     const tap      = document.getElementById('toggle-tap').checked;
     const hold     = document.getElementById('toggle-hold').checked;
@@ -337,6 +519,10 @@ async function startCapture() {
     if (!state.connected) { notify('Connect a device first', 'error'); return; }
     const targetUsage = getActivePanelUsage();
     if (!targetUsage) return;
+    if (getSelectedLayers().length === 0) {
+        notify('Select at least one layer before capture', 'error');
+        return;
+    }
 
     state.capturing   = true;
     state.captureUsage = targetUsage;
@@ -374,9 +560,12 @@ async function stopCapture() {
 
 function switchTab(tabId) {
     state.activeTab = tabId;
-    document.querySelectorAll('.tab').forEach(t =>
-        t.classList.toggle('active', t.dataset.tab === tabId)
-    );
+    document.querySelectorAll('.tab').forEach(t => {
+        const on = t.dataset.tab === tabId;
+        t.classList.toggle('active', on);
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+        t.tabIndex = on ? 0 : -1;
+    });
     document.querySelectorAll('.tab-panel').forEach(p =>
         p.classList.toggle('active', p.id === `panel-${tabId}`)
     );
@@ -519,7 +708,7 @@ async function onLoadConfig() {
         state.config = await loadConfig();
         setDirty(false);
 
-        refreshControllerVisual();
+        updateRemapVisualMode();
         updateLayerLeds();
         renderLayersTab();
         renderSettingsTab();
@@ -607,7 +796,7 @@ function onImportJSON() {
             const text = await file.text();
             state.config = importConfigJSON(text);
             setDirty();
-            refreshControllerVisual();
+            updateRemapVisualMode();
             updateLayerLeds();
             renderLayersTab();
             renderSettingsTab();
@@ -630,6 +819,7 @@ function bindSettingsEvents() {
     document.getElementById('emulation-mode').addEventListener('change', e => {
         state.config.our_descriptor_number = parseInt(e.target.value, 10);
         setDirty();
+        updateRemapVisualMode();
     });
     document.getElementById('normalize-gamepad').addEventListener('change', e => {
         state.config.normalize_gamepad_inputs = e.target.checked;
@@ -676,6 +866,28 @@ export function init() {
         return;
     }
 
+    window.addEventListener('beforeunload', (e) => {
+        if (state.dirty) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        if (state.capturing) {
+            e.preventDefault();
+            stopCapture();
+            return;
+        }
+        if (state.selectedVisual) {
+            e.preventDefault();
+            state.selectedVisual = null;
+            refreshControllerVisual();
+            renderAssignPanel();
+        }
+    });
+
     // Tab switching
     document.querySelectorAll('.tab').forEach(t => {
         t.addEventListener('click', () => switchTab(t.dataset.tab));
@@ -691,11 +903,10 @@ export function init() {
     document.getElementById('export-btn').addEventListener('click', onExportJSON);
     document.getElementById('import-btn').addEventListener('click', onImportJSON);
 
-    // Controller SVG clicks — delegate from the SVG element
-    document.getElementById('controller-svg').addEventListener('click', (e) => {
+    // Remap visuals (gamepad SVG + mouse / keyboard) — delegate from controller area
+    document.getElementById('controller-area').addEventListener('click', (e) => {
         const el = e.target.closest('.pad-clickable');
-        if (el) {
-            // Stop capture if active
+        if (el && el.dataset.input) {
             if (state.capturing) stopCapture();
             handleControllerClick(el.dataset.input);
         }
@@ -704,10 +915,12 @@ export function init() {
     // Stick sub-tabs
     document.querySelectorAll('.stick-tab').forEach(t => {
         t.addEventListener('click', () => {
+            if (t.classList.contains('hidden')) return;
             state.stickSubMode = t.dataset.mode;
-            document.querySelectorAll('.stick-tab').forEach(s =>
-                s.classList.toggle('active', s.dataset.mode === t.dataset.mode)
-            );
+            document.querySelectorAll('.stick-tab').forEach(s => {
+                if (s.classList.contains('hidden')) return;
+                s.classList.toggle('active', s.dataset.mode === t.dataset.mode);
+            });
             renderAssignPanel();
         });
     });
@@ -772,7 +985,7 @@ export function init() {
     renderLayersTab();
     renderSettingsTab();
     renderAdvancedTab();
-    refreshControllerVisual();
+    updateRemapVisualMode();
 
     // Initial state
     setDirty(false);

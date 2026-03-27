@@ -127,6 +127,9 @@ function maskToLayerList(mask) {
     return list;
 }
 function layerListToMask(list) {
+    if (!list || list.length === 0) {
+        return 0;
+    }
     return list.reduce((m, i) => m | (1 << i), 0);
 }
 
@@ -530,6 +533,13 @@ export function importConfigJSON(json) {
     if (!parsed.version) throw new Error('Invalid config: missing version');
     // Ensure layer_colors exists
     if (!parsed.layer_colors) parsed.layer_colors = [...DEFAULT_LAYER_COLORS];
+    if (parsed.mappings) {
+        for (const m of parsed.mappings) {
+            if (!m.layers || m.layers.length === 0) {
+                m.layers = Array.from({ length: NLAYERS }, (_, i) => i);
+            }
+        }
+    }
     return parsed;
 }
 

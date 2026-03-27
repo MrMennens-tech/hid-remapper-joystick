@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Configure HID Remapper: map gamepad, keyboard and mouse inputs. Requires Chrome and WebHID.">
     <title>TechRemap — by Mennens.Tech</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 
@@ -31,22 +32,22 @@
 
     <span id="save-check">✓</span>
 
-    <button class="btn" id="header-load-btn" disabled title="Load config from device">
+    <button type="button" class="btn" id="header-load-btn" disabled title="Load config from device" aria-label="Load configuration from device">
         ↓ Load
     </button>
-    <button class="btn btn-primary" id="header-save-btn" disabled title="Save config to device">
+    <button type="button" class="btn btn-primary" id="header-save-btn" disabled title="Save config to device" aria-label="Save configuration to device">
         ↑ Save
     </button>
-    <button class="btn" id="export-btn" title="Export config as JSON">⬇ Export</button>
-    <button class="btn" id="import-btn" title="Import config from JSON">⬆ Import</button>
+    <button type="button" class="btn" id="export-btn" title="Export config as JSON" aria-label="Export configuration as JSON file">⬇ Export</button>
+    <button type="button" class="btn" id="import-btn" title="Import config from JSON" aria-label="Import configuration from JSON file">⬆ Import</button>
 </header>
 
 <!-- ─── Tab Bar ─────────────────────────────────────────────────────────────── -->
-<nav id="tabs">
-    <div class="tab active" data-tab="remap">Remap</div>
-    <div class="tab" data-tab="layers">Layers &amp; LED</div>
-    <div class="tab" data-tab="settings">Settings</div>
-    <div class="tab" data-tab="advanced">Advanced</div>
+<nav id="tabs" role="tablist" aria-label="Configuration sections">
+    <div class="tab active" data-tab="remap" role="tab" tabindex="0" aria-selected="true">Remap</div>
+    <div class="tab" data-tab="layers" role="tab" tabindex="-1" aria-selected="false">Layers &amp; LED</div>
+    <div class="tab" data-tab="settings" role="tab" tabindex="-1" aria-selected="false">Settings</div>
+    <div class="tab" data-tab="advanced" role="tab" tabindex="-1" aria-selected="false">Advanced</div>
 </nav>
 
 <!-- ─── Main Content ────────────────────────────────────────────────────────── -->
@@ -59,23 +60,27 @@
         <div id="controller-area">
             <div id="controller-wrap">
 
+                <p id="remap-output-hint" class="remap-output-hint" aria-live="polite"></p>
+
+                <!-- ─── Gamepad output (Switch / PS4 / Stadia / XAC / default) ─── -->
+                <div id="remap-visual-gamepad" class="remap-visual">
                 <!-- ─── Controller SVG ──────────────────────────────────────── -->
-                <svg id="controller-svg" viewBox="0 0 600 380" xmlns="http://www.w3.org/2000/svg">
+                <svg id="controller-svg" class="joypad-controller" viewBox="0 0 600 380" xmlns="http://www.w3.org/2000/svg" aria-label="Gamepad output mapping">
                     <defs>
                         <filter id="inset-shadow" x="-10%" y="-10%" width="120%" height="120%">
                             <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#000" flood-opacity="0.6"/>
                         </filter>
                         <radialGradient id="body-grad" cx="50%" cy="35%" r="60%">
-                            <stop offset="0%"   stop-color="#232338"/>
-                            <stop offset="100%" stop-color="#161624"/>
+                            <stop offset="0%"   stop-color="#1e3a5c"/>
+                            <stop offset="100%" stop-color="#16213e"/>
                         </radialGradient>
                         <radialGradient id="grip-grad" cx="50%" cy="30%" r="70%">
-                            <stop offset="0%"   stop-color="#1A1A2C"/>
-                            <stop offset="100%" stop-color="#0E0E1A"/>
+                            <stop offset="0%"   stop-color="#182a45"/>
+                            <stop offset="100%" stop-color="#0d1522"/>
                         </radialGradient>
                     </defs>
 
-                    <!-- ── Body ───────────────────────────────────────────── -->
+                    <!-- ── Body (Joypad OS–style card shell) ───────────────── -->
                     <!-- Left grip -->
                     <rect fill="url(#grip-grad)" x="55" y="196" width="114" height="168" rx="46"/>
                     <!-- Right grip -->
@@ -83,8 +88,8 @@
                     <!-- Main body -->
                     <rect fill="url(#body-grad)" x="76" y="68" width="448" height="202" rx="66"/>
                     <!-- Grip texture lines (decorative) -->
-                    <rect fill="#0C0C18" opacity="0.5" x="64" y="222" width="96" height="130" rx="38"/>
-                    <rect fill="#0C0C18" opacity="0.5" x="440" y="222" width="96" height="130" rx="38"/>
+                    <rect fill="#0a1628" opacity="0.45" x="64" y="222" width="96" height="130" rx="38"/>
+                    <rect fill="#0a1628" opacity="0.45" x="440" y="222" width="96" height="130" rx="38"/>
 
                     <!-- ── Left Trigger (LT) ─────────────────────────────── -->
                     <g class="pad-clickable" data-input="btn-lt">
@@ -112,7 +117,7 @@
 
                     <!-- ── D-Pad ─────────────────────────────────────────── -->
                     <!-- Center background ring -->
-                    <circle fill="#1A1A2C" cx="168" cy="162" r="52"/>
+                    <circle fill="#1a2744" cx="168" cy="162" r="52"/>
 
                     <!-- D-Pad Up -->
                     <g class="pad-clickable" data-input="dpad-up">
@@ -135,12 +140,12 @@
                         <text class="pad-label" x="209" y="163">→</text>
                     </g>
                     <!-- D-Pad center dot -->
-                    <circle fill="#2A2A3E" cx="168" cy="162" r="12" pointer-events="none"/>
+                    <circle fill="#2d4263" cx="168" cy="162" r="12" pointer-events="none"/>
 
                     <!-- ── Left Stick ──────────────────────────────────────── -->
                     <g class="pad-clickable" data-input="stick-left">
                         <!-- Outer ring (movement indicator) -->
-                        <circle fill="#1E1E30" stroke="#2A2A42" stroke-width="2" cx="248" cy="222" r="42"/>
+                        <circle fill="#1a2744" stroke="#00d4aa" stroke-opacity="0.35" stroke-width="2" cx="248" cy="222" r="42"/>
                         <!-- Stick nub -->
                         <circle class="pad-stick-nub" cx="248" cy="222" r="26"/>
                         <text class="pad-label" x="248" y="227">L</text>
@@ -149,7 +154,7 @@
                     <!-- ── Right Stick ────────────────────────────────────── -->
                     <g class="pad-clickable" data-input="stick-right">
                         <!-- Outer ring -->
-                        <circle fill="#1E1E30" stroke="#2A2A42" stroke-width="2" cx="358" cy="222" r="42"/>
+                        <circle fill="#1a2744" stroke="#00d4aa" stroke-opacity="0.35" stroke-width="2" cx="358" cy="222" r="42"/>
                         <!-- Stick nub -->
                         <circle class="pad-stick-nub" cx="358" cy="222" r="26"/>
                         <text class="pad-label" x="358" y="227">R</text>
@@ -159,22 +164,23 @@
                     <!-- Back / View -->
                     <g class="pad-clickable" data-input="btn-back">
                         <circle class="pad-center-btn" cx="264" cy="152" r="14"/>
-                        <text class="pad-label" style="font-size:10px" x="264" y="156">⊲</text>
+                        <text id="center-label-back" class="pad-label" style="font-size:9px" x="264" y="156">View</text>
                     </g>
 
                     <!-- Home / Guide (larger, prominent) -->
                     <g class="pad-clickable" data-input="btn-home">
                         <circle class="pad-home-btn" cx="300" cy="138" r="20"/>
-                        <circle fill="#2A2A44" cx="300" cy="138" r="14"/>
-                        <circle fill="#1A1A30" cx="300" cy="138" r="8"/>
+                        <circle fill="#2d4263" cx="300" cy="138" r="14"/>
+                        <circle fill="#16213e" cx="300" cy="138" r="8"/>
                         <!-- Xbox-style ring decoration -->
-                        <circle fill="none" stroke="#3A3A58" stroke-width="1.5" cx="300" cy="138" r="18"/>
+                        <circle fill="none" stroke="#00d4aa" stroke-opacity="0.4" stroke-width="1.5" cx="300" cy="138" r="18"/>
+                        <text id="center-label-home" class="pad-label" style="font-size:8px" x="300" y="141">Guide</text>
                     </g>
 
                     <!-- Start / Menu -->
                     <g class="pad-clickable" data-input="btn-start">
                         <circle class="pad-center-btn" cx="336" cy="152" r="14"/>
-                        <text class="pad-label" style="font-size:10px" x="336" y="156">⊳</text>
+                        <text id="center-label-start" class="pad-label" style="font-size:9px" x="336" y="156">Menu</text>
                     </g>
 
                     <!-- ── Face Buttons ───────────────────────────────────── -->
@@ -182,35 +188,84 @@
                     <g class="pad-clickable" data-input="btn-y">
                         <circle class="pad-btn-y" cx="432" cy="118" r="22"/>
                         <circle fill="#4A3C18" opacity="0.3" cx="432" cy="118" r="22"/>
-                        <text class="pad-label pad-label-y" x="432" y="123">Y</text>
+                        <text id="face-label-y" class="pad-label pad-label-y" x="432" y="123">Y</text>
                     </g>
 
                     <!-- A (bottom, green) -->
                     <g class="pad-clickable" data-input="btn-a">
                         <circle class="pad-btn-a" cx="432" cy="202" r="22"/>
                         <circle fill="#1A4E2C" opacity="0.3" cx="432" cy="202" r="22"/>
-                        <text class="pad-label pad-label-a" x="432" y="207">A</text>
+                        <text id="face-label-a" class="pad-label pad-label-a" x="432" y="207">A</text>
                     </g>
 
                     <!-- X (left, blue) -->
                     <g class="pad-clickable" data-input="btn-x">
                         <circle class="pad-btn-x" cx="388" cy="160" r="22"/>
                         <circle fill="#1A2E58" opacity="0.3" cx="388" cy="160" r="22"/>
-                        <text class="pad-label pad-label-x" x="388" y="165">X</text>
+                        <text id="face-label-x" class="pad-label pad-label-x" x="388" y="165">X</text>
                     </g>
 
                     <!-- B (right, red) -->
                     <g class="pad-clickable" data-input="btn-b">
                         <circle class="pad-btn-b" cx="476" cy="160" r="22"/>
                         <circle fill="#4E1A1A" opacity="0.3" cx="476" cy="160" r="22"/>
-                        <text class="pad-label pad-label-b" x="476" y="165">B</text>
+                        <text id="face-label-b" class="pad-label pad-label-b" x="476" y="165">B</text>
                     </g>
 
                     <!-- Face button cluster subtle bg -->
-                    <circle fill="none" stroke="#222238" stroke-width="1" cx="432" cy="160" r="50" pointer-events="none"/>
+                    <circle fill="none" stroke="#2d4263" stroke-opacity="0.6" stroke-width="1" cx="432" cy="160" r="50" pointer-events="none"/>
 
                 </svg>
                 <!-- /SVG -->
+                </div><!-- /remap-visual-gamepad -->
+
+                <!-- ─── Mouse + keyboard output (descriptor 0 / 1) ─────────────── -->
+                <div id="remap-visual-mk" class="remap-visual hidden">
+                    <div class="mk-layout">
+                        <div class="mk-col mk-mouse-col">
+                            <div class="mk-col-title">Mouse</div>
+                            <svg id="mouse-svg" viewBox="0 0 400 280" xmlns="http://www.w3.org/2000/svg" class="mouse-svg">
+                                <rect fill="#16213e" x="24" y="20" width="352" height="240" rx="20"/>
+                                <g class="pad-clickable" data-input="mouse-l">
+                                    <path fill="#2d4263" stroke="#3d5680" d="M80 48 Q80 28 110 28 H190 Q200 28 200 38 V108 H80 Z"/>
+                                    <text class="pad-label" x="140" y="78">L</text>
+                                </g>
+                                <g class="pad-clickable" data-input="mouse-r">
+                                    <path fill="#2d4263" stroke="#3d5680" d="M320 48 Q320 28 290 28 H210 Q200 28 200 38 V108 H320 Z"/>
+                                    <text class="pad-label" x="260" y="78">R</text>
+                                </g>
+                                <g class="pad-clickable" data-input="wheel-v">
+                                    <rect fill="#1a2744" stroke="#00d4aa" stroke-opacity="0.35" x="175" y="36" width="50" height="56" rx="10"/>
+                                    <text class="pad-label" style="font-size:9px" x="200" y="68">Whl</text>
+                                </g>
+                                <g class="pad-clickable" data-input="mouse-m">
+                                    <rect fill="#3d5680" x="178" y="98" width="44" height="22" rx="6"/>
+                                    <text class="pad-label" style="font-size:8px" x="200" y="112">M</text>
+                                </g>
+                                <g class="pad-clickable" data-input="mouse-move">
+                                    <rect fill="#0f3460" stroke="#2d4263" x="88" y="128" width="224" height="112" rx="16"/>
+                                    <text class="pad-label" style="font-size:11px" x="200" y="188">Pointer X / Y</text>
+                                </g>
+                                <g class="pad-clickable" data-input="mouse-b4">
+                                    <rect fill="#2d4263" x="32" y="100" width="36" height="28" rx="6"/>
+                                    <text class="pad-label" style="font-size:8px" x="50" y="117">4</text>
+                                </g>
+                                <g class="pad-clickable" data-input="mouse-b5">
+                                    <rect fill="#2d4263" x="332" y="100" width="36" height="28" rx="6"/>
+                                    <text class="pad-label" style="font-size:8px" x="350" y="117">5</text>
+                                </g>
+                                <g class="pad-clickable" data-input="wheel-h">
+                                    <rect fill="#1a2744" stroke="#2d4263" x="140" y="248" width="120" height="22" rx="8"/>
+                                    <text class="pad-label" style="font-size:8px" x="200" y="263">H-scroll</text>
+                                </g>
+                            </svg>
+                        </div>
+                        <div class="mk-col mk-keys-col">
+                            <div class="mk-col-title">Keyboard</div>
+                            <div id="keyboard-grid" class="kbd-grid" role="group" aria-label="Keyboard keys"></div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Layer selector bar -->
                 <div id="layer-bar"></div>
@@ -223,8 +278,8 @@
         <aside id="assign-panel">
             <!-- Empty state -->
             <div id="assign-empty">
-                <div class="empty-icon">🎮</div>
-                <p>Click any button or stick on the controller to configure its mapping.</p>
+                <div class="empty-icon" id="assign-empty-icon">🎮</div>
+                <p id="assign-empty-text">Click any button or stick on the controller to configure its mapping.</p>
             </div>
 
             <!-- Content (shown when something is selected) -->
@@ -488,8 +543,8 @@
         Please use Chrome, Edge, or another Chromium-based browser (desktop only).
     </div>
 
-    <button class="connect-btn-big" id="connect-screen-btn">Connect Device</button>
-    <button class="btn" id="connect-btn" style="display:none">Connect</button>
+    <button type="button" class="connect-btn-big" id="connect-screen-btn" aria-label="Connect HID Remapper device">Connect Device</button>
+    <button type="button" class="btn" id="connect-btn" style="display:none" aria-label="Connect device">Connect</button>
 
     <p class="connect-note">
         Make sure your HID Remapper has the latest firmware flashed.<br>
@@ -505,6 +560,8 @@
     <span>TechRemap by <a href="https://mennens.tech" target="_blank" rel="noopener">Mennens.Tech</a></span>
     <span class="footer-sep">·</span>
     <span>Powered by <a href="https://remapper.org" target="_blank" rel="noopener">HID Remapper</a></span>
+    <span class="footer-sep">·</span>
+    <span>Gamepad UI inspired by <a href="https://github.com/joypad-ai/joypad-os" target="_blank" rel="noopener">Joypad OS</a></span>
 </footer>
 
 <!-- ─── App Bootstrap ─────────────────────────────────────────────────────── -->
