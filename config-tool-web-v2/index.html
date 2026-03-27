@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <meta name="description" content="Configure HID Remapper: map gamepad, keyboard and mouse inputs. Requires Chrome and WebHID.">
     <title>TechRemap — by Mennens.Tech</title>
-    <link rel="stylesheet" href="style.css?v=13">
+    <link rel="stylesheet" href="style.css?v=14">
 </head>
 <body>
 
@@ -75,8 +75,8 @@
                     <g class="gamepad-hit-layer">
                         <g class="pad-clickable" data-input="btn-lt"><rect class="pad-hit" x="200" y="2" width="280" height="100" rx="22" fill="rgba(0,0,0,0)"/></g>
                         <g class="pad-clickable" data-input="btn-rt"><rect class="pad-hit" x="1248" y="2" width="280" height="100" rx="22" fill="rgba(0,0,0,0)"/></g>
-                        <g class="pad-clickable" data-input="btn-lb"><rect class="pad-hit" x="230" y="108" width="320" height="100" rx="14" fill="rgba(0,0,0,0)"/><text class="pad-label" x="390" y="158">LB</text></g>
-                        <g class="pad-clickable" data-input="btn-rb"><rect class="pad-hit" x="1178" y="108" width="320" height="100" rx="14" fill="rgba(0,0,0,0)"/><text class="pad-label" x="1338" y="158">RB</text></g>
+                        <g class="pad-clickable" data-input="btn-lb"><rect class="pad-hit" x="230" y="88" width="320" height="100" rx="14" fill="rgba(0,0,0,0)"/><text class="pad-label" x="390" y="138">LB</text></g>
+                        <g class="pad-clickable" data-input="btn-rb"><rect class="pad-hit" x="1178" y="88" width="320" height="100" rx="14" fill="rgba(0,0,0,0)"/><text class="pad-label" x="1338" y="138">RB</text></g>
                         <g class="pad-clickable" data-input="dpad-up"><path class="pad-hit" fill="rgba(0,0,0,0)" d="m 674.48243,570.5 v -66.68889 c 0.78754,-9.40214 -7.28176,-12.57408 -7.28176,-12.57408 -6.55453,-4.05773 -34.0614,-4.05773 -34.0614,-4.05773 0,0 -29.32041,0 -35.90254,4.05773 0,0 -8.34649,3.20128 -7.28177,12.57408 V 570.5 c 41.1942,0.21036 41.30812,0 84.52747,0 z"/><text class="pad-label" x="631.9" y="528">↑</text></g>
                         <g class="pad-clickable" data-input="dpad-down"><path class="pad-hit" fill="rgba(0,0,0,0)" d="m 589.91807,655.1486 v 66.68889 c -0.78754,9.40214 7.28176,12.57408 7.28176,12.57408 6.55453,4.05773 34.0614,4.05773 34.0614,4.05773 0,0 29.32041,0 35.90254,-4.05773 0,0 8.34649,-3.20128 7.28177,-12.57408 V 655.1486 c -41.1942,-0.21036 -41.30812,0 -84.52747,0 z"/><text class="pad-label" x="631.9" y="698">↓</text></g>
                         <g class="pad-clickable" data-input="dpad-left"><path class="pad-hit" fill="rgba(0,0,0,0)" d="m 588.62575,570.46481 h -66.68889 c -9.40214,-0.78754 -12.57408,7.28176 -12.57408,7.28176 -4.05773,6.55453 -4.05773,34.0614 -4.05773,34.0614 0,0 0,29.32041 4.05773,35.90254 0,0 3.20128,8.34649 12.57408,7.28177 h 66.68889 c 0.21036,-41.1942 0,-41.30812 0,-84.52747 z"/><text class="pad-label" x="548" y="612">←</text></g>
@@ -97,14 +97,16 @@
                 <svg class="joypad-controller gamepad-skin-svg" viewBox="0 0 1728 1206" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                     <image class="gamepad-skin-bg" href="skins/switch-controller.svg" width="1728" height="1206" preserveAspectRatio="xMidYMid meet"/>
                     <g class="gamepad-hit-layer">
-                        <g class="pad-clickable" data-input="btn-lt"><rect class="pad-hit" x="175" y="6" width="210" height="118" rx="18" fill="rgba(0,0,0,0)"/><text class="pad-label" x="280" y="65">ZL</text></g>
-                        <g class="pad-clickable" data-input="btn-rt"><rect class="pad-hit" x="1343" y="6" width="210" height="118" rx="18" fill="rgba(0,0,0,0)"/><text class="pad-label" x="1448" y="65">ZR</text></g>
-                        <g class="pad-clickable" data-input="btn-lb"><rect class="pad-hit" x="220" y="118" width="340" height="95" rx="12" fill="rgba(0,0,0,0)"/><text class="pad-label" x="390" y="165.5">L</text></g>
-                        <g class="pad-clickable" data-input="btn-rb"><rect class="pad-hit" x="1168" y="118" width="340" height="95" rx="12" fill="rgba(0,0,0,0)"/><text class="pad-label" x="1338" y="165.5">R</text></g>
+                        <g class="pad-clickable" data-input="btn-lt"><rect class="pad-hit" x="175" y="-10" width="210" height="128" rx="18" fill="rgba(0,0,0,0)"/><text class="pad-label" x="280" y="54">ZL</text></g>
+                        <g class="pad-clickable" data-input="btn-rt"><rect class="pad-hit" x="1343" y="-10" width="210" height="128" rx="18" fill="rgba(0,0,0,0)"/><text class="pad-label" x="1448" y="54">ZR</text></g>
+                        <g class="pad-clickable" data-input="btn-lb"><rect class="pad-hit" x="220" y="92" width="340" height="95" rx="12" fill="rgba(0,0,0,0)"/><text class="pad-label" x="390" y="139.5">L</text></g>
+                        <g class="pad-clickable" data-input="btn-rb"><rect class="pad-hit" x="1168" y="92" width="340" height="95" rx="12" fill="rgba(0,0,0,0)"/><text class="pad-label" x="1338" y="139.5">R</text></g>
+                        <g transform="translate(-36 0)">
                         <g class="pad-clickable" data-input="dpad-up"><path class="pad-hit" fill="rgba(0,0,0,0)" d="M560.01 493.364v57.826c.006 4.06-4.366 10.383-8.271 10.383 12.427.024 84.476.021 97.485 0-3.907 0-8.508-6.321-8.508-10.383v-57.826c.01-8.97-6.3-14.453-15.608-14.453H575.6c-8.62.01-15.6 5.49-15.59 14.453"/><text class="pad-label" x="632" y="523">↑</text></g>
                         <g class="pad-clickable" data-input="dpad-down"><path class="pad-hit" fill="rgba(0,0,0,0)" d="M640.953 711.05v-57.826c-.006-4.06 4.365-10.383 8.27-10.383-12.427-.024-84.476-.021-97.484 0 3.907 0 8.507 6.321 8.507 10.383v57.826c-.01 8.97 6.3 14.454 15.609 14.454h49.507c8.62-.011 15.6-5.491 15.59-14.454"/><text class="pad-label" x="632" y="698">↓</text></g>
                         <g class="pad-clickable" data-input="dpad-left"><path class="pad-hit" fill="rgba(0,0,0,0)" d="M491.501 642.888h57.826c4.06-.006 10.383 4.366 10.383 8.27.024-12.426.021-84.476 0-97.484 0 3.907-6.321 8.507-10.383 8.507H491.5c-8.97-.01-14.453 6.3-14.453 15.61v49.507c.01 8.62 5.49 15.6 14.453 15.59"/><text class="pad-label" x="528" y="618">←</text></g>
                         <g class="pad-clickable" data-input="dpad-right"><path class="pad-hit" fill="rgba(0,0,0,0)" d="M709.666 561.945H651.84c-4.06.006-10.383-4.365-10.383-8.27-.024 12.427-.021 84.476 0 97.484 0-3.907 6.321-8.507 10.383-8.507h57.826c8.97.01 14.454-6.3 14.454-15.609v-49.508c-.011-8.62-5.491-15.6-14.454-15.59"/><text class="pad-label" x="736" y="618">→</text></g>
+                        </g>
                         <g class="pad-clickable" data-input="stick-left"><ellipse class="pad-hit" cx="394.636" cy="366.414" rx="102" ry="102" fill="rgba(0,0,0,0)"/><text class="pad-label" x="394.636" y="366.414">L</text></g>
                         <g class="pad-clickable" data-input="stick-right"><ellipse class="pad-hit" cx="1090.966" cy="597.614" rx="102" ry="102" fill="rgba(0,0,0,0)"/><text class="pad-label" x="1090.966" y="597.614">R</text></g>
                         <g class="pad-clickable" data-input="btn-back"><ellipse class="pad-hit" cx="653.336" cy="237.034" rx="38" ry="38" fill="rgba(0,0,0,0)"/><text data-skin-part="back" class="pad-label" x="653.336" y="237.034">−</text></g>
@@ -121,19 +123,19 @@
                 <svg class="joypad-controller gamepad-skin-svg" viewBox="0 0 522 320" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                     <image class="gamepad-skin-bg" href="skins/ps4-controller.svg" width="522" height="320" preserveAspectRatio="xMidYMid meet"/>
                     <g class="gamepad-hit-layer">
-                        <g class="pad-clickable" data-input="btn-lt"><rect class="pad-hit" x="48" y="8" width="128" height="46" rx="14" fill="rgba(0,0,0,0)"/><text class="pad-label" x="112" y="31">L2</text></g>
-                        <g class="pad-clickable" data-input="btn-rt"><rect class="pad-hit" x="346" y="8" width="128" height="46" rx="14" fill="rgba(0,0,0,0)"/><text class="pad-label" x="410" y="31">R2</text></g>
-                        <g class="pad-clickable" data-input="btn-lb"><rect class="pad-hit" x="70" y="54" width="92" height="24" rx="8" fill="rgba(0,0,0,0)"/><text class="pad-label" x="116" y="66">L1</text></g>
-                        <g class="pad-clickable" data-input="btn-rb"><rect class="pad-hit" x="360" y="54" width="92" height="24" rx="8" fill="rgba(0,0,0,0)"/><text class="pad-label" x="406" y="66">R1</text></g>
-                        <g class="pad-clickable" data-input="dpad-up"><rect class="pad-hit" x="71" y="128" width="34" height="34" rx="7" fill="rgba(0,0,0,0)"/><text class="pad-label" x="88" y="145">↑</text></g>
-                        <g class="pad-clickable" data-input="dpad-down"><rect class="pad-hit" x="71" y="198" width="34" height="34" rx="7" fill="rgba(0,0,0,0)"/><text class="pad-label" x="88" y="215">↓</text></g>
-                        <g class="pad-clickable" data-input="dpad-left"><rect class="pad-hit" x="36" y="162" width="34" height="34" rx="7" fill="rgba(0,0,0,0)"/><text class="pad-label" x="53" y="179">←</text></g>
-                        <g class="pad-clickable" data-input="dpad-right"><rect class="pad-hit" x="106" y="162" width="34" height="34" rx="7" fill="rgba(0,0,0,0)"/><text class="pad-label" x="123" y="179">→</text></g>
+                        <g class="pad-clickable" data-input="btn-lt"><rect class="pad-hit" x="52" y="2" width="118" height="34" rx="12" fill="rgba(0,0,0,0)"/><text class="pad-label" x="111" y="19">L2</text></g>
+                        <g class="pad-clickable" data-input="btn-rt"><rect class="pad-hit" x="352" y="2" width="118" height="34" rx="12" fill="rgba(0,0,0,0)"/><text class="pad-label" x="411" y="19">R2</text></g>
+                        <g class="pad-clickable" data-input="btn-lb"><rect class="pad-hit" x="66" y="38" width="102" height="22" rx="8" fill="rgba(0,0,0,0)"/><text class="pad-label" x="117" y="49">L1</text></g>
+                        <g class="pad-clickable" data-input="btn-rb"><rect class="pad-hit" x="354" y="38" width="102" height="22" rx="8" fill="rgba(0,0,0,0)"/><text class="pad-label" x="405" y="49">R1</text></g>
+                        <g class="pad-clickable" data-input="dpad-up"><rect class="pad-hit" x="108" y="154" width="34" height="34" rx="7" fill="rgba(0,0,0,0)"/><text class="pad-label" x="125" y="171">↑</text></g>
+                        <g class="pad-clickable" data-input="dpad-down"><rect class="pad-hit" x="108" y="206" width="34" height="34" rx="7" fill="rgba(0,0,0,0)"/><text class="pad-label" x="125" y="223">↓</text></g>
+                        <g class="pad-clickable" data-input="dpad-left"><rect class="pad-hit" x="76" y="180" width="34" height="34" rx="7" fill="rgba(0,0,0,0)"/><text class="pad-label" x="93" y="197">←</text></g>
+                        <g class="pad-clickable" data-input="dpad-right"><rect class="pad-hit" x="140" y="180" width="34" height="34" rx="7" fill="rgba(0,0,0,0)"/><text class="pad-label" x="157" y="197">→</text></g>
                         <g class="pad-clickable" data-input="stick-left"><ellipse class="pad-hit" cx="184.16" cy="193.34" rx="72" ry="72" fill="rgba(0,0,0,0)"/><text class="pad-label" x="184.16" y="193.34">L</text></g>
                         <g class="pad-clickable" data-input="stick-right"><ellipse class="pad-hit" cx="337.84" cy="193.34" rx="72" ry="72" fill="rgba(0,0,0,0)"/><text class="pad-label" x="337.84" y="193.34">R</text></g>
-                        <g class="pad-clickable" data-input="btn-back"><ellipse class="pad-hit" cx="228" cy="168" rx="20" ry="20" fill="rgba(0,0,0,0)"/><text data-skin-part="back" class="pad-label" x="228" y="168">Share</text></g>
-                        <g class="pad-clickable" data-input="btn-home"><ellipse class="pad-hit" cx="261" cy="128" rx="24" ry="24" fill="rgba(0,0,0,0)"/><text data-skin-part="home" class="pad-label" x="261" y="128">PS</text></g>
-                        <g class="pad-clickable" data-input="btn-start"><ellipse class="pad-hit" cx="294" cy="168" rx="20" ry="20" fill="rgba(0,0,0,0)"/><text data-skin-part="start" class="pad-label" x="294" y="168">Options</text></g>
+                        <g class="pad-clickable" data-input="btn-back"><ellipse class="pad-hit" cx="222" cy="172" rx="22" ry="22" fill="rgba(0,0,0,0)"/><text data-skin-part="back" class="pad-label" x="222" y="172">Share</text></g>
+                        <g class="pad-clickable" data-input="btn-home"><ellipse class="pad-hit" cx="261" cy="124" rx="26" ry="26" fill="rgba(0,0,0,0)"/><text data-skin-part="home" class="pad-label" x="261" y="124">PS</text></g>
+                        <g class="pad-clickable" data-input="btn-start"><ellipse class="pad-hit" cx="302" cy="172" rx="22" ry="22" fill="rgba(0,0,0,0)"/><text data-skin-part="start" class="pad-label" x="302" y="172">Options</text></g>
                         <g class="pad-clickable" data-input="btn-y"><ellipse class="pad-hit" cx="412.67" cy="78.51" rx="34" ry="34" fill="rgba(0,0,0,0)"/><text data-skin-part="y" class="pad-label pad-label-y" x="412.67" y="78.51">△</text></g>
                         <g class="pad-clickable" data-input="btn-a"><ellipse class="pad-hit" cx="412.67" cy="159.96" rx="34" ry="34" fill="rgba(0,0,0,0)"/><text data-skin-part="a" class="pad-label pad-label-a" x="412.67" y="159.96">✕</text></g>
                         <g class="pad-clickable" data-input="btn-x"><ellipse class="pad-hit" cx="371.94" cy="119.23" rx="34" ry="34" fill="rgba(0,0,0,0)"/><text data-skin-part="x" class="pad-label pad-label-x" x="371.94" y="119.23">□</text></g>
@@ -144,7 +146,7 @@
                 <div class="gamepad-art-panel hidden" id="gamepad-art-stadia" role="img" aria-label="Stadia style gamepad">
                 <svg class="joypad-controller gamepad-skin-svg" viewBox="0 0 1090 707" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                     <image class="gamepad-skin-bg" href="skins/stadia-controller.svg" width="1090" height="707" preserveAspectRatio="xMidYMid meet"/>
-                    <g class="gamepad-hit-layer" transform="translate(-94 -404)">
+                    <g class="gamepad-hit-layer" transform="translate(-94 -432)">
                         <g class="pad-clickable" data-input="btn-lt"><rect class="pad-hit" x="295" y="335" width="115" height="92" rx="12" fill="rgba(0,0,0,0)"/></g>
                         <g class="pad-clickable" data-input="btn-rt"><rect class="pad-hit" x="800" y="335" width="115" height="92" rx="12" fill="rgba(0,0,0,0)"/></g>
                         <g class="pad-clickable" data-input="btn-lb"><rect class="pad-hit" x="295" y="418" width="115" height="105" rx="12" fill="rgba(0,0,0,0)"/><text class="pad-label" x="352.5" y="475">L</text></g>

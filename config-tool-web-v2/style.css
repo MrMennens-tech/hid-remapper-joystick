@@ -279,6 +279,7 @@ body {
     height: auto;
     max-width: 920px;
     filter: drop-shadow(0 16px 48px rgba(0,0,0,0.55));
+    overflow: visible;
 }
 .gamepad-skin-bg {
     pointer-events: none;
@@ -327,20 +328,25 @@ body {
     pointer-events: none;
     user-select: none;
 }
-/* Alleen gamepad-visual: grote labels (px schaalt mee met layout); muis/toetsenbord blijft 11px */
+/* Alleen gamepad-visual: grote labels; op lichte controller-skins donkere vulling + lichte rand */
 #remap-visual-gamepad .pad-label {
     font-size: clamp(22px, 2.8vw + 14px, 56px);
     font-weight: 700;
     dominant-baseline: central;
-    fill: var(--text-1);
+    fill: #14141f;
     paint-order: stroke fill;
-    stroke: rgba(0, 0, 0, 0.5);
-    stroke-width: 1.25px;
+    stroke: rgba(255, 255, 255, 0.92);
+    stroke-width: 1.75px;
 }
 /* PS4: iets kleinere max zodat Share/Options nog in de knop passen */
 #gamepad-art-ps4 .pad-label {
     font-size: clamp(14px, 2.2vw + 8px, 34px);
 }
+/* Face-knoppen: donkere merkkleuren (leesbaar op witte knoppen); id+2 classes wint van regel hierboven */
+#remap-visual-gamepad .pad-label.pad-label-a { fill: #047857; stroke: rgba(255, 255, 255, 0.95); }
+#remap-visual-gamepad .pad-label.pad-label-b { fill: #b91c1c; stroke: rgba(255, 255, 255, 0.95); }
+#remap-visual-gamepad .pad-label.pad-label-x { fill: #1d4ed8; stroke: rgba(255, 255, 255, 0.95); }
+#remap-visual-gamepad .pad-label.pad-label-y { fill: #a16207; stroke: rgba(255, 255, 255, 0.95); }
 .pad-label-a { fill: var(--btn-a-text); }
 .pad-label-b { fill: var(--btn-b-text); }
 .pad-label-x { fill: var(--btn-x-text); }
