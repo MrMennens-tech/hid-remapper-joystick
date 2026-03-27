@@ -194,15 +194,6 @@ export const NAMED_USAGES = {
     '0xfff10005': { name: 'Layer 6 (toggle)',   category: 'layer', type: 'button' },
     '0xfff10006': { name: 'Layer 7 (toggle)',   category: 'layer', type: 'button' },
     '0xfff10007': { name: 'Layer 8 (toggle)',   category: 'layer', type: 'button' },
-    // HID Remapper vendor-defined source codes (page 0xfff3)
-    '0xfff30001': { name: 'Device Custom Axis 1', category: 'special', type: 'axis' },
-    '0xfff30002': { name: 'Device Custom Axis 2', category: 'special', type: 'axis' },
-    '0xfff30003': { name: 'Device Custom Axis 3', category: 'special', type: 'axis' },
-    '0xfff30004': { name: 'Device Custom Axis 4', category: 'special', type: 'axis' },
-    // Sport Controls (page 0x04)
-    '0x00040009': { name: 'Joystick (Sport Controls)', category: 'gamepad', type: 'axis' },
-    // Game Controls (page 0x05)
-    '0x00050009': { name: 'Select (Game Controls)',    category: 'gamepad', type: 'button' },
     // Nothing
     '0x00000000': { name: 'Nothing (block)',     category: 'special', type: 'button' },
 };
@@ -277,7 +268,7 @@ export const SOURCE_GROUPS = [
         id: 'special',
         label: 'Special',
         icon: '⚙️',
-        codes: ['0x00000000', '0xfff30001', '0xfff30002', '0xfff30003', '0xfff30004'],
+        codes: ['0x00000000'],
     },
 ];
 
@@ -314,10 +305,126 @@ export function getUsageName(code) {
     return u ? u.name : code;
 }
 
+// ─── Emulated device type (matches firmware our_descriptors[] index) ─────────
+/** Descriptor indices that present keyboard + mouse (not a gamepad). */
+export const DESCRIPTOR_MOUSE_KEYBOARD = [0, 1];
+
+export function isMouseKeyboardMode(descriptorNumber) {
+    return DESCRIPTOR_MOUSE_KEYBOARD.includes(descriptorNumber);
+}
+
+/** Gamepad skin for labels only (same HID layout, different naming). */
+export function getGamepadSkin(descriptorNumber) {
+    switch (descriptorNumber) {
+        case 2: return 'switch';
+        case 3: return 'ps4';
+        case 4: return 'stadia';
+        case 5: return 'xac';
+        default: return 'xbox';
+    }
+}
+
+export const GAMEPAD_SKIN_LABELS = {
+    xbox:   { y: 'Y', x: 'X', b: 'B', a: 'A', back: 'View', start: 'Menu',  home: 'Guide' },
+    switch: { y: 'Y', x: 'X', b: 'B', a: 'A', back: '−',   start: '+',     home: '⌂' },
+    ps4:    { y: '△', x: '□', b: '○', a: '✕', back: 'Share', start: 'Options', home: 'PS' },
+    stadia: { y: 'Y', x: 'X', b: 'B', a: 'A', back: '⋯',   start: '☰',     home: '▶' },
+    xac:    { y: 'Y', x: 'X', b: 'B', a: 'A', back: 'View', start: 'Menu',  home: 'Guide' },
+};
+
+// ─── Mouse + keyboard remap targets (descriptor 0 / 1) ───────────────────────
+export const KEYBOARD_VISUAL_KEYS = [
+    { id: 'k-esc', label: 'Esc', usage: '0x00070029' },
+    { id: 'k-tab', label: 'Tab', usage: '0x0007002b' },
+    { id: 'k-caps', label: 'Caps', usage: '0x00070039' },
+    { id: 'k-lshift', label: '⇧', usage: '0x000700e1' },
+    { id: 'k-lctrl', label: 'Ctrl', usage: '0x000700e0' },
+    { id: 'k-lalt', label: 'Alt', usage: '0x000700e2' },
+    { id: 'k-space', label: 'Space', usage: '0x0007002c' },
+    { id: 'k-enter', label: 'Enter', usage: '0x00070028' },
+    { id: 'k-bsp', label: '⌫', usage: '0x0007002a' },
+    { id: 'k-q', label: 'Q', usage: '0x00070014' },
+    { id: 'k-w', label: 'W', usage: '0x0007001a' },
+    { id: 'k-e', label: 'E', usage: '0x00070008' },
+    { id: 'k-r', label: 'R', usage: '0x00070015' },
+    { id: 'k-a', label: 'A', usage: '0x00070004' },
+    { id: 'k-s', label: 'S', usage: '0x00070016' },
+    { id: 'k-d', label: 'D', usage: '0x00070007' },
+    { id: 'k-f', label: 'F', usage: '0x00070009' },
+    { id: 'k-z', label: 'Z', usage: '0x0007001d' },
+    { id: 'k-x', label: 'X', usage: '0x0007001b' },
+    { id: 'k-c', label: 'C', usage: '0x00070006' },
+    { id: 'k-v', label: 'V', usage: '0x00070019' },
+    { id: 'k-1', label: '1', usage: '0x0007001e' },
+    { id: 'k-2', label: '2', usage: '0x0007001f' },
+    { id: 'k-3', label: '3', usage: '0x00070020' },
+    { id: 'k-4', label: '4', usage: '0x00070021' },
+    { id: 'k-up', label: '↑', usage: '0x00070052' },
+    { id: 'k-down', label: '↓', usage: '0x00070051' },
+    { id: 'k-left', label: '←', usage: '0x00070050' },
+    { id: 'k-right', label: '→', usage: '0x0007004f' },
+    { id: 'k-f1', label: 'F1', usage: '0x0007003a' },
+    { id: 'k-f2', label: 'F2', usage: '0x0007003b' },
+    { id: 'k-f3', label: 'F3', usage: '0x0007003c' },
+    { id: 'k-f4', label: 'F4', usage: '0x0007003d' },
+];
+
+const MOUSE_VISUAL_BASE = {
+    'mouse-l': {
+        label: 'Left click',
+        usages: ['0x00090001'],
+    },
+    'mouse-r': {
+        label: 'Right click',
+        usages: ['0x00090002'],
+    },
+    'mouse-m': {
+        label: 'Middle click',
+        usages: ['0x00090003'],
+    },
+    'mouse-b4': {
+        label: 'Mouse button 4 (back)',
+        usages: ['0x00090004'],
+    },
+    'mouse-b5': {
+        label: 'Mouse button 5 (forward)',
+        usages: ['0x00090005'],
+    },
+    'mouse-move': {
+        label: 'Pointer',
+        usages: ['0x00010030', '0x00010031'],
+        isStick: true,
+        axisX: '0x00010030',
+        axisY: '0x00010031',
+    },
+    'wheel-v': {
+        label: 'Scroll wheel (vertical)',
+        usages: ['0x00010038'],
+    },
+    'wheel-h': {
+        label: 'Scroll (horizontal)',
+        usages: ['0x000c0238'],
+    },
+};
+
+function buildMouseKeyboardVisual() {
+    const o = { ...MOUSE_VISUAL_BASE };
+    for (const k of KEYBOARD_VISUAL_KEYS) {
+        o[k.id] = { label: k.label, usages: [k.usage] };
+    }
+    return o;
+}
+
+/** Combined targets for mouse + keyboard emulation modes. */
+export const MOUSE_KEYBOARD_VISUAL = buildMouseKeyboardVisual();
+
 // Find which visual controller element represents a given usage code
-export function getVisualIdForUsage(code) {
-    for (const [id, info] of Object.entries(CONTROLLER_VISUAL)) {
-        if (info.usages.includes(code)) return id;
+export function getVisualIdForUsage(code, visualMap = CONTROLLER_VISUAL) {
+    for (const [id, info] of Object.entries(visualMap)) {
+        if (info.usages?.includes(code)) return id;
+        if (info.isStick) {
+            if (code === info.axisX || code === info.axisY || code === info.btnUsage) return id;
+        }
     }
     return null;
 }

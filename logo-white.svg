@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <!-- Circle ring -->
+  <circle cx="100" cy="100" r="91" stroke="white" stroke-width="9"/>
+  <!-- MM letterform:
+       Left leg (vertical) + zigzag /\/\
+       P1=(52,38)  V1=(97,162)  P2=(128,38)  V2=(156,110)  P3=(175,38) -->
+  <g stroke="white" stroke-width="8.5" stroke-linecap="butt" stroke-linejoin="miter">
+    <!-- Left vertical leg -->
+    <line x1="52"  y1="38"  x2="52"  y2="162"/>
+    <!-- Left diagonal (shares top with left leg) down to V1 -->
+    <line x1="52"  y1="38"  x2="97"  y2="162"/>
+    <!-- V1 up to center peak P2 -->
+    <line x1="97"  y1="162" x2="128" y2="38"/>
+    <!-- P2 down to right-mid valley V2 -->
+    <line x1="128" y1="38"  x2="156" y2="110"/>
+    <!-- V2 up to far-right peak P3 -->
+    <line x1="156" y1="110" x2="175" y2="38"/>
+  </g>
+</svg>

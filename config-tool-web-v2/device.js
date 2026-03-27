@@ -127,6 +127,9 @@ function maskToLayerList(mask) {
     return list;
 }
 function layerListToMask(list) {
+    if (!list || list.length === 0) {
+        return 0;
+    }
     return list.reduce((m, i) => m | (1 << i), 0);
 }
 
@@ -229,14 +232,16 @@ export async function disconnectDevice() {
 // ─── Input Monitor ────────────────────────────────────────────────────────────
 function handleInputReport(event) {
     if (!monitorCallback) return;
-    // Firmware struct monitor_report_item_t: uint32 usage, int32 value, uint8 hub_port (9 bytes)
-    const data = event.data;  // WebHID DataView, report ID already stripped
+    const data = new DataView(event.data.buffer);
+    // Monitor report format: [usage_hi(2), usage_lo(2), hub_port(1), value(4)] * n
     let offset = 0;
     while (offset + 9 <= data.byteLength) {
-        const usage   = '0x' + data.getUint32(offset, true).toString(16).padStart(8, '0');  offset += 4;
-        const value   = data.getInt32(offset, true);   offset += 4;
-        const hubPort = data.getUint8(offset);          offset += 1;
-        if (usage !== '0x00000000' && typeof monitorCallback === 'function') {
+        const usageHi  = data.getUint16(offset, true);     offset += 2;
+        const usageLo  = data.getUint16(offset, true);     offset += 2;
+        const hubPort  = data.getUint8(offset);             offset += 1;
+        const value    = data.getInt32(offset, true);       offset += 4;
+        const usage    = '0x' + ((usageHi << 16 | usageLo) >>> 0).toString(16).padStart(8, '0');
+        if (usage !== '0x00000000') {
             monitorCallback({ usage, hubPort, value });
         }
     }
@@ -528,6 +533,13 @@ export function importConfigJSON(json) {
     if (!parsed.version) throw new Error('Invalid config: missing version');
     // Ensure layer_colors exists
     if (!parsed.layer_colors) parsed.layer_colors = [...DEFAULT_LAYER_COLORS];
+    if (parsed.mappings) {
+        for (const m of parsed.mappings) {
+            if (!m.layers || m.layers.length === 0) {
+                m.layers = Array.from({ length: NLAYERS }, (_, i) => i);
+            }
+        }
+    }
     return parsed;
 }
 
