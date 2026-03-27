@@ -35,6 +35,9 @@
     --pad-button:  #252538;
     --pad-button-hi: #32325A;
     --pad-ring:    #2A2A44;
+    /* L2/R2 triggers: iets lichter + accentrand zodat ze niet verdwijnen tegen de body */
+    --pad-trigger-fill:  #34345a;
+    --pad-trigger-stroke: rgba(91, 127, 239, 0.55);
 
     --btn-a-fill:  #1A4A2A;
     --btn-a-hi:    #2A6E3E;
@@ -277,6 +280,13 @@ body {
     max-width: 920px;
     filter: drop-shadow(0 16px 48px rgba(0,0,0,0.55));
 }
+.gamepad-skin-bg {
+    pointer-events: none;
+}
+.pad-hit {
+    fill: rgba(0,0,0,0);
+    stroke: none;
+}
 
 /* SVG element base styles */
 .pad-body       { fill: var(--pad-body); }
@@ -284,8 +294,18 @@ body {
 .pad-surface    { fill: var(--pad-surface); }
 .pad-ring       { fill: var(--pad-ring); }
 .pad-stick-nub  { fill: var(--pad-button); stroke: var(--border); stroke-width: 1.5; }
-.pad-bumper     { fill: var(--pad-button); }
-.pad-trigger    { fill: var(--pad-button); }
+.pad-bumper {
+    fill: var(--pad-button);
+    stroke: var(--border-hi);
+    stroke-width: 1;
+    stroke-opacity: 0.5;
+}
+.pad-trigger {
+    fill: var(--pad-trigger-fill);
+    stroke: var(--accent);
+    stroke-width: 1.75;
+    stroke-opacity: 0.65;
+}
 .pad-dpad       { fill: var(--pad-button); }
 .pad-center-btn { fill: var(--pad-button); }
 .pad-home-btn   { fill: var(--pad-button); }
