@@ -1087,9 +1087,9 @@ export function init() {
         document.getElementById(id).addEventListener('change', applyCurrentMapping);
     });
 
-    // Monitor buttons
-    document.getElementById('monitor-toggle-btn').addEventListener('click', toggleMonitor);
-    document.getElementById('monitor-clear-btn').addEventListener('click', () => {
+    // Monitor buttons (optional — missing markup must not break init)
+    document.getElementById('monitor-toggle-btn')?.addEventListener('click', toggleMonitor);
+    document.getElementById('monitor-clear-btn')?.addEventListener('click', () => {
         monitor.inputs.clear();
         renderMonitorDisplay();
     });
