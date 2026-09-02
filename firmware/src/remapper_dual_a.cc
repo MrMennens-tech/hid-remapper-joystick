@@ -5,12 +5,12 @@
 
 #include "descriptor_parser.h"
 #include "dual.h"
-#include "globals.h"
 #include "interval_override.h"
 #include "remapper.h"
 #include "serial.h"
 #include "tick.h"
-#include "ws2812_led.h"
+
+extern uint16_t connected_led_ticks;
 
 #include "dual_b_binary.h"
 
