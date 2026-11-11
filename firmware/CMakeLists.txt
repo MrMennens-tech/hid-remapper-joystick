@@ -8,6 +8,9 @@ add_compile_definitions(PICO_XOSC_STARTUP_DELAY_MULTIPLIER=64)
 
 # Debug logging over UART is opt-in on boards where it would otherwise
 # take pins away from GPIO (see the board headers in src/boards).
+# TechRemap extensions (LED strip, pin names); see src/techremap_ext.h
+add_compile_definitions(TECHREMAP_EXT=1)
+
 if(DEFINED ENV{REMAPPER_DEBUG_UART})
 add_compile_definitions(REMAPPER_DEBUG_UART=1)
 endif()
@@ -36,6 +39,7 @@ endif()
 
 add_executable(remapper
     src/main.cc
+    src/techremap_ext.cc
     src/remapper.cc
     src/remapper_single.cc
     src/crc.cc
@@ -97,6 +101,7 @@ pico_add_extra_outputs(remapper)
 
 add_executable(remapper_dual_a
     src/main.cc
+    src/techremap_ext.cc
     src/remapper.cc
     src/remapper_dual_a.cc
     src/crc.cc
@@ -173,6 +178,7 @@ add_custom_command(
 
 add_executable(remapper_serial
     src/main.cc
+    src/techremap_ext.cc
     src/remapper.cc
     src/remapper_serial.cc
     src/crc.cc

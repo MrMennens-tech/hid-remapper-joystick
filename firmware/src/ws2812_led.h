@@ -34,5 +34,23 @@ bool ws2812_led_available(void);
 // Uses lowest active layer index; called after process_mapping()
 void ws2812_led_set_for_layer(uint8_t layer_state_mask);
 
+// Layer colours (globals.h) are full scale; this scales them down. 0-255.
+extern uint8_t led_brightness;
+// External WS2812 strip or ring that shows the layer colour on every LED.
+extern uint8_t led_strip_count;
+extern uint8_t led_strip_order;  // 0 = GRB, 1 = RGB
+
+// Pin of the onboard LED, or 0xFF if this board has none.
+uint8_t ws2812_led_pin(void);
+// Forget what was last shown so the next update is sent again
+// (call after changing colours, brightness or strip settings).
+void ws2812_led_invalidate(void);
+// Whether this build can drive an external strip at all.
+bool ws2812_strip_supported(void);
+// Start driving a strip on the given pin. Call once, after ws2812_led_init().
+bool ws2812_strip_init(uint8_t pin);
+// Call from the main loop; sends pending strip updates without blocking.
+void ws2812_strip_task(void);
+
 #endif
 

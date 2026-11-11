@@ -1,0 +1,604 @@
+<title>TechRemap lagenweergave</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: one drawing of the controller in the middle, panels per button group
+   on both sides joined by leader lines, layer colours as the only strong colour. */
+:root {
+    color-scheme: dark;
+    --bg: #0B0B13;
+    --surface-1: #11111C;
+    --surface-2: #181826;
+    --surface-3: #1F1F30;
+    --border: #2C2C44;
+    --border-hi: #3E3E5C;
+    --accent: #5B7FEF;
+    --accent-hi: #7A9FFF;
+    --text-1: #EEEEFF;
+    --text-2: #9090B8;
+    --text-3: #6A6A92;
+    --pad-body: #1A1A2A;
+    --pad-edge: #34344E;
+    --pad-part: #262639;
+    --pad-part-hi: #3A3A58;
+    --pad-back: #12121D;
+    --warning: #FBBF24;
+    --l1: #5B8DEF;
+    --l2: #4ADE80;
+    --l3: #F87171;
+    --l4: #FBBF24;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
+    color-scheme: light;
+    --bg: #F3F4FA; --surface-1: #FFFFFF; --surface-2: #F1F2F8; --surface-3: #E3E6F1;
+    --border: #CFD3E1; --border-hi: #9FA5BD; --accent: #2F55D4; --accent-hi: #1E3FB0;
+    --text-1: #14152A; --text-2: #44475F; --text-3: #63667F;
+    --pad-body: #E8EAF3; --pad-edge: #8F95B0; --pad-part: #FFFFFF; --pad-part-hi: #D9E2FD; --pad-back: #D3D7E6;
+    --warning: #A86A00; --l1: #2563EB; --l2: #128A43; --l3: #D92D2D; --l4: #B97A00;
+} }
+:root[data-theme="light"] {
+    color-scheme: light;
+    --bg: #F3F4FA; --surface-1: #FFFFFF; --surface-2: #F1F2F8; --surface-3: #E3E6F1;
+    --border: #CFD3E1; --border-hi: #9FA5BD; --accent: #2F55D4; --accent-hi: #1E3FB0;
+    --text-1: #14152A; --text-2: #44475F; --text-3: #63667F;
+    --pad-body: #E8EAF3; --pad-edge: #8F95B0; --pad-part: #FFFFFF; --pad-part-hi: #D9E2FD; --pad-back: #D3D7E6;
+    --warning: #A86A00; --l1: #2563EB; --l2: #128A43; --l3: #D92D2D; --l4: #B97A00;
+}
+* { box-sizing: border-box; }
+.pad-seam { fill: none; stroke: var(--pad-edge); stroke-width: 1.5; stroke-dasharray: 10 7; stroke-linecap: round; }
+body {
+    background: var(--bg);
+    color: var(--text-1);
+    font-family: var(--font);
+    font-size: 14px;
+    line-height: 1.45;
+    padding-block: 24px 48px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+.top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+.top h1 { font-size: 20px; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
+.note {
+    font-size: 12px; color: var(--text-2);
+    border: 1px dashed var(--border-hi); border-radius: 8px; padding: 4px 10px;
+}
+.spacer { flex: 1; }
+.bar { display: flex; flex-wrap: wrap; gap: 12px 28px; align-items: center; }
+.muted { color: var(--text-3); }
+.pad-flat { fill: var(--pad-part); stroke: var(--pad-edge); stroke-width: 1.5; }
+
+.layers { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.layers span.lbl, .bar .lbl { font-size: 12px; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.08em; margin-right: 4px; }
+.layers button {
+    font: inherit; font-size: 13px; color: var(--text-2);
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 999px; padding: 6px 14px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 8px;
+}
+.layers button:hover { border-color: var(--border-hi); color: var(--text-1); }
+.layers button[aria-pressed="true"] { background: var(--surface-3); border-color: var(--accent); color: var(--text-1); }
+.layers button:focus-visible, .row:focus-visible, .pad-hit:focus-visible { outline: 2px solid var(--accent-hi); outline-offset: 2px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; flex: none; display: inline-block; }
+.d1 { background: var(--l1); } .d2 { background: var(--l2); } .d3 { background: var(--l3); } .d4 { background: var(--l4); }
+
+.stage-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 18px; background: var(--surface-1); }
+.stage { display: block; width: 100%; min-width: 980px; height: auto; }
+
+/* panels inside the drawing */
+.panel {
+    height: 100%;
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px;
+    padding: 8px 10px; display: flex; flex-direction: column; gap: 2px;
+    font-family: var(--font); font-size: 13px; color: var(--text-1);
+}
+.panel h2 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-3); margin: 0 0 2px 4px; }
+.row {
+    display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 6px;
+    border-radius: 8px; cursor: pointer; border: 1px solid transparent; min-width: 0;
+    background: none; color: inherit; font: inherit; text-align: left; width: 100%;
+}
+.row:hover { background: var(--surface-3); }
+.row.sel { background: var(--surface-3); border-color: var(--accent); }
+.glyph {
+    flex: none; min-width: 30px; height: 22px; padding: 0 6px; border-radius: 6px;
+    background: var(--pad-part); border: 1px solid var(--pad-edge);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 650; color: var(--text-1);
+}
+.chips { display: flex; gap: 10px; min-width: 0; overflow: hidden; }
+.chip { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; min-width: 0; transition: opacity .12s; }
+.chip .t { overflow: hidden; text-overflow: ellipsis; }
+.chip.key .t { color: var(--text-1); font-weight: 600; }
+.chip.dim { opacity: 0.22; }
+.shift { font-size: 13px; line-height: 1; }
+
+/* drawing */
+.pad-back { fill: var(--pad-back); stroke: var(--pad-edge); stroke-width: 1.5; }
+.pad-body { fill: var(--pad-body); }
+.pad-outline { fill: none; stroke: var(--pad-edge); stroke-width: 2; stroke-linejoin: round; }
+.pad-well { fill: var(--pad-back); stroke: var(--pad-edge); stroke-width: 1.5; }
+.pad-part { fill: var(--pad-part); stroke: var(--pad-edge); stroke-width: 1.5; }
+.pad-text { fill: var(--text-1); font-family: var(--font); font-weight: 650; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.pad-hit { cursor: pointer; outline: none; }
+.pad-hit:hover .pad-part, .pad-hit:hover .pad-back { fill: var(--pad-part-hi); }
+.pad-hit.sel .pad-part, .pad-hit.sel .pad-back { fill: var(--pad-part-hi); stroke: var(--accent-hi); stroke-width: 2.5; }
+.leader { fill: none; stroke: var(--border-hi); stroke-width: 1.5; }
+.leader-end { fill: var(--border-hi); }
+.mark { stroke: var(--pad-body); stroke-width: 2; pointer-events: none; transition: opacity .12s; }
+.mark.dim { opacity: 0.2; }
+.m1 { fill: var(--l1); } .m2 { fill: var(--l2); } .m3 { fill: var(--l3); } .m4 { fill: var(--l4); }
+
+.below { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; align-items: start; }
+.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 18px; padding: 16px; min-width: 0; }
+.card h3 { font-size: 15px; font-weight: 650; margin: 0 0 4px; }
+.card p.sub { margin: 0 0 12px; color: var(--text-2); font-size: 13px; }
+.card .panel { background: none; border: none; padding: 0; height: auto; }
+.detail-row {
+    display: grid; grid-template-columns: 84px 1fr auto; align-items: center; gap: 10px;
+    padding: 9px 4px; border-top: 1px solid var(--border);
+}
+.detail-row .lname { display: inline-flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 13px; }
+.detail-row .val { min-width: 0; overflow-wrap: anywhere; }
+.detail-row .val.same { color: var(--text-3); }
+.detail-row button {
+    font: inherit; font-size: 12px; color: var(--text-2); background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: 8px; padding: 4px 10px; cursor: pointer;
+}
+.detail-row button:hover { color: var(--text-1); border-color: var(--border-hi); }
+.warn {
+    display: flex; gap: 10px; align-items: flex-start; margin-top: 12px;
+    border: 1px solid color-mix(in srgb, var(--warning) 45%, transparent);
+    background: color-mix(in srgb, var(--warning) 9%, transparent);
+    border-radius: 10px; padding: 9px 12px; font-size: 13px; color: var(--text-1);
+}
+.warn b { color: var(--warning); }
+.warn[hidden] { display: none; }
+.sim { border: 1px dashed var(--border-hi); border-radius: 12px; padding: 8px 12px; }
+.banner {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px;
+    background: var(--surface-3); border: 1.5px solid var(--accent); border-radius: 12px;
+    padding: 10px 14px; font-size: 14px;
+}
+.banner[hidden] { display: none; }
+.banner button, .detail-row button.go {
+    font: inherit; font-size: 12px; color: var(--text-1); background: var(--surface-1);
+    border: 1px solid var(--border-hi); border-radius: 8px; padding: 4px 10px; cursor: pointer;
+}
+.detail-row.listening { background: var(--surface-3); border-radius: 8px; }
+.detail-row.listening .val { color: var(--text-1); font-weight: 600; }
+.pad-hit.live .pad-part, .pad-hit.live .pad-back { stroke: var(--text-1); stroke-width: 2.5; stroke-dasharray: 5 4; }
+.row.live, .kkey.live { outline: 2px dashed var(--text-1); outline-offset: -2px; }
+.kbd-scroll { overflow-x: auto; }
+.kbd { display: flex; flex-direction: column; gap: 5px; min-width: 660px; }
+.kbd-row { display: flex; gap: 5px; }
+.kkey {
+    flex: 1 1 0; min-width: 0; height: 40px; position: relative; cursor: pointer;
+    font: inherit; font-size: 12px; font-weight: 600; color: var(--text-1);
+    background: var(--pad-part); border: 1.5px solid var(--pad-edge); border-radius: 8px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 2px;
+}
+.kkey:hover { background: var(--pad-part-hi); }
+.kkey.sel { background: var(--pad-part-hi); border-color: var(--accent-hi); border-width: 2.5px; }
+.kkey:focus-visible { outline: 2px solid var(--accent-hi); outline-offset: 2px; }
+.kkey .kd { position: absolute; top: 3px; right: 4px; display: flex; gap: 2px; }
+.kkey .kd .dot { width: 7px; height: 7px; }
+.kkey .kd .dot.dim { opacity: 0.2; }
+@media (prefers-reduced-motion: reduce) { .chip, .mark { transition: none; } }
+</style>
+
+<div class="wrap">
+    <div class="top">
+        <h1>Knoppen toewijzen</h1>
+        <span class="note">Ontwerpvoorbeeld met voorbeeldgegevens. Hardware is gesimuleerd.</span>
+        <span class="spacer"></span>
+        <div class="layers" id="themes">
+            <span class="lbl">Thema</span>
+            <button type="button" data-theme-set="dark">Donker</button>
+            <button type="button" data-theme-set="light">Licht</button>
+        </div>
+    </div>
+
+    <div class="bar">
+        <div class="layers" id="pads">
+            <span class="lbl">De pc ziet</span>
+            <button type="button" data-pad="xbox" aria-pressed="true">Xbox</button>
+            <button type="button" data-pad="ps4" aria-pressed="false">PS4</button>
+            <button type="button" data-pad="switch" aria-pressed="false">Switch Pro</button>
+            <button type="button" data-pad="stadia" aria-pressed="false">Stadia</button>
+            <button type="button" data-pad="mouse" aria-pressed="false">Muis + toetsenbord</button>
+        </div>
+        <div class="layers" id="layers">
+            <span class="lbl">Toon</span>
+            <button type="button" data-layer="0" aria-pressed="true">Alle lagen</button>
+            <button type="button" data-layer="1" aria-pressed="false"><span class="dot d1"></span>Laag 1</button>
+            <button type="button" data-layer="2" aria-pressed="false"><span class="dot d2"></span>Laag 2</button>
+            <button type="button" data-layer="3" aria-pressed="false"><span class="dot d3"></span>Laag 3</button>
+            <button type="button" data-layer="4" aria-pressed="false"><span class="dot d4"></span>Laag 4</button>
+        </div>
+    </div>
+
+    <div class="layers sim" id="sim">
+        <span class="lbl">Simuleer een druk op je hardware</span>
+        <button type="button" data-sim="Jack 1">Jack 1</button>
+        <button type="button" data-sim="Jack 2">Jack 2</button>
+        <button type="button" data-sim="Jack 3">Jack 3</button>
+        <button type="button" data-sim="Knop ★">Knop ★</button>
+        <button type="button" data-sim="Joystick">Joystick</button>
+    </div>
+    <div class="banner" id="banner" hidden></div>
+
+    <div class="stage-scroll">
+        <svg class="stage" id="stage" viewBox="0 44 1180 600" role="group" aria-label="Controller met toewijzingen per laag"></svg>
+    </div>
+
+    <div class="card" id="kbd-card" hidden>
+        <h3>Toetsenbord</h3>
+        <p class="sub">Klik op een toets om te kiezen welke knop of jack hem indrukt.</p>
+        <div class="kbd-scroll"><div class="kbd" id="kbd"></div></div>
+    </div>
+
+    <div class="below">
+        <div class="card">
+            <h3 id="detail-title"></h3>
+            <p class="sub">Klik op “Wijzig” en druk daarna op je knop of jack.</p>
+            <div id="detail-rows"></div>
+        </div>
+        <div class="card">
+            <h3>Laag wisselen</h3>
+            <p class="sub">Welke knop of jack schakelt naar een andere laag.</p>
+            <div class="panel" id="switches"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+// The drawing is the controller the PC sees. For every control on it, MAP says
+// which physical input drives it on which layer (example data).
+const MAP_MK = {
+    mb1: { 1: 'Jack 1' }, mb2: { 1: 'Jack 2' },
+    mx: { 1: 'Joystick' }, my: { 1: 'Joystick' }, wv: { 2: 'Joystick' },
+    'k:Spatie': { 1: 'Jack 4' }, 'k:Enter': { 1: 'Jack 5', 3: 'Jack 1' }, 'k:Esc': { 1: 'Knop ★' },
+};
+const KB = [
+    ['Esc', 'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12'],
+    ['`', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', ['Backspace', 2]],
+    [['Tab', 1.5], 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '[', ']', ['\\', 1.5]],
+    [['Caps', 1.8], 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ';', "'", ['Enter', 2.2]],
+    [['Shift', 2.3], 'Z', 'X', 'C', 'V', 'B', 'N', 'M', ',', '.', '/', ['Shift', 2.7, 'Shift rechts']],
+    [['Ctrl', 1.4], ['Win', 1.3], ['Alt', 1.3], ['Spatie', 4.3], ['Alt', 1.3, 'Alt rechts'], ['Ctrl', 1.4, 'Ctrl rechts'], '←', '↑', '↓', '→'],
+].map(r => r.map(k => Array.isArray(k) ? { g: k[0], w: k[1], id: 'k:' + (k[2] || k[0]), name: 'Toets ' + (k[2] || k[0]) } : { g: k, w: 1, id: 'k:' + k, name: 'Toets ' + k }));
+const MAP_PAD = {
+    fbottom: { 1: 'Jack 1' },
+    fright:  { 1: 'Jack 2', 3: 'Jack 1' },
+    fleft:   { 1: 'Knop ★' },
+    ftop:    { 2: 'Knop ★' },
+    ls:      { 1: 'Joystick' },
+    rs:      { 2: 'Joystick' },
+    rb:      { 1: 'Jack 4' },
+    c2:      { 1: 'Jack 5' },
+};
+const SWITCHES = [
+    { text: '⇧ Laag 2 zolang ingedrukt', map: { 1: 'Jack 3' } },
+    { text: 'Ga naar laag 3',            map: { 1: 'Jack 6' } },
+    { text: 'Ga naar laag 1',            map: { 3: 'Jack 6' } },
+];
+
+// Geometry is given for the RIGHT half around x = 590 and mirrored, so a
+// controller cannot be lopsided. Each pad only lists what differs.
+const CX = 590, mx = x => 2 * CX - x;
+const UPPER = 218, LOWER_X = 60, UPPER_X = 100;
+const PADS = {
+    xbox: {
+        half: 'M590,152 L672,152 C712,152 738,166 752,196 C778,252 800,340 796,402 C793,442 764,456 742,432 C722,410 708,372 688,356 C678,348 668,346 656,346 L590,346',
+        sticks: 'offset', lowerY: 296,
+        sh: ['LT', 'LB', 'RT', 'RB'], shNames: ['Linker trekker', 'Linker bumper', 'Rechter trekker', 'Rechter bumper'],
+        face: { ftop: 'Y', fright: 'B', fbottom: 'A', fleft: 'X' },
+        center: [
+            { id: 'c1', at: [562, 218], r: 9.5, g: '⧉', name: 'View-knop' },
+            { id: 'c2', at: [590, 186], r: 14,  g: '⌂', name: 'Xbox-knop' },
+            { id: 'c3', at: [618, 218], r: 9.5, g: '≡', name: 'Menu-knop' },
+        ],
+        lead: { end: 200, bracket: [562, 618, 227.5, 244] },
+    },
+    ps4: {
+        half: 'M590,158 L700,158 C738,158 762,170 774,196 C790,232 796,268 800,300 L822,418 C828,452 808,470 784,468 C764,466 752,452 744,432 L716,366 C708,348 694,338 676,338 L590,338',
+        sticks: 'low', lowerY: 290,
+        sh: ['L2', 'L1', 'R2', 'R1'], shNames: ['L2', 'L1', 'R2', 'R1'],
+        face: { ftop: '△', fright: '○', fbottom: '✕', fleft: '□' },
+        center: [
+            { id: 'c1', at: [537, 178], r: 7.5, g: '', name: 'Share', short: 'Share' },
+            { id: 'c2', at: [643, 178], r: 7.5, g: '', name: 'Options', short: 'Opt.' },
+            { id: 'c3', at: [590, 292], r: 12,  g: 'PS', name: 'PS-knop', fs: 10 },
+            { id: 'c4', rect: [548, 168, 84, 60], g: '', name: 'Touchpad-klik', short: 'Pad' },
+        ],
+        lead: { end: 304 },
+    },
+    switch: {
+        half: 'M590,150 L668,150 C730,150 762,172 772,214 L812,420 C818,452 796,470 772,466 C752,462 742,448 734,430 L700,350 L590,350',
+        extra: '<path class="pad-seam" d="M785,282 L706,350"/>',
+        sticks: 'offset', lowerY: 296,
+        sh: ['ZL', 'L', 'ZR', 'R'], shNames: ['ZL', 'L', 'ZR', 'R'],
+        face: { ftop: 'X', fright: 'A', fbottom: 'B', fleft: 'Y' },
+        center: [
+            { id: 'c1', at: [548, 198], r: 9.5, g: '−', name: 'Min-knop', fs: 14 },
+            { id: 'c2', at: [632, 198], r: 9.5, g: '+', name: 'Plus-knop', fs: 14 },
+            { id: 'c3', at: [614, 240], r: 9.5, g: '⌂', name: 'Home-knop' },
+            { id: 'c4', at: [566, 240], r: 9.5, g: '◉', name: 'Capture-knop' },
+        ],
+        lead: { end: 264, bracket: [566, 614, 249.5, 264] },
+    },
+    stadia: {
+        half: 'M590,150 L690,150 C748,150 778,186 786,240 C794,300 806,372 806,410 C806,448 780,462 752,462 C728,462 716,448 712,420 C708,384 692,346 650,346 L590,346',
+        sticks: 'low', lowerY: 292,
+        sh: ['L2', 'L1', 'R2', 'R1'], shNames: ['L2', 'L1', 'R2', 'R1'],
+        face: { ftop: 'Y', fright: 'B', fbottom: 'A', fleft: 'X' },
+        center: [
+            { id: 'c1', at: [552, 190], r: 9, g: '⋯', name: 'Options-knop' },
+            { id: 'c2', at: [628, 190], r: 9, g: '≡', name: 'Menu-knop' },
+            { id: 'c3', at: [590, 256], r: 13, g: 'S', name: 'Stadia-knop', fs: 12 },
+            { id: 'c4', at: [566, 222], r: 8, g: '●', name: 'Assistent-knop', fs: 8 },
+            { id: 'c5', at: [614, 222], r: 8, g: '◉', name: 'Capture-knop', fs: 9 },
+        ],
+        lead: { end: 269 },
+    },
+};
+let padKey = 'xbox', shown = 0, selected = 'fbottom', MAP = MAP_PAD;
+// Capture: `listen` waits for a hardware press for one control on one layer;
+// `pending` is a hardware press that still needs a control; `last` allows undo.
+let listen = null, pending = null, last = null;
+function assign(id, l, input) {
+    last = { map: MAP, id, l, input, prev: MAP[id] && MAP[id][l] };
+    (MAP[id] = MAP[id] || {})[l] = input;
+}
+function undo() {
+    if (!last) return;
+    if (last.prev === undefined) { delete last.map[last.id][last.l]; if (!Object.keys(last.map[last.id]).length) delete last.map[last.id]; }
+    else last.map[last.id][last.l] = last.prev;
+    last = null;
+}
+function press(input) {
+    if (listen) { assign(listen.id, listen.l, input); listen = null; }
+    else { pending = input; last = null; }
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// Resolve a pad into concrete positions and a table of controls.
+function layout(pad) {
+    const off = pad.sticks === 'offset';
+    const pos = {
+        face: [CX + UPPER_X, UPPER],
+        rs: [CX + LOWER_X, pad.lowerY],
+        ls: off ? [CX - UPPER_X, UPPER] : [CX - LOWER_X, pad.lowerY],
+        dpad: off ? [CX - LOWER_X, pad.lowerY] : [CX - UPPER_X, UPPER],
+    };
+    const c = {
+        lt: { g: pad.sh[0], name: pad.shNames[0] }, lb: { g: pad.sh[1], name: pad.shNames[1] },
+        rt: { g: pad.sh[2], name: pad.shNames[2] }, rb: { g: pad.sh[3], name: pad.shNames[3] },
+        ls: { g: 'L', name: 'Linker stick' }, rs: { g: 'R', name: 'Rechter stick' },
+        du: { g: '↑', name: 'D-pad omhoog' }, dr: { g: '→', name: 'D-pad rechts' },
+        dd: { g: '↓', name: 'D-pad omlaag' }, dl: { g: '←', name: 'D-pad links' },
+    };
+    for (const k in pad.face) c[k] = { g: pad.face[k], name: 'Knop ' + pad.face[k] };
+    pad.center.forEach(b => c[b.id] = { g: b.short || b.g, name: b.name });
+    return { pos, c };
+}
+
+const chip = (l, t, cls = '') => `<span class="chip ${cls}" data-l="${l}"><span class="dot d${l}"></span><span class="t">${esc(t)}</span></span>`;
+function chipsHTML(map) {
+    const ls = Object.keys(map || {});
+    return ls.length ? ls.map(l => chip(l, map[l])).join('') : '<span class="muted">Niet toegewezen</span>';
+}
+const rowHTML = (id, c) => `<button type="button" class="row" data-id="${id}"><span class="glyph">${esc(c[id].g)}</span><span class="chips">${chipsHTML(MAP[id])}</span></button>`;
+
+const PANEL_W = 320, LEFT_X = 12, RIGHT_X = 848;
+const panelH = n => 22 + 30 * n + 18 + 2 * (n - 1);
+
+// Mouse: same idea, one drawing with panels. The keyboard is a separate grid.
+function mouseScene() {
+    const c = {
+        mb1: { g: 'L', name: 'Linkermuisknop' }, mb3: { g: 'M', name: 'Middelste knop (wiel)' }, mb2: { g: 'R', name: 'Rechtermuisknop' },
+        mb5: { g: '▲', name: 'Zijknop vooruit' }, mb4: { g: '▼', name: 'Zijknop terug' },
+        wv: { g: '↕', name: 'Scrollen omhoog/omlaag' }, wh: { g: '↔', name: 'Scrollen links/rechts' },
+        mx: { g: '↔', name: 'Cursor links/rechts' }, my: { g: '↕', name: 'Cursor omhoog/omlaag' },
+    };
+    KB.flat().forEach(k => c[k.id] = { g: k.g, name: k.name });
+    const hit = (id, inner) => `<g class="pad-hit" data-id="${id}" tabindex="0" role="button" aria-label="${esc(c[id].name)}">${inner}</g>`;
+    const mirror = inner => `<g transform="translate(${2 * CX},0) scale(-1,1)">${inner}</g>`;
+    const text = (x, y, t, fs) => `<text class="pad-text" x="${x}" y="${y}" font-size="${fs}">${esc(t)}</text>`;
+    const HALF = 'M590,110 C640,110 660,150 660,200 L660,330 C660,376 632,400 590,400';
+    const BTN = '<path class="pad-part" d="M590,110 C640,110 660,150 660,200 L660,236 L590,236 Z"/>';
+    const drawing = [
+        hit('mb5', '<rect class="pad-back" x="508" y="250" width="24" height="34" rx="8"/>'),
+        hit('mb4', '<rect class="pad-back" x="508" y="290" width="24" height="34" rx="8"/>'),
+        `<path class="pad-body" d="${HALF} Z"/>`, mirror(`<path class="pad-body" d="${HALF} Z"/>`),
+        hit('mb2', BTN + text(640, 196, 'R', 14)), hit('mb1', mirror(BTN) + text(540, 196, 'L', 14)),
+        `<path class="pad-outline" d="${HALF}"/>`, mirror(`<path class="pad-outline" d="${HALF}"/>`),
+        hit('wv', '<path class="pad-part" d="M590,126 l9,12 h-18 Z"/><path class="pad-part" d="M590,230 l9,-12 h-18 Z"/>'),
+        hit('wh', '<path class="pad-part" d="M558,178 l12,-9 v18 Z"/><path class="pad-part" d="M622,178 l-12,-9 v18 Z"/>'),
+        hit('mb3', '<rect class="pad-well" x="578" y="150" width="24" height="56" rx="12"/><rect class="pad-part" x="584" y="160" width="12" height="36" rx="6"/>'),
+        hit('mx', '<rect x="700" y="304" width="90" height="32" fill="transparent"/>' + '<path class="pad-part" d="M705,320 l16,-12 v24 Z"/><path class="pad-part" d="M785,320 l-16,-12 v24 Z"/>'),
+        hit('my', '<rect x="729" y="276" width="32" height="88" fill="transparent"/>' + '<path class="pad-part" d="M745,280 l12,16 h-24 Z"/><path class="pad-part" d="M745,360 l12,-16 h-24 Z"/>'),
+        '<circle class="pad-well" cx="745" cy="320" r="6" pointer-events="none"/>',
+    ].join('');
+    const markAt = { mb1: [552, 214], mb2: [628, 214], mb3: [606, 154], wv: [602, 126], wh: [626, 166], mx: [790, 306], my: [760, 280], mb5: [510, 252], mb4: [510, 322] };
+    let marks = '';
+    for (const id in markAt) Object.keys(MAP[id] || {}).forEach((l, i) => {
+        marks += `<circle class="mark m${l}" data-l="${l}" cx="${markAt[id][0] + i * 9}" cy="${markAt[id][1]}" r="5"/>`;
+    });
+    const L = (d, ex, ey) => `<path class="leader" d="${d}"/><circle class="leader-end" cx="${ex}" cy="${ey}" r="3"/>`;
+    const leaders = [
+        L(`M${LEFT_X + PANEL_W},150 H548`, 548, 150), L(`M${LEFT_X + PANEL_W},287 H508`, 508, 287),
+        L(`M${RIGHT_X},178 H622`, 622, 178), L(`M${RIGHT_X},320 H785`, 785, 320),
+    ];
+    const panels = [
+        { title: 'Knoppen', ids: ['mb1', 'mb3', 'mb2'], x: LEFT_X, y: 82, h: panelH(3) },
+        { title: 'Zijknoppen', ids: ['mb5', 'mb4'], x: LEFT_X, y: 236, h: panelH(2) },
+        { title: 'Scrollen', ids: ['wv', 'wh'], x: RIGHT_X, y: 126, h: panelH(2) },
+        { title: 'Cursor bewegen', ids: ['mx', 'my'], x: RIGHT_X, y: 268, h: panelH(2) },
+    ];
+    return { c, drawing, leaders, marks, panels, bottom: 410 };
+}
+
+function padScene() {
+    const pad = PADS[padKey], { pos, c } = layout(pad);
+    const hit = (id, inner) => `<g class="pad-hit" data-id="${id}" tabindex="0" role="button" aria-label="${esc(c[id].name)}">${inner}</g>`;
+    const mirror = inner => `<g transform="translate(${2 * CX},0) scale(-1,1)">${inner}</g>`;
+    const text = (x, y, t, fs) => `<text class="pad-text" x="${x}" y="${y}" font-size="${fs}">${esc(t)}</text>`;
+    const trig = '<rect class="pad-back" x="672" y="96" width="70" height="60" rx="16"/>';
+    const bump = '<path class="pad-back" d="M654,196 L654,146 Q654,136 664,136 L676,136 C722,136 752,150 766,198 Z"/>';
+    const stick = (id) => { const [x, y] = pos[id]; return hit(id,
+        `<circle class="pad-well" cx="${x}" cy="${y}" r="34"/><circle class="pad-part" cx="${x}" cy="${y}" r="23"/>` + text(x, y, c[id].g, 15)); };
+    const [fx, fy] = pos.face, [dx, dy] = pos.dpad, o = 29;
+    const round = (id, x, y, r, fs) => hit(id, `<circle class="pad-part" cx="${x}" cy="${y}" r="${r}"/>` + text(x, y, c[id].g, fs));
+    const arm = (id, x, y, w, h, tx, ty) => hit(id, `<rect class="pad-part" x="${x}" y="${y}" width="${w}" height="${h}" rx="5"/>` + text(tx, ty, c[id].g, 13));
+    const centre = pad.center.map(b => b.rect
+        ? hit(b.id, `<rect class="pad-flat" x="${b.rect[0]}" y="${b.rect[1]}" width="${b.rect[2]}" height="${b.rect[3]}" rx="10"/>`)
+        : hit(b.id, `<circle class="pad-part" cx="${b.at[0]}" cy="${b.at[1]}" r="${b.r}"/>` + text(b.at[0], b.at[1], b.g, b.fs || 11))).join('');
+
+    const drawing = [
+        hit('rt', trig + text(707, 116, c.rt.g, 13)), hit('lt', mirror(trig) + text(mx(707), 116, c.lt.g, 13)),
+        hit('rb', bump + text(700, 144.5, c.rb.g, 11)), hit('lb', mirror(bump) + text(mx(700), 144.5, c.lb.g, 11)),
+        `<path class="pad-body" d="${pad.half} Z"/>`, mirror(`<path class="pad-body" d="${pad.half} Z"/>`),
+        `<path class="pad-outline" d="${pad.half}"/>`, mirror(`<path class="pad-outline" d="${pad.half}"/>`),
+        pad.extra ? pad.extra + mirror(pad.extra) : '',
+        centre, stick('ls'), stick('rs'),
+        `<circle class="pad-well" cx="${dx}" cy="${dy}" r="40"/>`,
+        arm('du', dx - 11, dy - 34, 22, 26, dx, dy - 21), arm('dd', dx - 11, dy + 8, 22, 26, dx, dy + 21),
+        arm('dl', dx - 34, dy - 11, 26, 22, dx - 21, dy), arm('dr', dx + 8, dy - 11, 26, 22, dx + 21, dy),
+        round('ftop', fx, fy - o, 14.5, 14), round('fright', fx + o, fy, 14.5, 14),
+        round('fbottom', fx, fy + o, 14.5, 14), round('fleft', fx - o, fy, 14.5, 14),
+    ].join('');
+
+    // layer marks: one dot per layer on which the control has an input
+    const markAt = {
+        rt: [736, 100], lt: [mx(678), 100], rb: [744, 148], lb: [mx(668), 142],
+        ls: [pos.ls[0] + 26, pos.ls[1] - 26], rs: [pos.rs[0] + 26, pos.rs[1] - 26],
+        du: [dx + 12, dy - 35], dr: [dx + 35, dy - 12], dd: [dx + 12, dy + 35], dl: [dx - 35, dy - 12],
+        ftop: [fx + 12, fy - o - 12], fright: [fx + o + 12, fy - 12], fbottom: [fx + 12, fy + o - 12], fleft: [fx - o + 12, fy - 12],
+    };
+    pad.center.forEach(b => markAt[b.id] = b.rect ? [b.rect[0] + b.rect[2] - 8, b.rect[1] + 8] : [b.at[0] + b.r * 0.8, b.at[1] - b.r * 0.8]);
+    let marks = '';
+    for (const id in markAt) Object.keys(MAP[id] || {}).forEach((l, i) => {
+        marks += `<circle class="mark m${l}" data-l="${l}" cx="${markAt[id][0] + i * 9}" cy="${markAt[id][1]}" r="5"/>`;
+    });
+
+    // panels: shoulder on top, then the two control groups in the order they sit on the pad
+    const offL = pad.sticks === 'offset';
+    const leftGroups = offL ? [['Linker stick', ['ls'], 'ls'], ['D-pad', ['du', 'dr', 'dd', 'dl'], 'dpad']]
+                            : [['D-pad', ['du', 'dr', 'dd', 'dl'], 'dpad'], ['Linker stick', ['ls'], 'ls']];
+    const panels = [], leaders = [];
+    const lead = (d, ex, ey) => leaders.push(`<path class="leader" d="${d}"/><circle class="leader-end" cx="${ex}" cy="${ey}" r="3"/>`);
+    const column = (x, side, groups) => {
+        let y = 184;
+        groups.forEach(([title, ids, key]) => {
+            const h = panelH(ids.length); panels.push({ title, ids, x, y, h });
+            const [tx, ty] = pos[key], rad = key === 'dpad' ? 40 : key === 'face' ? o + 14.5 : 34;
+            const edge = side < 0 ? x + PANEL_W : x, ly = Math.min(Math.max(ty, y + 22), y + h - 22);
+            if (ly === ty) lead(`M${edge},${ly} H${tx + side * rad}`, tx + side * rad, ty);
+            else {
+                const ex = edge - side * 78, len = Math.hypot(ex - tx, ly - ty);
+                const px = tx + (ex - tx) / len * rad, py = ty + (ly - ty) / len * rad;
+                lead(`M${edge},${ly} H${ex} L${px.toFixed(1)},${py.toFixed(1)}`, px.toFixed(1), py.toFixed(1));
+            }
+            y += h + 18;
+        });
+    };
+    panels.push({ title: 'Schouder links', ids: ['lt', 'lb'], x: LEFT_X, y: 62, h: panelH(2) });
+    panels.push({ title: 'Schouder rechts', ids: ['rt', 'rb'], x: RIGHT_X, y: 62, h: panelH(2) });
+    lead(`M${LEFT_X + PANEL_W},113 H${mx(742)}`, mx(742), 113);
+    lead(`M${RIGHT_X},113 H742`, 742, 113);
+    column(LEFT_X, -1, leftGroups);
+    column(RIGHT_X, 1, [['Knoppen', ['ftop', 'fright', 'fbottom', 'fleft'], 'face'], ['Rechter stick', ['rs'], 'rs']]);
+    const cIds = pad.center.map(b => b.id), cy = 486, ch = panelH(cIds.length);
+    panels.push({ title: 'Midden', ids: cIds, x: CX - PANEL_W / 2, y: cy, h: ch });
+    const br = pad.lead.bracket;
+    leaders.push(`<path class="leader" d="M${CX},${cy} V${pad.lead.end}${br ? ` M${br[0]},${br[2]} V${br[3]} H${br[1]} V${br[2]}` : ''}"/>` +
+        `<circle class="leader-end" cx="${CX}" cy="${pad.lead.end}" r="3"/>`);
+
+    return { c, drawing, leaders, marks, panels, bottom: cy + ch };
+}
+
+function render() {
+    const isMouse = padKey === 'mouse';
+    MAP = isMouse ? MAP_MK : MAP_PAD;
+    const { c, drawing, leaders, marks, panels, bottom } = isMouse ? mouseScene() : padScene();
+    if (!c[selected]) selected = isMouse ? 'mb1' : 'fbottom';
+
+    document.getElementById('kbd-card').hidden = !isMouse;
+    document.getElementById('kbd').innerHTML = !isMouse ? '' : KB.map(r => '<div class="kbd-row">' + r.map(k =>
+        `<button type="button" class="kkey" data-id="${esc(k.id)}" style="flex-grow:${k.w}" aria-label="${esc(k.name)}">${esc(k.g)}` +
+        `<span class="kd">${Object.keys(MAP[k.id] || {}).map(l => `<span class="dot d${l} mark" data-l="${l}"></span>`).join('')}</span></button>`).join('') + '</div>').join('');
+
+    const panelsSVG = panels.map(p => `<foreignObject x="${p.x}" y="${p.y}" width="${PANEL_W}" height="${p.h}">` +
+        `<div xmlns="http://www.w3.org/1999/xhtml" class="panel"><h2>${esc(p.title)}</h2>${p.ids.map(id => rowHTML(id, c)).join('')}</div></foreignObject>`).join('');
+
+    const stage = document.getElementById('stage');
+    stage.setAttribute('viewBox', `0 44 1180 ${bottom + 14 - 44}`);
+    stage.innerHTML = drawing + leaders.join('') + marks + panelsSVG;
+
+    document.getElementById('switches').innerHTML = SWITCHES.map(s =>
+        `<div class="row" style="cursor:default"><span class="chips"><span class="chip key"><span class="t">${esc(s.text)}</span></span>${chipsHTML(s.map)}</span></div>`).join('');
+
+    // detail card for the selected control
+    document.getElementById('detail-title').textContent = c[selected].name;
+    const m = MAP[selected] || {}, base = m[1];
+    let html = '';
+    for (let l = 1; l <= 4; l++) {
+        let txt = m[l], cls = '';
+        if (!txt) {
+            cls = ' same';
+            const other = base && l > 1 && Object.keys(MAP).find(k => k !== selected && MAP[k][l] === base);
+            txt = other ? `Niets. ${base} bedient hier ${c[other] ? c[other].name : other}.`
+                : base && l > 1 ? `Zelfde als laag 1 (${base})` : 'Niet toegewezen';
+        }
+        const on = listen && listen.id === selected && listen.l === l;
+        html += `<div class="detail-row${on ? ' listening' : ''}"><span class="lname"><span class="dot d${l}"></span>Laag ${l}</span>` +
+            (on ? `<span class="val">Druk nu op je knop of jack…</span><button type="button" class="go" data-cancel>Annuleer</button></div>`
+                : `<span class="val${cls}">${esc(txt)}</span><button type="button" data-listen="${l}">Wijzig</button></div>`);
+    }
+    document.getElementById('detail-rows').innerHTML = html;
+
+    const banner = document.getElementById('banner');
+    banner.hidden = !(pending || last);
+    if (pending) banner.innerHTML = `<span><b>${esc(pending)}</b> ingedrukt. Klik op de knop die hij moet bedienen op laag ${shown || 1}.</span><button type="button" data-cancel>Annuleer</button>`;
+    else if (last) banner.innerHTML = `<span><b>${esc(last.input)}</b> bedient nu ${esc(c[last.id] ? c[last.id].name : last.id)} op laag ${last.l}.</span><button type="button" data-undo>Ongedaan maken</button>`;
+    document.querySelectorAll('[data-id]').forEach(el =>
+        el.classList.toggle('live', !!pending && Object.values(MAP[el.dataset.id] || {}).includes(pending)));
+    document.querySelectorAll('[data-id]').forEach(el => el.classList.toggle('sel', el.dataset.id === selected));
+    document.querySelectorAll('.chip[data-l], .mark').forEach(el => el.classList.toggle('dim', shown !== 0 && Number(el.dataset.l) !== shown));
+    document.querySelectorAll('#layers button').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.layer) === shown)));
+    document.querySelectorAll('#pads button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.pad === padKey)));
+}
+
+function currentTheme() {
+    return document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+}
+function showTheme() {
+    document.querySelectorAll('#themes button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.themeSet === currentTheme())));
+}
+document.addEventListener('click', e => {
+    const th = e.target.closest('#themes button');
+    if (th) { document.documentElement.dataset.theme = th.dataset.themeSet; showTheme(); return; }
+    const lay = e.target.closest('#layers button'), pd = e.target.closest('#pads button'), el = e.target.closest('[data-id]');
+    const t = e.target, sim = t.closest('[data-sim]'), go = t.closest('[data-listen]');
+    if (sim) press(sim.dataset.sim);
+    else if (go) { listen = { id: selected, l: Number(go.dataset.listen) }; pending = null; last = null; }
+    else if (t.closest('[data-cancel]')) { listen = null; pending = null; }
+    else if (t.closest('[data-undo]')) undo();
+    else if (lay) shown = Number(lay.dataset.layer);
+    else if (pd) { padKey = pd.dataset.pad; listen = pending = last = null; }
+    else if (el) {
+        selected = el.dataset.id; listen = null;
+        if (pending) { assign(selected, shown || 1, pending); pending = null; }
+    }
+    else return;
+    render();
+});
+document.addEventListener('keydown', e => {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.pad-hit')) { e.preventDefault(); selected = e.target.dataset.id; render(); }
+});
+render();
+showTheme();
+</script>

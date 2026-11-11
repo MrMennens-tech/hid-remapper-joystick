@@ -15,8 +15,8 @@
 
 #define NOUR_DESCRIPTORS 6
 
-typedef void (*device_connected_t)(uint16_t interface, uint16_t vid, uint16_t pid);
-typedef void (*device_disconnected_t)(uint8_t dev_addr);
+typedef void (*device_connected_cb_t)(uint16_t interface, uint16_t vid, uint16_t pid);
+typedef void (*device_disconnected_cb_t)(uint8_t dev_addr);
 typedef void (*main_loop_task_t)();
 typedef void (*handle_received_report_t)(const uint8_t* report, int len, uint16_t interface, uint8_t external_report_id);
 typedef uint16_t (*handle_get_report_t)(uint8_t report_id, uint8_t* buffer, uint16_t reqlen);
@@ -34,8 +34,8 @@ struct our_descriptor_def_t {
     uint32_t descriptor_length;
     uint16_t vid = 0;
     uint16_t pid = 0;
-    device_connected_t device_connected = nullptr;
-    device_disconnected_t device_disconnected = nullptr;
+    device_connected_cb_t device_connected = nullptr;
+    device_disconnected_cb_t device_disconnected = nullptr;
     main_loop_task_t main_loop_task = nullptr;
     handle_received_report_t handle_received_report = nullptr;
     handle_get_report_t handle_get_report = nullptr;

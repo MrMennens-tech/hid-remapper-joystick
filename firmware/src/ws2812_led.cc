@@ -4,9 +4,22 @@
 #include "globals.h"
 #include "pico/time.h"  // for sleep_ms
 
+uint8_t led_brightness = 64;
+uint8_t led_strip_count = 0;
+uint8_t led_strip_order = 0;
+
+// 0x00RRGGBB scaled by led_brightness
+[[maybe_unused]] static uint32_t scale_color(uint32_t color) {
+    uint32_t r = ((color >> 16) & 0xFF) * led_brightness / 255;
+    uint32_t g = ((color >> 8) & 0xFF) * led_brightness / 255;
+    uint32_t b = (color & 0xFF) * led_brightness / 255;
+    return (r << 16) | (g << 8) | b;
+}
+
 // Check if WS2812 is configured for this board
 #ifdef PICO_DEFAULT_WS2812_PIN
 
+#include "hardware/dma.h"
 #include "hardware/pio.h"
 #include "hardware/clocks.h"
 #include "hardware/gpio.h"
@@ -16,6 +29,21 @@ static PIO ws2812_pio = nullptr;
 static uint ws2812_sm = 0;
 static bool ws2812_initialized = false;
 static uint ws2812_pin = PICO_DEFAULT_WS2812_PIN;
+static uint ws2812_offset = 0;
+
+#define NO_COLOR 0xFFFFFFFF
+#define MAX_STRIP_LEDS 64
+// what the onboard LED currently shows, NO_COLOR if unknown
+static uint32_t onboard_shown = NO_COLOR;
+
+static bool strip_initialized = false;
+static uint strip_sm = 0;
+static int strip_dma = -1;
+static uint32_t strip_buffer[MAX_STRIP_LEDS];
+static uint32_t strip_wanted = 0;
+static bool strip_dirty = false;
+static uint8_t strip_lit = 0;  // how many LEDs the last frame addressed
+static uint64_t strip_last_start = 0;
 
 // Send raw 32-bit value to the PIO state machine
 static inline void put_pixel(uint32_t pixel_grb) {
@@ -33,7 +61,7 @@ static int get_pio_index(PIO pio) {
 }
 
 // Try to claim a state machine on the given PIO
-static int try_claim_pio(PIO pio) {
+[[maybe_unused]] static int try_claim_pio(PIO pio) {
     int sm = pio_claim_unused_sm(pio, false);
     if (sm >= 0) {
         ws2812_pio = pio;
@@ -95,6 +123,7 @@ bool ws2812_led_init(void) {
     }
     
     uint offset = pio_add_program(ws2812_pio, &ws2812_program);
+    ws2812_offset = offset;
     printf("WS2812: PIO program loaded at offset %d\n", offset);
     
     // Initialize the WS2812 program
@@ -134,6 +163,92 @@ void ws2812_led_set(uint32_t color) {
     uint32_t rgb = color << 8;
     
     put_pixel(rgb);
+    // whoever calls this directly (status colours) bypasses the layer colour,
+    // so make sure the layer colour is sent again afterwards
+    onboard_shown = NO_COLOR;
+}
+
+uint8_t ws2812_led_pin(void) {
+    return PICO_DEFAULT_WS2812_PIN;
+}
+
+void ws2812_led_invalidate(void) {
+    onboard_shown = NO_COLOR;
+    strip_dirty = true;
+}
+
+bool ws2812_strip_supported(void) {
+    return true;
+}
+
+bool ws2812_strip_init(uint8_t pin) {
+    if (!ws2812_initialized || strip_initialized) {
+        return false;
+    }
+    // The strip gets its own state machine on the PIO block that already holds
+    // the WS2812 program, so the onboard LED and the strip never share a pin.
+    int sm = -1;
+#if NUM_PIOS >= 3
+    sm = pio_claim_unused_sm(ws2812_pio, false);
+#else
+    // see ws2812_led_init(): on RP2040 only the high state machines of PIO0 are safe
+    if (!pio_sm_is_claimed(pio0, 2)) {
+        pio_sm_claim(pio0, 2);
+        sm = 2;
+    }
+#endif
+    if (sm < 0) {
+        printf("WS2812 strip: no state machine available\n");
+        return false;
+    }
+    strip_dma = dma_claim_unused_channel(false);
+    if (strip_dma < 0) {
+        printf("WS2812 strip: no DMA channel available\n");
+        pio_sm_unclaim(ws2812_pio, sm);
+        return false;
+    }
+    strip_sm = (uint) sm;
+    ws2812_program_init(ws2812_pio, strip_sm, ws2812_offset, pin, 800000.0f, false);
+
+    dma_channel_config c = dma_channel_get_default_config(strip_dma);
+    channel_config_set_transfer_data_size(&c, DMA_SIZE_32);
+    channel_config_set_read_increment(&c, true);
+    channel_config_set_write_increment(&c, false);
+    channel_config_set_dreq(&c, pio_get_dreq(ws2812_pio, strip_sm, true));
+    dma_channel_configure(strip_dma, &c, &ws2812_pio->txf[strip_sm], strip_buffer, 0, false);
+
+    strip_initialized = true;
+    strip_dirty = true;
+    printf("WS2812 strip: ready on pin %d (SM%d, DMA%d)\n", pin, strip_sm, strip_dma);
+    return true;
+}
+
+void ws2812_strip_task(void) {
+    if (!strip_initialized || !strip_dirty || dma_channel_is_busy(strip_dma)) {
+        return;
+    }
+    // A frame takes 30us per LED and the strip needs a pause before the next one.
+    uint64_t now = time_us_64();
+    if (now - strip_last_start < 5000) {
+        return;
+    }
+    uint8_t count = led_strip_count > MAX_STRIP_LEDS ? MAX_STRIP_LEDS : led_strip_count;
+    // also address the LEDs that were lit before, so a shorter count switches them off
+    uint8_t total = count > strip_lit ? count : strip_lit;
+    if (total == 0) {
+        strip_dirty = false;
+        return;
+    }
+    uint32_t r = (strip_wanted >> 16) & 0xFF, g = (strip_wanted >> 8) & 0xFF, b = strip_wanted & 0xFF;
+    uint32_t pixel = (led_strip_order == 1) ? ((r << 16) | (g << 8) | b) : ((g << 16) | (r << 8) | b);
+    for (uint8_t i = 0; i < total; i++) {
+        strip_buffer[i] = (i < count) ? (pixel << 8) : 0;
+    }
+    strip_lit = count;
+    strip_dirty = false;
+    strip_last_start = now;
+    dma_channel_set_read_addr(strip_dma, strip_buffer, false);
+    dma_channel_set_trans_count(strip_dma, total, true);
 }
 
 bool ws2812_led_available(void) {
@@ -145,13 +260,23 @@ void ws2812_led_set_for_layer(uint8_t layer_state_mask) {
         return;
     }
     // Use lowest active layer index (layer_state_mask: bit 0 = layer 0, etc.)
+    int layer = 0;
     for (int i = 0; i < 4; i++) {
         if (layer_state_mask & (1u << i)) {
-            ws2812_led_set(layer_colors[i]);
-            return;
+            layer = i;
+            break;
         }
     }
-    ws2812_led_set(layer_colors[0]);  // Fallback: layer 0
+    uint32_t color = scale_color(layer_colors[layer]);
+    // this runs every millisecond, so only talk to the LEDs when something changed
+    if (color != onboard_shown) {
+        ws2812_led_set(color);
+        onboard_shown = color;
+    }
+    if (color != strip_wanted) {
+        strip_wanted = color;
+        strip_dirty = true;
+    }
 }
 
 #else
@@ -172,6 +297,25 @@ bool ws2812_led_available(void) {
 
 void ws2812_led_set_for_layer(uint8_t layer_state_mask) {
     (void)layer_state_mask;
+}
+
+uint8_t ws2812_led_pin(void) {
+    return 0xFF;
+}
+
+void ws2812_led_invalidate(void) {
+}
+
+bool ws2812_strip_supported(void) {
+    return false;
+}
+
+bool ws2812_strip_init(uint8_t pin) {
+    (void)pin;
+    return false;
+}
+
+void ws2812_strip_task(void) {
 }
 
 #endif

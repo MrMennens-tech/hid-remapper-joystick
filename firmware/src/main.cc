@@ -29,6 +29,9 @@
 #include "remapper.h"
 #include "tick.h"
 #include "ws2812_led.h"
+#ifdef TECHREMAP_EXT
+#include "techremap_ext.h"
+#endif
 
 // RP2350 UF2s wipe the last sector of flash every time
 // because of RP2350-E10 errata mitigation. So we put
@@ -40,6 +43,10 @@
 #endif
 
 #define FLASH_CONFIG_IN_MEMORY (((uint8_t*) XIP_BASE) + CONFIG_OFFSET_IN_FLASH)
+
+// The TechRemap extension settings have their own sector, right below the config.
+#define EXT_OFFSET_IN_FLASH (CONFIG_OFFSET_IN_FLASH - 4096)
+#define FLASH_EXT_IN_MEMORY (((uint8_t*) XIP_BASE) + EXT_OFFSET_IN_FLASH)
 
 #define ADC_USAGE_PAGE 0xFFF80000
 
@@ -79,6 +86,10 @@ bool do_send_report(uint8_t interface, const uint8_t* report_with_id, uint8_t le
 
 void gpio_pins_init() {
     gpio_valid_pins_mask = get_gpio_valid_pins_mask();
+#ifdef TECHREMAP_EXT
+    techremap_ext_load(FLASH_EXT_IN_MEMORY, gpio_valid_pins_mask);
+    gpio_valid_pins_mask &= ~techremap_ext_reserved_pins();
+#endif
     gpio_init_mask(gpio_valid_pins_mask);
 }
 
@@ -194,6 +205,23 @@ void do_persist_config(uint8_t* buffer) {
 #endif
 }
 
+#ifdef TECHREMAP_EXT
+void techremap_ext_write_flash(const uint8_t* sector) {
+#if !PICO_COPY_TO_RAM
+    uint32_t ints = save_and_disable_interrupts();
+#endif
+    flash_range_erase(EXT_OFFSET_IN_FLASH, 4096);
+    flash_range_program(EXT_OFFSET_IN_FLASH, sector, 4096);
+#if !PICO_COPY_TO_RAM
+    restore_interrupts(ints);
+#endif
+}
+
+const uint8_t* techremap_ext_flash() {
+    return FLASH_EXT_IN_MEMORY;
+}
+#endif
+
 void reset_to_bootloader() {
     reset_usb_boot(0, 0);
 }
@@ -253,6 +281,11 @@ int main() {
     if (ws2812_led_available()) {
         ws2812_led_set(LED_COLOR_WAITING);  // Purple = waiting for HID device
     }
+#ifdef TECHREMAP_EXT
+    if (techremap_ext_strip_pin() != TECHREMAP_NO_PIN) {
+        ws2812_strip_init(techremap_ext_strip_pin());
+    }
+#endif
     extra_init();
     tusb_init();
 
@@ -322,8 +355,13 @@ int main() {
         send_out_report();
         if (need_to_persist_config) {
             persist_config_return_code = persist_config();
+#ifdef TECHREMAP_EXT
+            techremap_ext_persist();
+#endif
             need_to_persist_config = false;
         }
+
+        ws2812_strip_task();
 
         print_stats_maybe();
 

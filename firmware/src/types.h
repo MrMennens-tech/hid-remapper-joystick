@@ -32,6 +32,12 @@ enum class ConfigCommand : int8_t {
     CLEAR_QUIRKS = 23,
     ADD_QUIRK = 24,
     GET_QUIRK = 25,
+    // TechRemap extensions (see techremap_ext.h), kept well clear of upstream's numbering
+    TR_GET_INFO = 64,
+    TR_SET_LED = 65,
+    TR_GET_LED = 66,
+    TR_SET_PIN_NAME = 67,
+    TR_GET_PIN_NAME = 68,
 };
 
 struct usage_def_t {

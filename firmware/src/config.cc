@@ -9,6 +9,9 @@
 #include "our_descriptor.h"
 #include "platform.h"
 #include "remapper.h"
+#ifdef TECHREMAP_EXT
+#include "techremap_ext.h"
+#endif
 
 const uint8_t CONFIG_VERSION = 18;
 
@@ -697,7 +700,6 @@ void load_config(const uint8_t* persisted_config) {
         our_descriptor_number = 0;
     }
     macro_entry_duration = config->macro_entry_duration;
-    memcpy(layer_colors, config->layer_colors, sizeof(layer_colors));
     mapping_config11_t* buffer_mappings = (mapping_config11_t*) (persisted_config + sizeof(persist_config_v19_t));
     for (uint32_t i = 0; i < config->mapping_count; i++) {
         config_mappings.push_back(buffer_mappings[i]);
@@ -1013,6 +1015,11 @@ uint16_t handle_get_report1(uint8_t report_id, uint8_t* buffer, uint16_t reqlen)
                 break;
             }
             default:
+#ifdef TECHREMAP_EXT
+                if (techremap_ext_handle_get(last_config_command, (uint8_t*) config_buffer)) {
+                    break;
+                }
+#endif
                 return 0;
         }
         config_buffer->crc32 = crc32((uint8_t*) config_buffer, CONFIG_SIZE - 4);
@@ -1183,6 +1190,11 @@ void handle_set_report1(uint8_t report_id, uint8_t const* buffer, uint16_t bufsi
                     break;
                 }
                 default:
+#ifdef TECHREMAP_EXT
+                    if (techremap_ext_handle_set(config_buffer)) {
+                        break;
+                    }
+#endif
                     last_config_command = ConfigCommand::INVALID_COMMAND;
                     break;
             }

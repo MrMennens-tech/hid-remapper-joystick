@@ -34,6 +34,10 @@ const uint32_t MACRO_USAGE_PAGE = 0xFFF20000;
 const uint32_t EXPR_USAGE_PAGE = 0xFFF30000;
 const uint32_t REGISTER_USAGE_PAGE = 0xFFF50000;
 const uint32_t MIDI_USAGE_PAGE = 0xFFF70000;
+// "Go to layer N": pressing the source makes layer N the layer that is active
+// when no other layer is being held or toggled on. Unlike LAYERS_USAGE_PAGE
+// it stays there after the button is released.
+const uint32_t LAYER_SELECT_USAGE_PAGE = 0xFFFC0000;
 
 const uint32_t ROLLOVER_USAGE = 0x00070001;
 
@@ -47,6 +51,7 @@ const uint8_t resolution_multiplier_masks[] = {
 std::vector<reverse_mapping_t> reverse_mapping;
 std::vector<reverse_mapping_t> reverse_mapping_macros;
 std::vector<reverse_mapping_t> reverse_mapping_layers;
+std::vector<reverse_mapping_t> reverse_mapping_layer_select;
 
 std::unordered_map<uint8_t, std::unordered_map<uint32_t, usage_def_t>> our_usages;  // report_id -> usage -> usage_def
 std::unordered_map<uint32_t, usage_def_t> our_usages_flat;
@@ -90,6 +95,7 @@ uint32_t used_state_slots = 0;
 
 std::unordered_map<uint32_t, int32_t> accumulated;  // usage -> relative movement, * 1000
 uint8_t layer_state_mask = 1;
+uint8_t base_layer = 0;
 
 std::vector<int32_t*> relative_usages;  // input_state pointers
 
@@ -392,6 +398,7 @@ void set_mapping_from_config() {
     reverse_mapping.clear();
     reverse_mapping_macros.clear();
     reverse_mapping_layers.clear();
+    reverse_mapping_layer_select.clear();
     used_state_slots = 0;
     usage_state_ptr.clear();
     register_ptrs.clear();
@@ -694,6 +701,8 @@ void set_mapping_from_config() {
             reverse_mapping_macros.push_back(rev_map);
         } else if ((target & 0xFFFF0000) == LAYERS_USAGE_PAGE) {
             reverse_mapping_layers.push_back(rev_map);
+        } else if ((target & 0xFFFF0000) == LAYER_SELECT_USAGE_PAGE) {
+            reverse_mapping_layer_select.push_back(rev_map);
         } else {
             reverse_mapping.push_back(rev_map);
         }
@@ -1132,6 +1141,30 @@ void process_mapping(bool auto_repeat) {
         }
     }
 
+    // "Go to layer" mappings are judged against the layers that were active
+    // before this frame, so a button that means "go to 2" on layer 1 and
+    // "go to 3" on layer 2 moves one step per press.
+    uint8_t new_base_layer = base_layer;
+    for (auto const& rev_map : reverse_mapping_layer_select) {
+        uint16_t layer = rev_map.target & 0xFFFF;
+        if (layer >= NLAYERS) {
+            continue;
+        }
+        for (auto const& map_source : rev_map.sources) {
+            if (!(map_source.layer_mask & layer_state_mask)) {
+                continue;
+            }
+            bool triggered =
+                map_source.tap ? map_source.tap_hold_state->tap
+                : map_source.hold ? (map_source.tap_hold_state->hold && !map_source.tap_hold_state->prev_hold)
+                                  : ((*(map_source.input_state + PREV_STATE_OFFSET) == 0) && (*map_source.input_state != 0));
+            if (triggered) {
+                new_base_layer = layer;
+            }
+        }
+    }
+    base_layer = new_base_layer;
+
     uint8_t new_layer_state_mask = 0;
     for (auto const& rev_map : reverse_mapping_layers) {
         uint16_t i = rev_map.target & 0xFFFF;
@@ -1163,9 +1196,10 @@ void process_mapping(bool auto_repeat) {
         }
     }
 
-    // if no layer is active then layer 0 is active
+    // if no layer is held or toggled on then the base layer is active
+    // (layer 0 unless a "go to layer" mapping moved it)
     if (new_layer_state_mask == 0) {
-        new_layer_state_mask = 1;
+        new_layer_state_mask = 1 << base_layer;
     }
 
     layer_state_mask = new_layer_state_mask;
@@ -2036,6 +2070,7 @@ void reset_state() {
     memset(registers, 0, sizeof(registers));
     accumulated.clear();
     layer_state_mask = 1;
+    base_layer = 0;
     frame_counter = 0;
 }
 
