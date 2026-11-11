@@ -69,12 +69,16 @@ bool ws2812_led_init(void) {
         sm = try_claim_pio(pio0);
     }
 #else
-    // RP2040 has 2 PIO blocks - try PIO1 first (PIO0 often used by USB)
-    printf("WS2812: RP2040 detected, trying PIO1 first...\n");
-    sm = try_claim_pio(pio1);
-    if (sm < 0) {
-        printf("WS2812: PIO1 full, trying PIO0...\n");
-        sm = try_claim_pio(pio0);
+    // RP2040 has 2 PIO blocks and Pico-PIO-USB uses both: PIO0 SM0 for TX and
+    // PIO1 SM0/SM1 for RX, with the RX programs filling PIO1's program memory.
+    // It claims those state machines by number after we run, so we must not
+    // take a low-numbered one. The last state machine on PIO0 is free.
+    printf("WS2812: RP2040 detected, using PIO0 SM3...\n");
+    if (!pio_sm_is_claimed(pio0, 3)) {
+        pio_sm_claim(pio0, 3);
+        ws2812_pio = pio0;
+        ws2812_sm = 3;
+        sm = 3;
     }
 #endif
     

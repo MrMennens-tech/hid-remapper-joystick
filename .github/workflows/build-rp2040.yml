@@ -54,6 +54,11 @@ jobs:
           PICO_BOARD=waveshare_rp2040_pizero cmake ..
           make remapper
           cd ..
+          mkdir build-waveshare_rp2040_zero
+          cd build-waveshare_rp2040_zero
+          PICO_BOARD=waveshare_rp2040_zero cmake ..
+          make remapper
+          cd ..
           mkdir build-pico2
           cd build-pico2
           PICO_BOARD=pico2 cmake ..
@@ -81,6 +86,7 @@ jobs:
           mv build-board_v8/remapper.uf2 artifacts/remapper_board_v8.uf2
           mv build-feather/remapper.uf2 artifacts/remapper_feather.uf2
           mv build-waveshare_rp2040_pizero/remapper.uf2 artifacts/remapper_waveshare_rp2040_pizero.uf2
+          mv build-waveshare_rp2040_zero/remapper.uf2 artifacts/remapper_waveshare_rp2040_zero.uf2
           mv build-pico2/remapper.uf2 artifacts/remapper_pico2.uf2
           mv build-pico2/remapper_dual_a.uf2 artifacts/remapper_pico2_dual_a.uf2
           mv build-pico2/remapper_dual_b.uf2 artifacts/remapper_pico2_dual_b.uf2
