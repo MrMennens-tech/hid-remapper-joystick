@@ -4,164 +4,128 @@
 <meta charset="UTF-8">
 <title>TechRemap infographic</title>
 <style>
-/* One flow from left to right: what you press -> the board -> what your device gets.
-   Then three steps and three extras. Light by default for readability; #dark switches. */
-:root {
-    --bg: #F4F6FB; --card: #FFFFFF; --ink: #121433; --ink-2: #474B6E; --ink-3: #6A6E90;
-    --line: #D5D9E8; --accent: #2F55D4; --accent-soft: #E3E9FB;
-    --l1: #2563EB; --l2: #16A34A; --l3: #DC2626; --l4: #D97706;
-    --board: #1C1F3A; --board-edge: #3A3F6B; --pcb: #0E7A4E;
-}
-body.dark {
-    --bg: #0B0B13; --card: #161624; --ink: #EEEEFF; --ink-2: #A8A8CC; --ink-3: #7C7CA3;
-    --line: #2C2C44; --accent: #6E8FF5; --accent-soft: #1D2547;
-    --l1: #5B8DEF; --l2: #4ADE80; --l3: #F87171; --l4: #FBBF24;
-}
+/* One picture carries the message: your own control -> the board -> every device.
+   Variants through the URL hash: #wide (default), #tall, #therapist, plus #light. */
+:root { --bg: #0B0B13; --glow: #1B2350; --card: #161628; --line: #2C2C44; --ink: #EEEEFF; --ink-2: #A8A8CC; --ink-3: #7C7CA3;
+        --accent: #6E8FF5; --on-accent: #0B0B13; --l2: #4ADE80; --l3: #F87171; --l4: #FBBF24;
+        --board: #1C1F3A; --board-edge: #3A3F6B; --chip: #2A2E52; --part: #232845; }
+body.light { --bg: #F4F6FB; --glow: #DCE5FF; --card: #FFFFFF; --line: #D5D9E8; --ink: #121433; --ink-2: #474B6E; --ink-3: #6A6E90;
+        --accent: #2F55D4; --on-accent: #FFFFFF; --l2: #16A34A; --l3: #DC2626; --l4: #D97706; --part: #FFFFFF; }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
 body { background: var(--bg); color: var(--ink); font-family: Inter, sans-serif; }
-.sheet { width: 1600px; padding: 64px 72px 48px; display: flex; flex-direction: column; gap: 40px; }
-body.portrait .sheet { width: 1080px; padding: 56px 56px 40px; gap: 34px; }
+.sheet { width: 1920px; height: 1080px; padding: 72px 96px 56px; display: flex; flex-direction: column;
+         background: radial-gradient(1000px 520px at 50% 52%, var(--glow) 0%, var(--bg) 72%); }
+.eyebrow { font-size: 22px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 18px; }
+h1 { font-family: 'Inter Display', Inter, sans-serif; font-size: 92px; line-height: 1.0; font-weight: 800; letter-spacing: -0.025em; margin: 0; }
+.lead { font-size: 32px; line-height: 1.4; color: var(--ink-2); margin: 20px 0 0; max-width: 42ch; }
+.art { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+.art svg { width: 100%; height: 100%; }
+.art text { font-family: Inter, sans-serif; fill: var(--ink); }
+.art .sub { fill: var(--ink-3); }
+.points { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+.point h2 { font-size: 30px; font-weight: 750; margin: 0 0 6px; display: flex; align-items: center; gap: 14px; }
+.point h2 i { flex: none; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); }
+.point p { font-size: 22px; line-height: 1.4; color: var(--ink-2); margin: 0; }
+footer { display: flex; justify-content: space-between; align-items: baseline; gap: 24px; margin-top: 30px; padding-top: 20px; border-top: 2px solid var(--line); font-size: 17px; color: var(--ink-3); }
+footer b { font-size: 28px; font-weight: 800; color: var(--ink); }
 
-header h1 { font-family: 'Inter Display', Inter, sans-serif; font-size: 64px; line-height: 1.05; font-weight: 800; margin: 0; letter-spacing: -0.02em; }
-header p { font-size: 26px; line-height: 1.4; color: var(--ink-2); margin: 14px 0 0; max-width: 46ch; }
-body.portrait header h1 { font-size: 56px; }
-body.portrait header p { font-size: 24px; }
+/* tall: for social posts and phones */
+body.tall .sheet { width: 1080px; height: 1350px; padding: 64px 64px 44px; background: radial-gradient(700px 520px at 50% 50%, var(--glow) 0%, var(--bg) 72%); }
+body.tall h1 { font-size: 80px; }
+body.tall .lead { font-size: 29px; }
+body.tall .points { grid-template-columns: 1fr; gap: 14px; }
+body.tall .point h2 { font-size: 28px; }
+body.tall .point p { font-size: 22px; padding-left: 28px; }
+body.tall footer { flex-direction: column; gap: 6px; margin-top: 22px; }
 
-/* the flow */
-.flow { display: grid; grid-template-columns: 1fr auto 330px auto 1fr; align-items: stretch; gap: 18px; }
-body.portrait .flow { grid-template-columns: 1fr; gap: 10px; }
-.col { background: var(--card); border: 2px solid var(--line); border-radius: 26px; padding: 26px 26px 22px; display: flex; flex-direction: column; gap: 16px; }
-.col h2 { font-size: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; color: var(--ink-3); margin: 0; }
-.items { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 12px; }
-body.portrait .items { grid-template-columns: repeat(3, 1fr); }
-.item { display: flex; align-items: center; gap: 12px; font-size: 21px; font-weight: 600; }
-.item svg { flex: none; width: 50px; height: 50px; color: var(--accent); }
-.item small { display: block; font-size: 15px; font-weight: 500; color: var(--ink-3); }
-.arrow { display: flex; align-items: center; justify-content: center; color: var(--accent); }
-.arrow svg { width: 56px; height: 56px; }
-body.portrait .arrow svg { transform: rotate(90deg); width: 46px; height: 46px; }
-
-.hub { background: var(--accent-soft); border-color: var(--accent); align-items: center; justify-content: center; text-align: center; }
-.hub h2 { color: var(--accent); }
-.hub svg { width: 250px; height: 150px; }
-body.portrait .hub { flex-direction: row; text-align: left; gap: 28px; }
-body.portrait .hub svg { width: 220px; height: 132px; flex: none; }
-.hub p { margin: 0; font-size: 20px; line-height: 1.4; color: var(--ink-2); }
-.hub b { color: var(--ink); }
-
-/* steps */
-.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
-body.portrait .steps { grid-template-columns: 1fr; gap: 14px; }
-.step { display: flex; gap: 18px; align-items: flex-start; }
-.num { flex: none; width: 54px; height: 54px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 28px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
-.step h3 { margin: 4px 0 4px; font-size: 26px; font-weight: 750; }
-.step p { margin: 0; font-size: 20px; line-height: 1.4; color: var(--ink-2); }
-
-/* extras */
-.extras { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
-body.portrait .extras { grid-template-columns: 1fr; gap: 14px; }
-.extra { background: var(--card); border: 2px solid var(--line); border-radius: 22px; padding: 22px 24px; display: flex; gap: 18px; align-items: center; }
-.extra svg { flex: none; width: 76px; height: 64px; }
-.extra h3 { margin: 0 0 4px; font-size: 23px; font-weight: 750; }
-.extra p { margin: 0; font-size: 18px; line-height: 1.4; color: var(--ink-2); }
-
-footer { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; border-top: 2px solid var(--line); padding-top: 18px; font-size: 16px; color: var(--ink-3); }
-body.portrait footer { flex-direction: column; align-items: flex-start; gap: 8px; }
-footer .site { font-size: 26px; font-weight: 800; color: var(--ink); }
-footer .site span { color: var(--accent); }
+/* therapist: a banner with one message */
+body.therapist .sheet { height: 800px; padding: 0 0 0 110px; flex-direction: row; align-items: center; gap: 30px;
+                        background: radial-gradient(900px 600px at 76% 50%, var(--glow) 0%, var(--bg) 70%); }
+body.therapist .copy { flex: none; width: 800px; }
+body.therapist h1 { font-size: 78px; }
+body.therapist .lead { font-size: 29px; max-width: 34ch; }
+body.therapist .art { height: 640px; padding-right: 50px; }
+body.therapist .points, body.therapist footer { display: none; }
+.url { display: none; }
+body.therapist .url { display: inline-block; margin-top: 30px; font-size: 25px; font-weight: 700; padding: 13px 26px; border-radius: 999px; background: var(--accent); color: var(--on-accent); }
 </style>
 </head>
 <body>
 <div class="sheet">
-    <header>
-        <h1>Elke knop doet wat jij wilt.</h1>
-        <p>TechRemap is een klein bordje tussen jouw knoppen en je computer of console. Het vertaalt wat je indrukt naar wat het spel nodig heeft.</p>
-    </header>
-
-    <section class="flow">
-        <div class="col">
-            <h2>Jij drukt op</h2>
-            <div class="items">
-                <div class="item"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"><ellipse cx="24" cy="30" rx="19" ry="9"/><path d="M5 30v-5c0-5 8.5-9 19-9s19 4 19 9v5"/><ellipse cx="24" cy="24" rx="12" ry="5.5" fill="currentColor" fill-opacity=".18"/></svg><span>Grote knop<small>via een jack</small></span></div>
-                <div class="item"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="24" cy="38" rx="15" ry="5"/><path d="M24 37V17"/><circle cx="24" cy="12" r="6" fill="currentColor" fill-opacity=".18"/></svg><span>Joystick</span></div>
-                <div class="item"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14h20c6 0 9 5 10 12l1 6c.6 4-3.6 6.4-6.4 3.6L33 30H15l-5.6 5.6C6.6 38.4 2.4 36 3 32l1-6c1-7 4-12 10-12z"/><path d="M13 20v6M10 23h6"/><circle cx="33" cy="21" r="1.6" fill="currentColor"/><circle cx="37" cy="25" r="1.6" fill="currentColor"/></svg><span>Controller</span></div>
-                <div class="item"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="13" y="5" width="22" height="38" rx="11"/><path d="M24 5v13M13 18h22"/></svg><span>Muis</span></div>
-                <div class="item"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="42" height="25" rx="4"/><path d="M9 19h2M15 19h2M21 19h2M27 19h2M33 19h2M39 19h0M9 25h2M15 25h2M21 25h2M27 25h2M33 25h6M15 31h18"/></svg><span>Toetsenbord</span></div>
-                <div class="item"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="36" height="36" rx="18"/><circle cx="24" cy="24" r="9" fill="currentColor" fill-opacity=".18"/></svg><span>Schakelaar<small>pedaal, mondknop…</small></span></div>
-            </div>
-        </div>
-
-        <div class="arrow"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 24h30M28 13l11 11-11 11"/></svg></div>
-
-        <div class="col hub">
-            <h2>TechRemap</h2>
-            <svg viewBox="0 0 250 150" aria-label="Het TechRemap-bordje">
-                <defs>
-                    <radialGradient id="glow"><stop offset="0" stop-color="var(--l2)" stop-opacity=".95"/><stop offset="1" stop-color="var(--l2)" stop-opacity="0"/></radialGradient>
-                </defs>
-                <!-- cable in -->
-                <path d="M4 75 H52" stroke="var(--ink-3)" stroke-width="7" stroke-linecap="round"/>
-                <rect x="40" y="62" width="24" height="26" rx="4" fill="var(--ink-2)"/>
-                <!-- board -->
-                <rect x="62" y="35" width="126" height="80" rx="12" fill="var(--board)" stroke="var(--board-edge)" stroke-width="3"/>
-                <rect x="104" y="58" width="34" height="34" rx="5" fill="#2A2E52" stroke="#4A4F82" stroke-width="2"/>
-                <g fill="#C9A227">
-                    <circle cx="74" cy="44" r="3"/><circle cx="86" cy="44" r="3"/><circle cx="98" cy="44" r="3"/><circle cx="110" cy="44" r="3"/><circle cx="122" cy="44" r="3"/><circle cx="134" cy="44" r="3"/><circle cx="146" cy="44" r="3"/>
-                    <circle cx="74" cy="106" r="3"/><circle cx="86" cy="106" r="3"/><circle cx="98" cy="106" r="3"/><circle cx="110" cy="106" r="3"/><circle cx="122" cy="106" r="3"/><circle cx="134" cy="106" r="3"/><circle cx="146" cy="106" r="3"/>
-                </g>
-                <circle cx="163" cy="75" r="22" fill="url(#glow)"/>
-                <circle cx="163" cy="75" r="7" fill="var(--l2)"/>
-                <!-- cable out -->
-                <rect x="186" y="62" width="24" height="26" rx="4" fill="var(--ink-2)"/>
-                <path d="M198 75 H246" stroke="var(--ink-3)" stroke-width="7" stroke-linecap="round"/>
-            </svg>
-            <p>Je stelt het <b>één keer</b> in.<br>Daarna werkt het <b>zonder software</b>.</p>
-        </div>
-
-        <div class="arrow"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 24h30M28 13l11 11-11 11"/></svg></div>
-
-        <div class="col">
-            <h2>Je apparaat krijgt</h2>
-            <div class="items">
-                <div class="item"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="40" height="27" rx="3"/><path d="M18 42h12M24 34v8"/></svg><span>Pc of Mac</span></div>
-                <div class="item"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="10" y="4" width="28" height="40" rx="4"/><path d="M21 39h6"/></svg><span>iPad</span></div>
-                <div class="item"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="12" y="11" width="24" height="26" rx="2"/><path d="M12 11H8a5 5 0 0 0-5 5v16a5 5 0 0 0 5 5h4M36 11h4a5 5 0 0 1 5 5v16a5 5 0 0 1-5 5h-4"/><circle cx="7.5" cy="19" r="1.5" fill="currentColor"/><circle cx="40.5" cy="27" r="1.5" fill="currentColor"/></svg><span>Nintendo Switch</span></div>
-                <div class="item"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5h20l3 38H11z"/><path d="M15 24h18"/></svg><span>PlayStation<small>PS5 via adapter</small></span></div>
-                <div class="item"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="14" width="42" height="22" rx="7"/><circle cx="17" cy="25" r="5.5" fill="currentColor" fill-opacity=".18"/><circle cx="31" cy="25" r="5.5" fill="currentColor" fill-opacity=".18"/></svg><span>Xbox<small>via Adaptive Controller</small></span></div>
-                <div class="item"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="10" width="42" height="28" rx="4"/><path d="M3 18h42"/><circle cx="9" cy="14" r="1" fill="currentColor"/><circle cx="13" cy="14" r="1" fill="currentColor"/></svg><span>Laptop</span></div>
-            </div>
-        </div>
-    </section>
-
-    <section class="steps">
-        <div class="step"><div class="num">1</div><div><h3>Aansluiten</h3><p>Steek je knoppen in het bordje en het bordje in je computer of console.</p></div></div>
-        <div class="step"><div class="num">2</div><div><h3>Instellen</h3><p>Ga op een computer naar remap.mennens.tech. Klik op een knop en druk op de jouwe.</p></div></div>
-        <div class="step"><div class="num">3</div><div><h3>Spelen</h3><p>Klaar. Het bordje onthoudt alles, ook als je het in een ander apparaat steekt.</p></div></div>
-    </section>
-
-    <section class="extras">
-        <div class="extra">
-            <svg viewBox="0 0 76 64"><rect x="6" y="2" width="64" height="12" rx="6" fill="var(--l1)"/><rect x="6" y="18" width="64" height="12" rx="6" fill="var(--l2)"/><rect x="6" y="34" width="64" height="12" rx="6" fill="var(--l3)"/><rect x="6" y="50" width="64" height="12" rx="6" fill="var(--l4)"/></svg>
-            <div><h3>4 lagen</h3><p>Eén knop, vier functies. Een lampje laat in kleur zien welke laag aan staat.</p></div>
-        </div>
-        <div class="extra">
-            <svg viewBox="0 0 76 64" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"><circle cx="20" cy="16" r="9" fill="var(--accent)" fill-opacity=".18"/><path d="M4 50c0-9 7-15 16-15s16 6 16 15"/><circle cx="56" cy="16" r="9" fill="var(--accent)" fill-opacity=".18"/><path d="M40 50c0-9 7-15 16-15s16 6 16 15"/><path d="M30 60h16"/></svg>
-            <div><h3>Samen spelen</h3><p>Twee mensen kunnen dezelfde knop bedienen. Handig om mee te helpen.</p></div>
-        </div>
-        <div class="extra">
-            <svg viewBox="0 0 76 64" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 32h14"/><rect x="16" y="22" width="26" height="20" rx="4" fill="var(--accent)" fill-opacity=".18"/><path d="M42 27h14v10H42"/><path d="M56 28.5h8l6 3.5-6 3.5h-8"/><path d="M50 27v10M62 28.5v7" stroke-width="2"/></svg>
-            <div><h3>Jacks</h3><p>Sluit gewone 3,5 mm-schakelaars aan en geef ze een eigen naam.</p></div>
-        </div>
-    </section>
-
-    <footer>
-        <div class="site">remap<span>.</span>mennens<span>.</span>tech</div>
-        <div>Gebouwd op HID Remapper van Jacek Fedoryński (jfedor2) · TechRemap by Mennens.Tech</div>
-    </footer>
+    <div class="copy">
+        <div class="eyebrow" id="eyebrow"></div>
+        <h1 id="title"></h1>
+        <p class="lead" id="lead"></p>
+        <div class="url">remap.mennens.tech</div>
+    </div>
+    <div class="art" id="art"></div>
+    <div class="points">
+        <div class="point"><h2><i></i>Sluit aan wat bij je past</h2><p>Een grote knop, een joystick, een schakelaar of een gewone controller.</p></div>
+        <div class="point"><h2><i></i>Kies wat elke knop doet</h2><p>Eén keer instellen in je browser. Het bordje onthoudt het.</p></div>
+        <div class="point"><h2><i></i>Gebruik het overal</h2><p>Steek het bordje in een ander apparaat en het werkt meteen.</p></div>
+    </div>
+    <footer><b>remap.mennens.tech</b><span>TechRemap by Mennens.Tech · gebouwd op HID Remapper van Jacek Fedoryński (jfedor2)</span></footer>
 </div>
 <script>
-    for (const c of location.hash.slice(1).split(',')) if (c) document.body.classList.add(c);
+const flags = new Set(location.hash.slice(1).split(',').filter(Boolean));
+for (const f of flags) document.body.classList.add(f);
+const therapist = flags.has('therapist'), tall = flags.has('tall');
+
+document.getElementById('eyebrow').textContent = therapist ? 'Voor therapeuten en begeleiders' : 'TechRemap by Mennens.Tech';
+document.getElementById('title').innerHTML = therapist ? 'Eén vertrouwde bediening. Overal inzetbaar.' : 'Jouw bediening.<br>Voor alles.';
+document.getElementById('lead').textContent = therapist
+    ? 'Heeft iemand een knop of joystick gevonden die goed werkt? Met TechRemap werkt die ook op de computer, de tablet en de spelcomputer. Niemand hoeft per apparaat iets nieuws aan te leren.'
+    : 'Gebruik de knop, joystick of schakelaar waar jij goed mee overweg kunt, op elke computer, tablet of spelcomputer.';
+
+// ── the picture ──────────────────────────────────────────────────────────────
+const bigButton = (x, y, s = 1) => `<g transform="translate(${x},${y}) scale(${s})">
+    <ellipse cx="0" cy="34" rx="92" ry="34" fill="var(--part)" stroke="var(--accent)" stroke-width="6"/>
+    <path d="M-70,22 C-70,-50 70,-50 70,22 C70,48 -70,48 -70,22 Z" fill="var(--accent)"/>
+    <ellipse cx="-22" cy="-12" rx="26" ry="10" fill="#fff" opacity=".28" transform="rotate(-18 -22 -12)"/></g>`;
+const board = (x, y, s = 1) => `<g transform="translate(${x},${y}) scale(${s})">
+    <rect x="-166" y="-30" width="34" height="60" rx="8" fill="var(--ink-2)"/><rect x="132" y="-30" width="34" height="60" rx="8" fill="var(--ink-2)"/>
+    <rect x="-140" y="-88" width="280" height="176" rx="26" fill="var(--board)" stroke="var(--board-edge)" stroke-width="6"/>
+    <rect x="-62" y="-38" width="76" height="76" rx="10" fill="var(--chip)" stroke="#4A4F82" stroke-width="4"/>
+    ${[-112, -84, -56, -28, 0, 28, 56].map(d => `<circle cx="${d}" cy="-66" r="6" fill="#C9A227"/><circle cx="${d}" cy="66" r="6" fill="#C9A227"/>`).join('')}
+    <circle cx="82" cy="0" r="52" fill="url(#glow)"/><circle cx="82" cy="0" r="16" fill="#4ADE80"/></g>`;
+const ICONS = {
+    computer: '<rect x="-46" y="-36" width="92" height="62" rx="8"/><path d="M-18,44 h36 M0,26 v18"/>',
+    tablet: '<rect x="-34" y="-46" width="68" height="92" rx="10"/><path d="M-8,34 h16"/>',
+    game: '<path d="M-26,-26 h52 c18,0 26,14 29,34 l3,18 c2,12 -11,19 -19,11 l-17,-17 h-44 l-17,17 c-8,8 -21,1 -19,-11 l3,-18 c3,-20 11,-34 29,-34 z"/><path d="M-28,-8 v16 M-36,0 h16"/><circle cx="24" cy="-6" r="4" fill="var(--accent)"/><circle cx="36" cy="6" r="4" fill="var(--accent)"/>',
+};
+const device = (x, y, kind, s = 1) => `<g transform="translate(${x},${y}) scale(${s})" fill="var(--part)" stroke="var(--accent)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">${ICONS[kind]}</g>`;
+const defs = '<defs><radialGradient id="glow"><stop offset="0" stop-color="#4ADE80" stop-opacity=".9"/><stop offset="1" stop-color="#4ADE80" stop-opacity="0"/></radialGradient></defs>';
+const cable = d => `<path d="${d}" fill="none" stroke="var(--ink-2)" stroke-width="8" stroke-linecap="round"/>`;
+const label = (x, y, t, sub, anchor = 'start', fs = 34) => `<text x="${x}" y="${y}" font-size="${fs}" font-weight="700" text-anchor="${anchor}">${t}</text>` +
+    (sub ? `<text class="sub" x="${x}" y="${y + fs * 1.1}" font-size="${fs * 0.68}" font-weight="500" text-anchor="${anchor}">${sub}</text>` : '');
+
+let svg;
+if (tall) {
+    // from top to bottom: your control, the board, three devices
+    svg = `<svg viewBox="0 0 950 660">${defs}
+        ${cable('M475,150 V230')}${cable('M475,410 C475,470 170,440 170,520')}${cable('M475,410 V520')}${cable('M475,410 C475,470 780,440 780,520')}
+        ${bigButton(475, 80, 0.95)}${label(590, 78, 'Jouw bediening', 'knop, joystick, schakelaar', 'start', 30)}
+        <g transform="rotate(90 475 320)">${board(475, 320, 0.95)}</g>
+        ${device(170, 580, 'computer', 0.95)}${device(475, 580, 'tablet', 0.95)}${device(780, 580, 'game', 0.95)}
+    </svg>`;
+} else if (therapist) {
+    svg = `<svg viewBox="0 0 900 640">${defs}
+        ${cable('M150,320 H300')}${cable('M632,320 C720,320 700,130 790,130')}${cable('M632,320 H790')}${cable('M632,320 C720,320 700,510 790,510')}
+        ${bigButton(100, 300, 0.95)}${board(466, 320)}
+        ${device(820, 130, 'computer', 0.8)}${device(820, 320, 'tablet', 0.8)}${device(820, 510, 'game', 0.8)}
+    </svg>`;
+} else {
+    svg = `<svg viewBox="0 0 1728 430">${defs}
+        ${cable('M330,215 H640')}${cable('M972,215 C1100,215 1080,70 1200,70')}${cable('M972,215 H1200')}${cable('M972,215 C1100,215 1080,360 1200,360')}
+        ${bigButton(230, 190, 1.05)}${label(230, 330, 'Jouw bediening', 'knop, joystick, schakelaar', 'middle')}
+        ${board(806, 215)}${label(806, 362, 'TechRemap', '', 'middle')}
+        ${device(1260, 70, 'computer', 0.9)}${label(1340, 82, 'Computer')}
+        ${device(1260, 215, 'tablet', 0.9)}${label(1340, 227, 'Tablet')}
+        ${device(1260, 360, 'game', 0.9)}${label(1340, 372, 'Spelcomputer')}
+    </svg>`;
+}
+document.getElementById('art').innerHTML = svg;
 </script>
 </body>
 </html>
