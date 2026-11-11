@@ -178,6 +178,16 @@ const EN = {
         'On a PS4 this works directly. On a PS5 it only works directly in fighting games, and then with a separate authentication device. Through an adapter such as the Brook Wingman FGC2, Beloader or Besavior it works in all PS5 games.',
     'Van de touchpad wordt alleen de klik doorgegeven, geen vingerbeweging.': 'Only the click of the touchpad is passed on, not finger movement.',
 
+    'Samen spelen: meerdere apparaten tegelijk': 'Playing together: several devices at once',
+    'Met een USB-hub tussen het bordje en je apparaten sluit je er meerdere tegelijk aan, bijvoorbeeld een controller, losse knoppen, een muis en een toetsenbord.':
+        'With a USB hub between the board and your devices you can connect several at once, for example a controller, separate buttons, a mouse and a keyboard.',
+    'Alles komt samen in één apparaat voor de pc of console. Zo kan iemand meespelen als copiloot: de een gebruikt de controller, de ander een paar knoppen.':
+        'Everything comes together as one device for the PC or console. That lets someone join in as a co-pilot: one person uses the controller, the other a few buttons.',
+    'Het bordje meldt zich altijd als één apparaat; twee aparte controllers als uitvoer kan niet.':
+        'The board always presents itself as one device; two separate controllers as output is not possible.',
+    'Dit staat zo in de handleiding van HID Remapper. Wij hebben het met een hub zelf nog niet getest.':
+        'This is what the HID Remapper manual says. We have not tested it with a hub ourselves yet.',
+
     // devices and controls
     'Muis + toetsenbord': 'Mouse + keyboard',
     'Muis (absoluut) + toetsenbord': 'Mouse (absolute) + keyboard',

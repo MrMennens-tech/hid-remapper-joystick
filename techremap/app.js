@@ -177,6 +177,12 @@ function renderRemap() {
     notes.hidden = !dev.notes;
     if (dev.notes) notes.innerHTML = `<summary>${esc(t(dev.notes.title))}</summary><ul>${dev.notes.items.map(n => `<li>${esc(t(n))}</li>`).join('')}</ul>`;
 
+    $('hub-note').innerHTML = `<summary>${esc(t('Samen spelen: meerdere apparaten tegelijk'))}</summary><ul>` +
+        ['Met een USB-hub tussen het bordje en je apparaten sluit je er meerdere tegelijk aan, bijvoorbeeld een controller, losse knoppen, een muis en een toetsenbord.',
+         'Alles komt samen in één apparaat voor de pc of console. Zo kan iemand meespelen als copiloot: de een gebruikt de controller, de ander een paar knoppen.',
+         'Het bordje meldt zich altijd als één apparaat; twee aparte controllers als uitvoer kan niet.',
+         'Dit staat zo in de handleiding van HID Remapper. Wij hebben het met een hub zelf nog niet getest.'].map(n => `<li>${esc(t(n))}</li>`).join('') + '</ul>';
+
     $('kbd-card').hidden = !dev.keyboard;
     $('kbd').innerHTML = !dev.keyboard ? '' : dev.keyboard.map(r => '<div class="kbd-row">' + r.map(k =>
         `<button type="button" class="kkey" data-id="${k.id}" style="flex-grow:${k.w}" aria-label="${esc(tKey(k.name))}">${esc(t(k.g))}` +
