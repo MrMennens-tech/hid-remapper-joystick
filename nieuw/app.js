@@ -325,7 +325,7 @@ function renderBoard() {
 function renderSettings() {
     const c = S.cfg, pass = c.unmapped_passthrough_layers.length > 0, T = x => esc(t(x));
     const fw = S.demo ? t('Demo, geen bordje verbonden')
-        : S.ext ? t('TechRemap-firmware op {board}', { board: BOARD_NAMES[S.ext.board] || t('een onbekend bord') }) : t('Officiële HID Remapper-firmware');
+        : S.ext ? (BOARD_NAMES[S.ext.board] ? t('TechRemap-firmware op {board}', { board: BOARD_NAMES[S.ext.board] }) : t('TechRemap-firmware')) : t('Officiële HID Remapper-firmware');
     $('settings-card').innerHTML = `<h3>${T('Instellingen')}</h3>
         <div class="field"><label for="devtype">${T('De pc ziet het bordje als')}</label><select id="devtype">${DEVICE_ORDER.map(n => `<option value="${n}"${n === c.our_descriptor_number ? ' selected' : ''}>${T(DEVICES[n].label)}</option>`).join('')}</select>
             <span class="hint">${T('Werkt nadat je hebt opgeslagen en het bordje opnieuw hebt ingestoken.')}</span></div>
