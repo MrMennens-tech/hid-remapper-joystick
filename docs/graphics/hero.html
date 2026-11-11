@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<title>TechRemap banner</title>
+<style>
+:root { --bg: #0B0B13; --ink: #EEEEFF; --ink-2: #A8A8CC; --accent: #6E8FF5;
+        --l1: #5B8DEF; --l2: #4ADE80; --l3: #F87171; --l4: #FBBF24; --board: #1C1F3A; --board-edge: #3A3F6B; }
+html, body { margin: 0; }
+body { background: var(--bg); font-family: Inter, sans-serif; color: var(--ink); }
+.hero { width: 1920px; height: 800px; position: relative; overflow: hidden;
+        background: radial-gradient(900px 600px at 78% 50%, #1B2350 0%, var(--bg) 70%); }
+.text { position: absolute; left: 120px; top: 50%; transform: translateY(-50%); width: 860px; display: flex; flex-direction: column; gap: 26px; }
+.eyebrow { font-size: 22px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+h1 { font-family: 'Inter Display', Inter, sans-serif; font-size: 96px; line-height: 1.0; font-weight: 800; letter-spacing: -0.025em; margin: 0; }
+p { font-size: 30px; line-height: 1.45; color: var(--ink-2); margin: 0; max-width: 34ch; }
+.url { align-self: flex-start; font-size: 26px; font-weight: 700; padding: 14px 26px; border-radius: 999px; background: var(--accent); color: #0B0B13; }
+.art { position: absolute; right: 60px; top: 50%; transform: translateY(-50%); width: 860px; height: 640px; }
+</style>
+</head>
+<body>
+<div class="hero">
+    <div class="text">
+        <div class="eyebrow">TechRemap by Mennens.Tech</div>
+        <h1>Elke knop doet wat jij wilt.</h1>
+        <p>Sluit grote knoppen, joysticks en schakelaars aan op je pc, iPad of console. Instellen doe je in je browser, zonder software.</p>
+        <div class="url">remap.mennens.tech</div>
+    </div>
+    <svg class="art" viewBox="0 0 860 640" aria-hidden="true">
+        <defs>
+            <radialGradient id="g"><stop offset="0" stop-color="var(--l2)" stop-opacity=".9"/><stop offset="1" stop-color="var(--l2)" stop-opacity="0"/></radialGradient>
+        </defs>
+        <!-- four layer rings -->
+        <g fill="none" stroke-width="10" stroke-linecap="round" opacity=".9">
+            <circle cx="470" cy="320" r="290" stroke="var(--l1)" stroke-dasharray="380 1442" transform="rotate(-140 470 320)"/>
+            <circle cx="470" cy="320" r="250" stroke="var(--l2)" stroke-dasharray="330 1241" transform="rotate(-40 470 320)"/>
+            <circle cx="470" cy="320" r="210" stroke="var(--l3)" stroke-dasharray="270 1049" transform="rotate(60 470 320)"/>
+            <circle cx="470" cy="320" r="170" stroke="var(--l4)" stroke-dasharray="220 848" transform="rotate(160 470 320)"/>
+        </g>
+        <!-- inputs on the left -->
+        <g fill="none" stroke="var(--ink-2)" stroke-width="8" stroke-linecap="round">
+            <path d="M40 180 C160 180 200 300 300 310"/>
+            <path d="M40 320 H300"/>
+            <path d="M40 460 C160 460 200 340 300 330"/>
+        </g>
+        <g>
+            <circle cx="40" cy="180" r="34" fill="#232845" stroke="var(--accent)" stroke-width="6"/><circle cx="40" cy="180" r="16" fill="var(--accent)" opacity=".5"/>
+            <circle cx="40" cy="320" r="34" fill="#232845" stroke="var(--l3)" stroke-width="6"/><circle cx="40" cy="320" r="16" fill="var(--l3)" opacity=".5"/>
+            <circle cx="40" cy="460" r="34" fill="#232845" stroke="var(--l4)" stroke-width="6"/><circle cx="40" cy="460" r="16" fill="var(--l4)" opacity=".5"/>
+        </g>
+        <!-- board -->
+        <rect x="290" y="290" width="40" height="60" rx="8" fill="var(--ink-2)"/>
+        <rect x="326" y="230" width="290" height="180" rx="26" fill="var(--board)" stroke="var(--board-edge)" stroke-width="6"/>
+        <rect x="420" y="282" width="78" height="78" rx="10" fill="#2A2E52" stroke="#4A4F82" stroke-width="4"/>
+        <g fill="#C9A227">
+            <circle cx="352" cy="252" r="6"/><circle cx="380" cy="252" r="6"/><circle cx="408" cy="252" r="6"/><circle cx="436" cy="252" r="6"/><circle cx="464" cy="252" r="6"/><circle cx="492" cy="252" r="6"/><circle cx="520" cy="252" r="6"/>
+            <circle cx="352" cy="388" r="6"/><circle cx="380" cy="388" r="6"/><circle cx="408" cy="388" r="6"/><circle cx="436" cy="388" r="6"/><circle cx="464" cy="388" r="6"/><circle cx="492" cy="388" r="6"/><circle cx="520" cy="388" r="6"/>
+        </g>
+        <circle cx="565" cy="320" r="52" fill="url(#g)"/>
+        <circle cx="565" cy="320" r="16" fill="var(--l2)"/>
+        <rect x="612" y="290" width="40" height="60" rx="8" fill="var(--ink-2)"/>
+        <path d="M650 320 H760" stroke="var(--ink-2)" stroke-width="8" stroke-linecap="round"/>
+        <!-- screen on the right -->
+        <rect x="760" y="250" width="92" height="66" rx="8" fill="#232845" stroke="var(--accent)" stroke-width="6"/>
+        <path d="M790 340 h32 M806 316 v24" stroke="var(--accent)" stroke-width="6" stroke-linecap="round"/>
+    </svg>
+</div>
+</body>
+</html>
