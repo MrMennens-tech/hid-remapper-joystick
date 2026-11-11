@@ -2,7 +2,6 @@
 // Adapted from the original config-tool-web/code.js by @jfedor2
 
 import crc32 from './crc.js';
-import { DEFAULT_LAYER_COLORS } from './usages.js';
 
 // ─── Protocol Constants ───────────────────────────────────────────────────────
 const REPORT_ID_CONFIG  = 100;
@@ -19,7 +18,7 @@ const IGNORE_AUTH_DEV_INPUTS_FLAG = 1 << 4;
 const GPIO_OUTPUT_MODE_FLAG     = 1 << 5;
 const NORMALIZE_GAMEPAD_INPUTS_FLAG = 1 << 6;
 
-const NLAYERS   = 8;
+const NLAYERS   = 4;
 const NMACROS   = 32;
 const NEXPRESSIONS = 8;
 const MACRO_ITEMS_IN_PACKET = 6;
@@ -49,6 +48,14 @@ const SET_MONITOR_ENABLED = 22;
 const CLEAR_QUIRKS        = 23;
 const ADD_QUIRK           = 24;
 const GET_QUIRK           = 25;
+// TechRemap firmware extensions (see TECHREMAP.md); absent on upstream firmware
+const TR_GET_INFO         = 64;
+const TR_SET_LED          = 65;
+const TR_GET_LED          = 66;
+const TR_SET_PIN_NAME     = 67;
+const TR_GET_PIN_NAME     = 68;
+const TR_NO_PIN           = 0xFF;
+const TR_NAME_LEN         = 16;
 
 const PERSIST_CONFIG_SUCCESS        = 1;
 const PERSIST_CONFIG_CONFIG_TOO_BIG = 2;
@@ -79,7 +86,7 @@ const opcodes = Object.fromEntries(Object.entries(ops).map(([k,v]) => [v,k]));
 export function makeDefaultConfig() {
     return {
         version: CONFIG_VERSION,
-        unmapped_passthrough_layers: [0,1,2,3,4,5,6,7],
+        unmapped_passthrough_layers: [0,1,2,3],
         partial_scroll_timeout: 1000000,
         tap_hold_threshold: 200000,
         gpio_debounce_time_ms: 5,
@@ -94,7 +101,6 @@ export function makeDefaultConfig() {
         macros: Array.from({length: NMACROS}, () => []),
         expressions: Array(NEXPRESSIONS).fill(''),
         quirks: [],
-        layer_colors: [...DEFAULT_LAYER_COLORS],  // WS2812 LED colors per layer
     };
 }
 
@@ -127,9 +133,6 @@ function maskToLayerList(mask) {
     return list;
 }
 function layerListToMask(list) {
-    if (!list || list.length === 0) {
-        return 0;
-    }
     return list.reduce((m, i) => m | (1 << i), 0);
 }
 
@@ -232,16 +235,14 @@ export async function disconnectDevice() {
 // ─── Input Monitor ────────────────────────────────────────────────────────────
 function handleInputReport(event) {
     if (!monitorCallback) return;
-    const data = new DataView(event.data.buffer);
-    // Monitor report format: [usage_hi(2), usage_lo(2), hub_port(1), value(4)] * n
+    // Firmware struct monitor_report_item_t: uint32 usage, int32 value, uint8 hub_port (9 bytes)
+    const data = event.data;  // WebHID DataView, report ID already stripped
     let offset = 0;
     while (offset + 9 <= data.byteLength) {
-        const usageHi  = data.getUint16(offset, true);     offset += 2;
-        const usageLo  = data.getUint16(offset, true);     offset += 2;
-        const hubPort  = data.getUint8(offset);             offset += 1;
-        const value    = data.getInt32(offset, true);       offset += 4;
-        const usage    = '0x' + ((usageHi << 16 | usageLo) >>> 0).toString(16).padStart(8, '0');
-        if (usage !== '0x00000000') {
+        const usage   = '0x' + data.getUint32(offset, true).toString(16).padStart(8, '0');  offset += 4;
+        const value   = data.getInt32(offset, true);   offset += 4;
+        const hubPort = data.getUint8(offset);          offset += 1;
+        if (usage !== '0x00000000' && typeof monitorCallback === 'function') {
             monitorCallback({ usage, hubPort, value });
         }
     }
@@ -378,7 +379,7 @@ export async function loadConfig() {
 }
 
 // ─── Save Config To Device ────────────────────────────────────────────────────
-export async function saveConfig(cfg) {
+export async function saveConfig(cfg, ext = null) {
     if (!device) throw new Error('No device connected.');
     if (busy) throw new Error('Device is busy.');
     busy = true;
@@ -454,6 +455,8 @@ export async function saveConfig(cfg) {
             ]);
         }
 
+        if (ext) await sendExt(ext);
+
         await sendFeatureCommand(PERSIST_CONFIG);
         const [returnCode] = await readConfigFeature([UINT8]);
         await sendFeatureCommand(RESUME);
@@ -467,6 +470,84 @@ export async function saveConfig(cfg) {
         return true;
     } finally {
         busy = false;
+    }
+}
+
+// ─── TechRemap extensions ─────────────────────────────────────────────────────
+// Returns null on firmware without the extensions (upstream HID Remapper).
+export async function loadExt() {
+    if (!device) return null;
+    let info;
+    try {
+        await sendFeatureCommand(TR_GET_INFO);
+        info = await readConfigFeature([UINT8,UINT8,UINT8,UINT8,UINT32,UINT32,UINT8,UINT8,UINT8]);
+    } catch (_) {
+        return null;   // unknown command: the reply is not a valid packet
+    }
+    if (info[0] === 0 || info[0] === 0xFF) return null;
+    const ext = {
+        version: info[0], board: info[1], nlayers: info[2],
+        onboardLedPin: info[3] === TR_NO_PIN ? null : info[3],
+        boardPins: maskToPins(info[4]), usablePins: maskToPins(info[5]),
+        maxStripLeds: info[6],
+        activeStripPin: info[8] === TR_NO_PIN ? null : info[8],
+        led: null, pinNames: {},
+    };
+    await sendFeatureCommand(TR_GET_LED);
+    const l = await readConfigFeature([UINT8,UINT8,UINT8,UINT8,UINT32,UINT32,UINT32,UINT32]);
+    ext.led = {
+        brightness: l[0], stripPin: l[1] === TR_NO_PIN ? null : l[1], stripCount: l[2], stripOrder: l[3],
+        colors: l.slice(4, 8).map(c => '#' + c.toString(16).padStart(6, '0')),
+    };
+    const decoder = new TextDecoder();
+    for (const pin of ext.boardPins) {
+        await sendFeatureCommand(TR_GET_PIN_NAME, [[UINT32, pin]]);
+        const f = await readConfigFeature(Array(1 + TR_NAME_LEN).fill(UINT8));
+        const bytes = f.slice(1);
+        const end = bytes.indexOf(0);
+        const name = decoder.decode(new Uint8Array(end < 0 ? bytes : bytes.slice(0, end)));
+        if (name) ext.pinNames[pin] = name;
+    }
+    return ext;
+}
+
+function maskToPins(mask) {
+    const pins = [];
+    for (let i = 0; i < 30; i++) if (mask & (1 << i)) pins.push(i);
+    return pins;
+}
+
+// UTF-8 bytes of a name, cut at a character boundary so it fits the firmware's field.
+export function pinNameBytes(name) {
+    const encoder = new TextEncoder();
+    let out = [];
+    for (const ch of name) {
+        const b = Array.from(encoder.encode(ch));
+        if (out.length + b.length > TR_NAME_LEN) break;
+        out = out.concat(b);
+    }
+    while (out.length < TR_NAME_LEN) out.push(0);
+    return out;
+}
+
+function ledFields(led) {
+    return [
+        [UINT8, led.brightness], [UINT8, led.stripPin ?? TR_NO_PIN], [UINT8, led.stripCount], [UINT8, led.stripOrder],
+        ...led.colors.map(c => [UINT32, parseInt(c.slice(1), 16)]),
+    ];
+}
+
+// Apply LED settings right away (not saved until the config is saved).
+export async function previewLed(led) {
+    if (!device || busy) return;
+    await sendFeatureCommand(TR_SET_LED, ledFields(led));
+}
+
+async function sendExt(ext) {
+    await sendFeatureCommand(TR_SET_LED, ledFields(ext.led));
+    for (const pin of ext.boardPins) {
+        await sendFeatureCommand(TR_SET_PIN_NAME,
+            [[UINT8, pin]].concat(pinNameBytes(ext.pinNames[pin] || '').map(b => [UINT8, b])));
     }
 }
 
@@ -511,7 +592,9 @@ function exprToElems(expr) {
             if (tok.toLowerCase().startsWith('0x')) {
                 tokens.push([ops.PUSH_USAGE, parseInt(tok, 16)]);
             } else if (/^-?[0-9]/.test(tok)) {
-                tokens.push([ops.PUSH, Math.round(parseFloat(tok) * 1000)]);
+                // numbers are kept exactly as the device stores them (thousandths), the same
+                // way they are read back, so loading and saving does not change an expression
+                tokens.push([ops.PUSH, parseInt(tok, 10)]);
             } else if (tok === '\n' || tok.toLowerCase() === 'eol') {
                 tokens.push([ops.EOL]);
             } else {
@@ -531,15 +614,6 @@ export function exportConfigJSON(cfg) {
 export function importConfigJSON(json) {
     const parsed = JSON.parse(json);
     if (!parsed.version) throw new Error('Invalid config: missing version');
-    // Ensure layer_colors exists
-    if (!parsed.layer_colors) parsed.layer_colors = [...DEFAULT_LAYER_COLORS];
-    if (parsed.mappings) {
-        for (const m of parsed.mappings) {
-            if (!m.layers || m.layers.length === 0) {
-                m.layers = Array.from({ length: NLAYERS }, (_, i) => i);
-            }
-        }
-    }
     return parsed;
 }
 

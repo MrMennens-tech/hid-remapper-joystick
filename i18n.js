@@ -2,6 +2,13 @@
 // t('Laag {n}', { n: 2 }) -> "Laag 2" / "Layer 2". A missing entry falls back to the Dutch text.
 
 const EN = {
+    // credits
+    'TechRemap is gebouwd op': 'TechRemap is built on',
+    'van Jacek Fedoryński (jfedor2). Hij schreef de firmware waar alles op draait; TechRemap voegt een eenvoudigere bediening, lampjes en jacks toe.':
+        'by Jacek Fedoryński (jfedor2). He wrote the firmware everything runs on; TechRemap adds simpler controls, lights and jacks.',
+    'Vrijgegeven onder de': 'Released under the',
+    'Handleiding van HID Remapper': 'HID Remapper manual',
+
     // shell
     'Geen bordje verbonden': 'No board connected',
     'Demo zonder bordje': 'Demo without a board',

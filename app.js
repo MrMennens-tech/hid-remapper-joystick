@@ -1,1118 +1,590 @@
-// TechRemap — Main Application Logic
-// by Mennens.Tech
+// TechRemap - the screen. State lives in `S`; every change ends in render().
 
-import {
-    connectDevice, disconnectDevice, loadConfig, saveConfig,
-    exportConfigJSON, importConfigJSON, enableMonitor, disableMonitor,
-    isConnected, onHIDDisconnect, makeDefaultConfig, NLAYERS
-} from './device.js?v=5';
-import {
-    CONTROLLER_VISUAL, NAMED_USAGES, SOURCE_GROUPS,
-    getUsageName, getVisualIdForUsage,
-    firmwareColorToCSS, cssColorToFirmware, DEFAULT_LAYER_COLORS,
-    isMouseKeyboardMode, getGamepadSkin, GAMEPAD_SKIN_LABELS,
-    KEYBOARD_VISUAL_KEYS, MOUSE_KEYBOARD_VISUAL,
-} from './usages.js?v=5';
+import * as Dev from './device.js?v=2';
+import * as M from './model.js?v=2';
+import { DEVICES, DEVICE_ORDER, PANEL_W, keyName } from './pads.js?v=2';
+import { t, tKey, setLang, lang } from './i18n.js?v=2';
 
-// ─── App State ────────────────────────────────────────────────────────────────
-const state = {
-    config:         makeDefaultConfig(),
-    connected:      false,
-    dirty:          false,
-    activeTab:      'remap',
-    activeLayer:    0,
-    // Assignment panel
-    selectedVisual: null,   // which visual element is selected (e.g. 'btn-a')
-    stickSubMode:   'x',    // 'x' | 'y' | 'btn'
-    // Capture mode
-    capturing:      false,
-    captureUsage:   null,   // target usage we're assigning a source for
+const CLASSIC_URL = 'https://www.remapper.org/config/';   // HID Remapper's own tool
+const BOARD_NAMES = { 1: 'Waveshare RP2040-Zero', 2: 'Waveshare RP2350-USB-A' };
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+const S = {
+    cfg: null, ext: null, connected: false, demo: false, dirty: false, deviceName: '',
+    tab: 'remap', shown: -1, selected: null,
+    listen: null,        // { id, layer }: waiting for a press for this control
+    listenSwitch: null,  // { type, from, to }: waiting for a press for a layer switch
+    pending: null,       // input pressed first, waiting for a click on a control
+    last: null,          // { text, undo }: last change, for "Ongedaan maken"
+    active: new Map(),   // inputs currently pressed -> time last seen
+    rest: {},            // resting value of analog inputs
 };
+const device = () => DEVICES[S.cfg.our_descriptor_number] || DEVICES[0];
+const layerNo = l => l + 1;
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function setDirty(dirty = true) {
-    state.dirty = dirty;
-    const disabled = !dirty || !state.connected;
-    document.getElementById('save-btn').disabled = disabled;
-    document.getElementById('header-save-btn').disabled = disabled;
-}
-
-function notify(message, type = 'info', duration = 3000) {
-    const el = document.createElement('div');
-    el.className = `notification ${type}`;
-    el.textContent = message;
-    document.getElementById('notifications').appendChild(el);
-    setTimeout(() => el.remove(), duration);
-}
-
-// Returns all mappings for a given target usage on the active layer
-function getMappingsFor(targetUsage, layer = state.activeLayer) {
-    return state.config.mappings.filter(m =>
-        m.target_usage === targetUsage && (m.layers.length === 0 || m.layers.includes(layer))
-    );
-}
-
-// Returns the primary (first) mapping for a target usage
-function getPrimaryMapping(targetUsage) {
-    return getMappingsFor(targetUsage)[0] || null;
-}
-
-function getRemapVisualMap() {
-    const d = state.config.our_descriptor_number;
-    return isMouseKeyboardMode(d) ? MOUSE_KEYBOARD_VISUAL : CONTROLLER_VISUAL;
-}
-
-// Returns which target usage is "active" in the assignment panel
-function getActivePanelUsage() {
-    const vis = state.selectedVisual;
-    if (!vis) return null;
-    const info = getRemapVisualMap()[vis];
-    if (!info) return null;
-    if (info.isStick) {
-        if (state.stickSubMode === 'x')   return info.axisX;
-        if (state.stickSubMode === 'y')   return info.axisY;
-        if (state.stickSubMode === 'btn') return info.btnUsage;
+// ── names ────────────────────────────────────────────────────────────────────
+function sourceName(u, asStick = false) {
+    const n = parseInt(u, 16), page = n >>> 16, low = n & 0xffff;
+    if (page === 0xfff4) return (S.ext && S.ext.pinNames[low]) || `GPIO ${low}`;
+    if (page === 0x0009) return t('Knop {n}', { n: low });
+    if (page === 0xfff9) return 'D-pad ' + ({ 1: '←', 2: '→', 3: '↑', 4: '↓' }[low] || low);
+    if (page === 0x0007) return tKey(keyName(u) || `Toets ${low}`);
+    if (page === 0x0001) {
+        const axes = { 0x30: ['Linker stick', '↔'], 0x31: ['Linker stick', '↕'], 0x32: ['Rechter stick', '↔'], 0x35: ['Rechter stick', '↕'],
+                       0x33: ['Derde stick', '↔'], 0x34: ['Derde stick', '↕'], 0x36: ['Schuif', ''], 0x38: ['Scrollwiel', ''] };
+        if (axes[low]) return asStick ? t(axes[low][0]) : (t(axes[low][0]) + ' ' + axes[low][1]).trim();
     }
-    return info.usages[0];
+    if (page === 0x0002 && low === 0xc4) return t('Gaspedaal');
+    if (page === 0x0002 && low === 0xc5) return t('Rempedaal');
+    if (page === 0xfff3) return t('Expressie {n}', { n: low });
+    return u;
 }
-
-// ─── Layer colour helpers ──────────────────────────────────────────────────────
-function getLayerCSSColor(index) {
-    const fw = state.config.layer_colors?.[index] ?? DEFAULT_LAYER_COLORS[index];
-    return firmwareColorToCSS(fw);
+function targetName(u) {
+    const c = Object.values(device().controls).find(x => (x.targets || []).some(t => t.u === u) || (x.axes || []).includes(u));
+    if (c) return tKey(c.name);
+    const n = parseInt(u, 16);
+    if ((n >>> 16) === 0xfff1) return t('laag {n} (zolang ingedrukt)', { n: layerNo(n & 0xffff) });
+    if ((n >>> 16) === 0xfffc) return t('ga naar laag {n}', { n: layerNo(n & 0xffff) });
+    return t('een andere functie');
 }
-
-function updateLayerLeds() {
-    document.querySelectorAll('.layer-led').forEach((dot, i) => {
-        dot.style.background = getLayerCSSColor(i);
-        dot.style.boxShadow  = `0 0 6px ${getLayerCSSColor(i)}`;
-    });
-    document.querySelectorAll('.led-preview').forEach((dot, i) => {
-        const color = getLayerCSSColor(i);
-        dot.style.background = color;
-        dot.style.boxShadow  = `0 0 10px ${color}`;
-        dot.style.setProperty('--preview-color', color);
-    });
-    document.querySelectorAll('input[type="color"].led-color-input').forEach((inp, i) => {
-        inp.value = getLayerCSSColor(i);
-    });
-}
-
-// ─── Controller Visual ────────────────────────────────────────────────────────
-
-const MODE_NAMES = {
-    0: '🖱️ Mouse + Keyboard',
-    1: '🖱️ Absolute Mouse + Keyboard',
+const REASONS = {
+    'stick-needs-stick': 'Hier hoort een joystick bij. Beweeg een joystick, of gebruik de richtingen ← → ↑ ↓ voor losse knoppen.',
+    'needs-button': 'Hier hoort een knop of jack bij, geen joystick.',
+    'no-slot': 'Er is geen ruimte meer voor nog een joystick-koppeling. Verwijder eerst een andere, of een expressie in de originele HID Remapper-tool.',
 };
+const stickLike = c => c.kind === 'stick' || c.kind === 'expr';
 
-function refreshButtonLabels() {
-    const mode = state.config?.our_descriptor_number ?? 5;
-    if (!isMouseKeyboardMode(mode)) {
-        applyGamepadSkin(getGamepadSkin(mode));
-    }
-
-    const badge = document.getElementById('controller-mode-badge');
-    if (badge) {
-        const name = MODE_NAMES[mode];
-        badge.textContent = name ?? '';
-        badge.classList.toggle('visible', !!name);
-    }
+// ── changing the config ──────────────────────────────────────────────────────
+function change(text, fn) {
+    const before = JSON.stringify(S.cfg.mappings);
+    fn();
+    S.dirty = true;
+    S.last = text ? { text, undo: before } : null;
+}
+function undo() {
+    if (!S.last) return;
+    S.cfg.mappings = JSON.parse(S.last.undo);
+    S.last = null;
+}
+function doAssign(id, layer, source, add = false) {
+    const control = device().controls[id];
+    const reason = M.rejects(control, source, S.cfg);
+    if (reason) { toast(t(REASONS[reason]), true); return false; }
+    const label = sourceName(source, stickLike(control));
+    change(t(add ? '{source} bedient nu ook {control} op laag {n}.' : '{source} bedient nu {control} op laag {n}.', { source: label, control: tKey(control.name), n: layerNo(layer) }),
+        () => M.assign(S.cfg, control, layer, source, add));
+    const also = M.alsoDrives(S.cfg, control, source, layer).filter(m => (parseInt(m.target_usage, 16) >>> 16) < 0xfff0);
+    if (also.length) S.last.text += t(' Let op: op deze laag bedient {source} ook {others}.', { source: label, others: [...new Set(also.map(m => targetName(m.target_usage)))].join(t(' en ')) });
+    S.selected = id;
+    return true;
 }
 
-function refreshControllerVisual() {
-    const map = getRemapVisualMap();
-    // Update which elements show as "mapped"
-    document.querySelectorAll('.pad-clickable').forEach(el => {
-        const vis  = el.dataset.input;
-        const info = map[vis];
-        if (!info) return;
-        const isMapped = info.usages.some(u => getMappingsFor(u).length > 0);
-        el.classList.toggle('mapped', isMapped);
-        el.classList.toggle('selected', vis === state.selectedVisual);
+// ── hardware input (from the device's monitor, or simulated) ─────────────────
+function onInput(usage, value) {
+    const now = Date.now();
+    let fired = false;
+    if (M.isAnalog(usage)) {
+        if (!(usage in S.rest)) { S.rest[usage] = value; return; }
+        const big = Math.abs(S.rest[usage]) > 1023 || Math.abs(value) > 1023;
+        const moved = Math.abs(value - S.rest[usage]) >= (big ? 8000 : 40);
+        fired = moved && !S.active.has(usage);
+        moved ? S.active.set(usage, now) : S.active.delete(usage);
+    } else {
+        const seen = S.active.get(usage);
+        fired = value !== 0 && (seen === undefined || now - seen > 700);
+        value !== 0 ? S.active.set(usage, now) : S.active.delete(usage);
+    }
+    if (fired) captured(usage);
+    schedulePressed();
+}
+function captured(usage) {
+    if (S.listenSwitch) {
+        const { type, from, to } = S.listenSwitch;
+        S.listenSwitch = null;
+        const msg = type === 'goto' ? '{source} gaat naar laag {to} (op laag {from}).' : '{source} activeert laag {to} zolang ingedrukt (op laag {from}).';
+        change(t(msg, { source: sourceName(usage), to: layerNo(to), from: layerNo(from) }), () => M.addSwitch(S.cfg, type, from, to, usage));
+    } else if (S.listen) {
+        const { id, layer, add } = S.listen;
+        if (doAssign(id, layer, usage, add)) S.listen = null;
+    } else if (S.tab === 'remap') {
+        S.pending = usage;
+        S.last = null;
+    } else return;
+    render();
+}
+let pressedFrame = 0;
+function schedulePressed() {
+    if (pressedFrame) return;
+    pressedFrame = requestAnimationFrame(() => { pressedFrame = 0; paintPressed(); });
+}
+setInterval(() => {          // inputs that stopped reporting are no longer pressed
+    const cutoff = Date.now() - 1500;
+    let changed = false;
+    for (const [u, t] of S.active) if (t < cutoff && !M.isAnalog(u)) { S.active.delete(u); changed = true; }
+    if (changed) schedulePressed();
+}, 500);
+
+// Which controls does an input drive (on any layer)?
+function drivenBy(usages) {
+    const ids = new Set();
+    if (!usages.size) return ids;
+    const ctl = device().controls;
+    for (const id in ctl) {
+        if (M.chips(S.cfg, ctl[id]).some(c => usages.has(c.source) || (stickLike(ctl[id]) && (M.stickPair(c.source) || []).some(a => usages.has(a))))) ids.add(id);
+    }
+    return ids;
+}
+function paintPressed() {
+    if (!S.cfg || S.tab !== 'remap') { paintPins(); return; }
+    const ids = drivenBy(new Set(S.active.keys()));
+    const stands = S.scene ? S.scene.stands : {};
+    document.querySelectorAll('#page-remap [data-id]').forEach(el => {
+        const id = el.dataset.id;
+        el.classList.toggle('pressed', ids.has(id) || (el.classList.contains('pad-hit') && (stands[id] || []).some(x => ids.has(x))));
     });
 }
-
-function handleControllerClick(visId) {
-    const info = getRemapVisualMap()[visId];
-    if (!info) return;
-
-    state.selectedVisual = visId;
-
-    // Default stick sub-mode
-    if (info.isStick) state.stickSubMode = 'x';
-
-    refreshControllerVisual();
-    renderAssignPanel();
-    requestAnimationFrame(() => {
-        const search = document.getElementById('source-search');
-        if (search) search.focus();
-    });
+function paintPins() {
+    document.querySelectorAll('.pin[data-pin]').forEach(el =>
+        el.classList.toggle('active', S.active.has(M.hex(0xfff40000 | Number(el.dataset.pin)))));
 }
 
-function applyGamepadSkin(skinKey) {
-    const L = GAMEPAD_SKIN_LABELS[skinKey] || GAMEPAD_SKIN_LABELS.xbox;
-    const gamepad = document.getElementById('remap-visual-gamepad');
-    if (!gamepad) return;
-    const setPart = (part, text) => {
-        gamepad.querySelectorAll(`[data-skin-part="${part}"]`).forEach((el) => {
-            el.textContent = text;
-        });
+// ── rendering: Knoppen ───────────────────────────────────────────────────────
+const chip = (l, t, cls = '') => `<span class="chip ${cls}" data-l="${l}"><span class="dot d${l + 1}"></span><span class="t">${esc(t)}</span></span>`;
+function chipsHTML(control) {
+    const cs = M.chips(S.cfg, control);
+    return cs.length ? cs.map(c => chip(c.layer, sourceName(c.source, stickLike(control)))).join('') : `<span class="muted">${esc(t('Niet toegewezen'))}</span>`;
+}
+
+function renderRemap() {
+    const dev = device(), ctl = dev.controls, scene = dev.scene();
+    S.scene = scene;
+    if (!ctl[S.selected]) S.selected = Object.keys(ctl)[0];
+    $('device-pill').innerHTML = `${esc(t('De pc ziet:'))} <b>${esc(t(dev.label))}</b>`;
+
+    const row = id => `<button type="button" class="row" data-id="${id}"><span class="glyph">${esc(ctl[id].g)}</span><span class="chips">${chipsHTML(ctl[id])}</span></button>`;
+    let marks = '';
+    for (const id in scene.markAt) {
+        const layers = [...new Set((scene.stands[id] || [id]).flatMap(x => M.chips(S.cfg, ctl[x]).map(c => c.layer)))].sort();
+        layers.forEach((l, i) => { marks += `<circle class="mark m${l + 1}" data-l="${l}" cx="${scene.markAt[id][0] + i * 9}" cy="${scene.markAt[id][1]}" r="5"/>`; });
+    }
+    const panels = scene.panels.map(p => `<foreignObject x="${p.x}" y="${p.y}" width="${PANEL_W}" height="${p.h}">` +
+        `<div xmlns="http://www.w3.org/1999/xhtml" class="panel"><h2>${esc(t(p.title))}</h2>${p.ids.map(row).join('')}</div></foreignObject>`).join('');
+    const stage = $('stage');
+    stage.setAttribute('viewBox', `0 44 1180 ${scene.bottom + 14 - 44}`);
+    stage.innerHTML = scene.drawing + scene.leaders + marks + panels;
+
+    const notes = $('notes');
+    notes.hidden = !dev.notes;
+    if (dev.notes) notes.innerHTML = `<summary>${esc(t(dev.notes.title))}</summary><ul>${dev.notes.items.map(n => `<li>${esc(t(n))}</li>`).join('')}</ul>`;
+
+    $('hub-note').innerHTML = `<summary>${esc(t('Samen spelen: meerdere apparaten tegelijk'))}</summary><ul>` +
+        ['Met een USB-hub tussen het bordje en je apparaten sluit je er meerdere tegelijk aan, bijvoorbeeld een controller, losse knoppen, een muis en een toetsenbord.',
+         'Alles komt samen in één apparaat voor de pc of console. Zo kan iemand meespelen als copiloot: de een gebruikt de controller, de ander een paar knoppen.',
+         'Twee mensen dezelfde knop geven? Wijs de eerste toe, klik daarna op “Nog een” en druk op de tweede.',
+         'Het bordje meldt zich altijd als één apparaat; twee aparte controllers als uitvoer kan niet.',
+         'Dit staat zo in de handleiding van HID Remapper. Wij hebben het met een hub zelf nog niet getest.'].map(n => `<li>${esc(t(n))}</li>`).join('') + '</ul>';
+
+    $('kbd-card').hidden = !dev.keyboard;
+    $('kbd').innerHTML = !dev.keyboard ? '' : dev.keyboard.map(r => '<div class="kbd-row">' + r.map(k =>
+        `<button type="button" class="kkey" data-id="${k.id}" style="flex-grow:${k.w}" aria-label="${esc(tKey(k.name))}">${esc(t(k.g))}` +
+        `<span class="kd">${M.chips(S.cfg, ctl[k.id]).map(c => `<span class="dot d${c.layer + 1} mark" data-l="${c.layer}"></span>`).join('')}</span></button>`).join('') + '</div>').join('');
+
+    renderDetail(ctl[S.selected]);
+    renderSwitches();
+
+    const banner = $('banner');
+    banner.className = 'banner';
+    banner.hidden = false;
+    const cancel = `<button type="button" data-cancel>${esc(t('Annuleer'))}</button>`;
+    if (S.listenSwitch) banner.innerHTML = `<span>${esc(t('Druk nu op de knop of jack die de laag moet wisselen.'))}</span>${cancel}`;
+    else if (S.pending) banner.innerHTML = `<span>${esc(t('{source} ingedrukt. Klik op wat hij moet bedienen op laag {n}.', { source: sourceName(S.pending, true), n: layerNo(Math.max(S.shown, 0)) }))}</span>${cancel}`;
+    else if (S.last) banner.innerHTML = `<span>${esc(S.last.text)}</span><button type="button" data-undo>${esc(t('Ongedaan maken'))}</button>`;
+    else banner.hidden = true;
+
+    const live = S.pending ? drivenBy(new Set([S.pending, ...(M.stickPair(S.pending) || [])])) : new Set();
+    document.querySelectorAll('#page-remap [data-id]').forEach(el => {
+        const id = el.dataset.id, group = el.classList.contains('pad-hit') ? (scene.stands[id] || [id]) : [id];
+        el.classList.toggle('sel', group.includes(S.selected));
+        el.classList.toggle('live', group.some(x => live.has(x)));
+    });
+    document.querySelectorAll('#page-remap .chip[data-l], #page-remap .mark').forEach(el =>
+        el.classList.toggle('dim', S.shown >= 0 && Number(el.dataset.l) !== S.shown));
+    document.querySelectorAll('#layers button').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.layer) === S.shown)));
+    paintPressed();
+}
+
+function renderDetail(control) {
+    const asStick = stickLike(control);
+    $('detail-title').textContent = tKey(control.name);
+    $('detail-sub').textContent = t(asStick ? 'Klik op “Wijzig” en beweeg daarna de joystick die dit moet bedienen.' : 'Klik op “Wijzig” en druk daarna op je knop of jack.');
+    const btn = (attr, label, cls = '') => `<button type="button"${cls ? ` class="${cls}"` : ''} ${attr}>${esc(t(label))}</button>`;
+    let html = '';
+    for (let l = 0; l < M.NLAYERS; l++) {
+        const st = M.layerState(S.cfg, control, l);
+        const on = S.listen && S.listen.id === S.selected && S.listen.layer === l;
+        const names = (st.sources || []).map(s => sourceName(s, asStick)).join(t(' en '));
+        // each input can be taken away on its own when there is more than one
+        const several = st.state === 'set' && st.sources.length > 1 && !on;
+        const text = st.state === 'set' ? names
+            : st.state === 'same' ? t('Zelfde als laag 1 ({names})', { names })
+            : st.state === 'moved' ? t('Niets. {source} doet hier: {what}.', { source: sourceName(st.source, asStick), what: targetName(st.to) })
+            : st.state === 'off' ? t('Niets op deze laag') : t('Niet toegewezen');
+        const acts = [];
+        if (on) acts.push(btn('data-cancel', 'Annuleer', 'go'));
+        else {
+            acts.push(btn(`data-listen="${l}"`, 'Wijzig'));
+            if (st.state === 'set') acts.push(btn(`data-add="${l}"`, 'Nog een'));
+            if (l === 0 && st.state === 'set') acts.push(btn(`data-clear="${l}"`, 'Wis'));
+            if (l > 0 && ['set', 'off', 'moved'].includes(st.state) && M.layerState(S.cfg, control, 0).state === 'set') acts.push(btn(`data-inherit="${l}"`, 'Zelfde als laag 1'));
+            if (l > 0 && ['set', 'same'].includes(st.state)) acts.push(btn(`data-clear="${l}"`, 'Niets'));
+        }
+        html += `<div class="detail-row${on ? ' listening' : ''}"><span class="lname"><span class="dot d${l + 1}"></span>${esc(t('Laag {n}', { n: layerNo(l) }))}</span>` +
+            `<span class="val${st.state === 'set' || on ? '' : ' same'}">${several
+                ? st.sources.map(s => `<span class="src">${esc(sourceName(s, asStick))}<button type="button" data-remove="${l}|${s}" aria-label="${esc(t('Verwijder {source}', { source: sourceName(s, asStick) }))}">✕</button></span>`).join('')
+                : esc(on ? t(asStick ? 'Beweeg nu de joystick…' : 'Druk nu op je knop of jack…') : text)}</span>` +
+            `<span class="acts">${acts.join('')}</span></div>`;
+    }
+    const slider = (id, label, min, max, value, shown) => `<div class="detail-row"><span class="lname">${esc(t(label))}</span>` +
+        `<span class="val"><input type="range" id="${id}" min="${min}" max="${max}" value="${value}" aria-label="${esc(t(label))}"></span><span class="acts" id="${id}-val">${shown}</span></div>`;
+    if (control.range) { const v = M.speed(S.cfg, control) ?? control.speed; html += slider('speed', 'Snelheid', control.range[0], control.range[1], v, scalingText(v)); }
+    if (control.kind === 'expr') { const v = Math.round((M.deadzone(S.cfg, control) ?? control.dz) / 1280); html += slider('deadzone', 'Dode zone', 0, 40, v, v + '%'); }
+    $('detail-rows').innerHTML = html;
+}
+
+// The same number HID Remapper's own tool calls "scaling" (1 = normal speed).
+const scalingText = v => (v / 1000).toLocaleString(lang, { maximumFractionDigits: 3 }) + '×';
+
+function renderSwitches() {
+    const sw = M.switches(S.cfg);
+    const text = s => t({ goto: 'Ga naar laag {n}', hold: '⇧ Laag {n} zolang ingedrukt', toggle: 'Laag {n} aan/uit' }[s.type], { n: layerNo(s.to) });
+    $('switches').innerHTML = sw.length ? sw.map((s, i) =>
+        `<div class="row" style="cursor:default"><span class="chips"><span class="chip key"><span class="t">${esc(text(s))}</span></span>` +
+        s.from.map(l => chip(l, sourceName(s.source))).join('') + `</span><button type="button" class="xbtn" data-unswitch="${i}">${esc(t('Verwijder'))}</button></div>`).join('')
+        : `<span class="muted" style="padding:4px 6px">${esc(t('Nog geen laagknoppen.'))}</span>`;
+    const stranded = M.strandedLayers(S.cfg);
+    $('switch-warn').hidden = !stranded.length;
+    $('switch-warn').innerHTML = stranded.map(l => `<span><b>${esc(t('Let op.'))}</b> ${esc(t('Vanuit laag {n} kun je niet terug naar laag 1. Opnieuw insteken brengt je altijd terug.', { n: layerNo(l) }))}</span>`).join('');
+    const canGoto = S.demo || !!S.ext;
+    const type = $('sw-type'), keep = type.value;
+    type.innerHTML = (canGoto ? `<option value="goto">${esc(t('ga naar'))}</option>` : '') + `<option value="hold">${esc(t('zolang ingedrukt naar'))}</option>`;
+    if ([...type.options].some(o => o.value === keep)) type.value = keep;
+    $('sw-add').textContent = t(S.listenSwitch ? 'Annuleer' : 'Kies knop of jack');
+    for (const id of ['sw-from', 'sw-to']) [...$(id).options].forEach(o => { o.textContent = t('laag {n}', { n: Number(o.value) + 1 }); });
+}
+
+// ── rendering: other tabs ────────────────────────────────────────────────────
+const needsExt = what => `<h3>${esc(t(what))}</h3><p class="sub">${esc(t('Dit bordje draait de officiële HID Remapper-firmware. Daarmee kun je knoppen en lagen instellen, maar dit onderdeel zit alleen in de TechRemap-firmware.'))}</p>`;
+
+function applyLayerColors() {
+    const colors = S.ext ? S.ext.led.colors : ['#5b8def', '#4ade80', '#f87171', '#fbbf24'];
+    const dark = (document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')) === 'dark';
+    colors.forEach((c, i) => {
+        // on a light page, pure LED colours wash out; darken them a little there
+        const n = parseInt(c.slice(1), 16), f = dark ? 1 : 0.72;
+        const rgb = [n >> 16, (n >> 8) & 255, n & 255].map(v => Math.round(v * f));
+        document.documentElement.style.setProperty(`--l${i + 1}`, `rgb(${rgb.join(',')})`);
+    });
+}
+function renderLed() {
+    const card = $('led-card');
+    if (!S.ext) { card.innerHTML = needsExt('Lampjes'); return; }
+    const led = S.ext.led;
+    card.innerHTML = `<h3>${esc(t('Lampjes'))}</h3><p class="sub">${esc(t('De lamp op het bordje toont in welke laag je zit. Wijzigingen zie je meteen; ze blijven pas bewaard na “Opslaan op bordje”.'))}</p>` +
+        led.colors.map((c, i) => `<div class="field"><label for="col${i}">${esc(t('Kleur laag {n}', { n: i + 1 }))}</label><input type="color" id="col${i}" data-color="${i}" value="${c}"></div>`).join('') +
+        `<div class="field"><label for="bright">${esc(t('Helderheid'))}</label><div class="inline"><input type="range" id="bright" min="0" max="255" value="${led.brightness}"><span id="bright-val">${Math.round(led.brightness / 2.55)}%</span></div></div>`;
+}
+function stripCurrent() {
+    const led = S.ext.led;
+    return Math.round(led.stripCount * 60 * led.brightness / 255);
+}
+function renderBoard() {
+    const card = $('board-card'), strip = $('strip-card');
+    if (!S.ext) { card.innerHTML = needsExt('Bord inrichten'); strip.hidden = true; return; }
+    strip.hidden = false;
+    const e = S.ext, led = e.led;
+    const T = x => esc(t(x));
+    card.innerHTML = `<h3>${T('Jacks en pinnen')}</h3><p class="sub">${T('Geef elke pin waar je een jack of schakelaar aan hebt gesoldeerd een naam. Die naam zie je daarna overal in plaats van het pinnummer. Druk op een schakelaar om te zien welke pin het is.')} ${T('Een schakelaar of jack sluit je aan tussen de pin en GND; meerdere schakelaars mogen dezelfde GND delen.')}</p>` +
+        `<div class="pins">` + e.boardPins.map(p => {
+            const taken = p === e.activeStripPin || p === led.stripPin;
+            return `<div class="pin${taken ? ' taken' : ''}" data-pin="${p}"><span class="lamp"></span><span class="n">GPIO ${p}</span>` +
+                `<input type="text" data-pinname="${p}" maxlength="16" placeholder="${T(taken ? 'LED-strip' : 'bijv. Input Jack 1')}" value="${esc(e.pinNames[p] || '')}" aria-label="${esc(t('Naam voor GPIO {n}', { n: p }))}"></div>`;
+        }).join('') + `</div>`;
+    const mA = stripCurrent();
+    strip.innerHTML = `<h3>${T('LED-strip of -ring')}</h3><p class="sub">${T('Een WS2812-strip of -ring die de laagkleur toont. Sluit de datalijn aan op de gekozen pin.')}</p>` +
+        (e.maxStripLeds ? `
+        <div class="field"><label for="strip-pin">${T('Pin')}</label><select id="strip-pin"><option value="">${T('Geen strip')}</option>${e.boardPins.map(p => `<option value="${p}"${p === led.stripPin ? ' selected' : ''}>GPIO ${p}${e.pinNames[p] ? ' · ' + esc(e.pinNames[p]) : ''}</option>`).join('')}</select>
+            <span class="hint">${T('Een andere pin werkt pas nadat je hebt opgeslagen en het bordje opnieuw hebt ingestoken.')}${e.activeStripPin !== led.stripPin ? ` <b>${T('Nog niet actief.')}</b>` : ''}</span></div>
+        <div class="field"><label for="strip-count">${T('Aantal LEDs')}</label><input type="number" id="strip-count" min="0" max="${e.maxStripLeds}" value="${led.stripCount}"></div>
+        <div class="field"><label for="strip-order">${T('Kleurvolgorde')}</label><select id="strip-order"><option value="0"${led.stripOrder === 0 ? ' selected' : ''}>${T('GRB (meeste strips)')}</option><option value="1"${led.stripOrder === 1 ? ' selected' : ''}>RGB</option></select>
+            <span class="hint">${T('Kloppen de kleuren niet (rood en groen verwisseld)? Kies dan de andere volgorde.')}</span></div>
+        ${mA > 400 ? `<div class="warn"><span><b>${T('Let op.')}</b> ${esc(t('{count} LEDs op deze helderheid kunnen tot ongeveer {mA} mA trekken. Dat is meer dan een USB-poort veilig levert; verlaag de helderheid of voed de strip apart.', { count: led.stripCount, mA }))}</span></div>` : ''}`
+        : `<p class="sub">${T('Deze firmware kan geen strip aansturen.')}</p>`);
+    paintPins();
+}
+function renderSettings() {
+    const c = S.cfg, pass = c.unmapped_passthrough_layers.length > 0, T = x => esc(t(x));
+    const fw = S.demo ? t('Demo, geen bordje verbonden')
+        : S.ext ? (BOARD_NAMES[S.ext.board] ? t('TechRemap-firmware op {board}', { board: BOARD_NAMES[S.ext.board] }) : t('TechRemap-firmware')) : t('Officiële HID Remapper-firmware');
+    $('settings-card').innerHTML = `<h3>${T('Instellingen')}</h3>
+        <div class="field"><label for="devtype">${T('De pc ziet het bordje als')}</label><select id="devtype">${DEVICE_ORDER.map(n => `<option value="${n}"${n === c.our_descriptor_number ? ' selected' : ''}>${T(DEVICES[n].label)}</option>`).join('')}</select>
+            <span class="hint">${T('Werkt nadat je hebt opgeslagen en het bordje opnieuw hebt ingestoken.')}</span></div>
+        ${S.offerWipe ? `<div class="warn"><span><b>${T('Let op.')}</b> ${T('De toewijzingen die je al had zijn voor het vorige apparaat gemaakt en betekenen hier iets anders.')} <button type="button" class="btn" id="wipe">${T('Begin met een lege indeling')}</button> <button type="button" class="btn" id="keep">${T('Behoud ze toch')}</button></span></div>` : ''}
+        <div class="field"><label for="pass">${T('Niet-toegewezen knoppen')}</label><div class="inline"><input type="checkbox" id="pass"${pass ? ' checked' : ''}><label for="pass">${T('gewoon doorgeven aan de pc')}</label></div>
+            <span class="hint">${T('Handig als je een gewone controller insteekt en maar een paar knoppen wilt veranderen.')}</span></div>
+        <div class="field"><label for="lang">${T('Taal')}</label><select id="lang"><option value="nl"${lang === 'nl' ? ' selected' : ''}>Nederlands</option><option value="en"${lang === 'en' ? ' selected' : ''}>English</option></select></div>
+        <div class="field"><span class="flabel">${T('Reservekopie')}</span><div class="inline"><button type="button" class="btn" id="export">${T('Bewaar als bestand')}</button><button type="button" class="btn" id="import">${T('Laad uit bestand')}</button><input type="file" id="import-file" accept=".json,application/json" hidden></div></div>
+        <div class="field"><span class="flabel">${T('Voor gevorderden')}</span><div class="inline"><a class="btn" href="${CLASSIC_URL}" target="_blank" rel="noopener">${T('Open de originele HID Remapper-tool')}</a></div>
+            <span class="hint">${T('Macro’s, expressies en quirks stel je voorlopig daar in. Wat je hier instelt blijft daar zichtbaar, en andersom.')}</span></div>
+        <div class="field"><span class="flabel">${T('Firmware')}</span><span>${esc(fw)}</span></div>`;
+}
+
+function render() {
+    const has = !!S.cfg;
+    document.querySelectorAll('[data-t]').forEach(el => { el.textContent = t(el.dataset.t); });
+    document.querySelectorAll('.ln[data-n]').forEach(el => { el.textContent = t('Laag {n}', { n: el.dataset.n }); });
+    document.querySelectorAll('[data-t-label]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.tLabel)); });
+    document.querySelectorAll('#lang-pick button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.langSet === lang)));
+    $('welcome').hidden = has;
+    $('app').hidden = !has;
+    $('status').classList.toggle('on', S.connected);
+    $('status-text').textContent = S.connected ? S.deviceName : t(S.demo ? 'Demo zonder bordje' : 'Geen bordje verbonden');
+    $('connect').hidden = S.connected;
+    $('save').disabled = !has || !S.dirty;
+    $('save').textContent = t(S.dirty || !has ? 'Opslaan op bordje' : 'Opgeslagen');
+    if (!has) return;
+    applyLayerColors();
+    document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === S.tab)));
+    for (const t of ['remap', 'led', 'board', 'settings']) $('page-' + t).hidden = t !== S.tab;
+    $('sim').hidden = !S.demo;
+    if (S.demo) renderSim();
+    if (S.tab === 'remap') renderRemap();
+    if (S.tab === 'led') renderLed();
+    if (S.tab === 'board') renderBoard();
+    if (S.tab === 'settings') renderSettings();
+}
+
+let toastTimer = 0;
+function toast(text, err = false) {
+    const box = $('toast');
+    box.textContent = text; box.className = 'toast' + (err ? ' err' : ''); box.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { box.hidden = true; }, err ? 7000 : 3500);
+}
+
+// ── device ───────────────────────────────────────────────────────────────────
+async function connect() {
+    try {
+        const info = await Dev.connectDevice();
+        S.cfg = M.normalize(await Dev.loadConfig());
+        S.ext = await Dev.loadExt();
+        S.connected = true; S.demo = false; S.dirty = false;
+        S.deviceName = info.name || 'HID Remapper';
+        S.selected = null; S.listen = S.pending = S.last = S.listenSwitch = null;
+        await Dev.enableMonitor(r => onInput(r.usage, r.value));
+        render();
+    } catch (e) {
+        if (e && e.name !== 'NotFoundError') toast(String(e.message || e), true);
+    }
+}
+let previewTimer = 0;
+function previewLed() {
+    if (!S.connected) return;
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(() => Dev.previewLed(S.ext.led).catch(() => {}), 60);
+}
+async function save() {
+    if (S.demo) { S.dirty = false; toast(t('Demo: er is geen bordje om op te slaan.')); render(); return; }
+    $('save').disabled = true; $('save').textContent = t('Bezig…');
+    try {
+        await Dev.saveConfig(S.cfg, S.ext);
+        S.dirty = false; S.last = null;
+        toast(t('Opgeslagen op het bordje.'));
+    } catch (e) {
+        toast(t('Opslaan is niet gelukt: {why}', { why: e.message || e }), true);
+    }
+    render();
+}
+function startDemo() {
+    S.cfg = M.normalize(Dev.makeDefaultConfig());
+    S.cfg.our_descriptor_number = 5;
+    S.ext = {
+        version: 1, board: 1, nlayers: 4, onboardLedPin: 16, maxStripLeds: 64, activeStripPin: null,
+        boardPins: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 26, 27, 28, 29],
+        usablePins: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 26, 27, 28, 29],
+        led: { brightness: 64, stripPin: null, stripCount: 0, stripOrder: 0, colors: ['#0000ff', '#00ff00', '#ff0000', '#ffff00'] },
+        pinNames: { 2: 'Input Jack 1', 3: 'Input Jack 2', 4: 'Input Jack 3' },
     };
-    setPart('y', L.y);
-    setPart('x', L.x);
-    setPart('b', L.b);
-    setPart('a', L.a);
-    setPart('back', L.back);
-    setPart('start', L.start);
-    setPart('home', L.home);
+    S.demo = true; S.connected = false; S.dirty = false;
+    const sims = [['0xfff40002', 0], ['0xfff40003', 0], ['0xfff40004', 0], ['0x00090001', 0], ['0xfff90003', 0], ['0x00010030', 1], ['0x00010032', 1]];
+    S.sims = sims;
+    sims.filter(s => s[1]).forEach(([u]) => onInput(u, 128));
+    render();
+}
+function renderSim() {
+    $('sim').innerHTML = `<span class="lbl">${esc(t('Demo: druk op je hardware'))}</span>` +
+        S.sims.map(([u, a]) => `<button type="button" data-sim="${u}" data-analog="${a}">${esc(sourceName(u, true))}</button>`).join('');
 }
 
-/** Welk gamepad-art-paneel hoort bij firmware-skin (zelfde layout als descriptor-tabel). */
-function gamepadArtPanelIdForSkin(skinKey) {
-    if (skinKey === 'switch') return 'gamepad-art-switch';
-    if (skinKey === 'ps4') return 'gamepad-art-ps4';
-    if (skinKey === 'stadia') return 'gamepad-art-stadia';
-    return 'gamepad-art-xbox';
-}
-
-function updateGamepadArtVisibility() {
-    const d = state.config.our_descriptor_number;
-    if (isMouseKeyboardMode(d)) return;
-    const skin = getGamepadSkin(d);
-    const showId = gamepadArtPanelIdForSkin(skin);
-    document.querySelectorAll('#remap-visual-gamepad .gamepad-art-panel').forEach((panel) => {
-        panel.classList.toggle('hidden', panel.id !== showId);
-        panel.setAttribute('aria-hidden', panel.id !== showId ? 'true' : 'false');
-    });
-}
-
-function updateRemapOutputHint() {
-    const hint = document.getElementById('remap-output-hint');
-    if (!hint) return;
-    const d = state.config.our_descriptor_number;
-    const labels = [
-        'Output: mouse + keyboard',
-        'Output: absolute mouse + keyboard',
-        'Output: Switch-style gamepad',
-        'Output: PS4 / arcade-style gamepad',
-        'Output: Stadia-style gamepad',
-        'Output: Xbox / XAC compatible gamepad',
-    ];
-    hint.textContent = labels[d] ?? labels[0];
-}
-
-function updateAssignEmptyCopy() {
-    const icon = document.getElementById('assign-empty-icon');
-    const text = document.getElementById('assign-empty-text');
-    if (!text) return;
-    if (isMouseKeyboardMode(state.config.our_descriptor_number)) {
-        if (icon) icon.textContent = '🖱️';
-        text.textContent = 'Click a mouse area, scroll control, or keyboard key to map outputs from your inputs.';
-    } else {
-        if (icon) icon.textContent = '🎮';
-        text.textContent = 'Click any button or stick on the controller to configure its mapping.';
-    }
-}
-
-function ensureKeyboardGridRendered() {
-    const grid = document.getElementById('keyboard-grid');
-    if (!grid || grid.dataset.ready === '1') return;
-    grid.innerHTML = '';
-    for (const k of KEYBOARD_VISUAL_KEYS) {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'kbd-key pad-clickable';
-        b.dataset.input = k.id;
-        b.textContent = k.label;
-        b.title = k.label;
-        grid.appendChild(b);
-    }
-    grid.dataset.ready = '1';
-}
-
-/** Show mouse+keyboard vs gamepad visuals; refresh highlights. Call after load / emulation change. */
-function updateRemapVisualMode() {
-    state.selectedVisual = null;
-    const d = state.config.our_descriptor_number;
-    const gamepadEl = document.getElementById('remap-visual-gamepad');
-    const mkEl = document.getElementById('remap-visual-mk');
-    if (!gamepadEl || !mkEl) return;
-
-    if (isMouseKeyboardMode(d)) {
-        gamepadEl.classList.add('hidden');
-        mkEl.classList.remove('hidden');
-        ensureKeyboardGridRendered();
-    } else {
-        mkEl.classList.add('hidden');
-        gamepadEl.classList.remove('hidden');
-        applyGamepadSkin(getGamepadSkin(d));
-        updateGamepadArtVisibility();
-    }
-
-    updateRemapOutputHint();
-    updateAssignEmptyCopy();
-    refreshControllerVisual();
-    renderAssignPanel();
-}
-
-// ─── Assignment Panel ─────────────────────────────────────────────────────────
-
-function renderAssignPanel() {
-    const visId = state.selectedVisual;
-    const emptyEl   = document.getElementById('assign-empty');
-    const contentEl = document.getElementById('assign-content');
-
-    if (!visId) {
-        emptyEl.classList.remove('hidden');
-        contentEl.classList.add('hidden');
+// ── events ───────────────────────────────────────────────────────────────────
+function onClick(e) {
+    const tg = e.target, q = sel => tg.closest(sel);
+    let el;
+    if ((el = q('[data-lang-set]'))) { pickLang(el.dataset.langSet); return; }
+    if ((el = q('[data-theme-set]'))) {
+        document.documentElement.dataset.theme = el.dataset.themeSet;
+        try { localStorage.setItem('techremap-theme', el.dataset.themeSet); } catch (_) {}
+        showTheme();
+        if (S.cfg) render();
         return;
     }
-    emptyEl.classList.add('hidden');
-    contentEl.classList.remove('hidden');
-
-    const info       = getRemapVisualMap()[visId];
-    const targetUsage = getActivePanelUsage();
-    const mapping    = targetUsage ? getPrimaryMapping(targetUsage) : null;
-
-    // Header
-    document.getElementById('assign-title').textContent = info.label;
-    document.getElementById('assign-usage-code').textContent = targetUsage || '';
-
-    // Stick sub-tabs
-    const stickTabs = document.getElementById('stick-tabs');
-    if (info.isStick) {
-        stickTabs.classList.remove('hidden');
-        stickTabs.querySelectorAll('.stick-tab').forEach(t => {
-            t.classList.toggle('active', t.dataset.mode === state.stickSubMode);
-        });
-    } else {
-        stickTabs.classList.add('hidden');
-    }
-
-    // Current mapping
-    const currentMappingEl = document.getElementById('current-mapping');
-    const mappingNameEl    = document.getElementById('mapping-source-name');
-    const removeBtnEl      = document.getElementById('remove-mapping-btn');
-
-    if (mapping) {
-        currentMappingEl.classList.add('has-mapping');
-        mappingNameEl.textContent = getUsageName(mapping.source_usage);
-        removeBtnEl.classList.remove('hidden');
-    } else {
-        currentMappingEl.classList.remove('has-mapping');
-        mappingNameEl.textContent = 'Not remapped (passthrough)';
-        removeBtnEl.classList.add('hidden');
-    }
-
-    // Capture button
-    const captureBtn = document.getElementById('capture-btn');
-    if (state.capturing && state.captureUsage === targetUsage) {
-        captureBtn.classList.add('capturing');
-        captureBtn.innerHTML = '<span class="capture-indicator"></span> Press a button on your device…';
-    } else {
-        captureBtn.classList.remove('capturing');
-        captureBtn.innerHTML = '<span class="capture-indicator"></span> Capture from device';
-    }
-
-    // Axis-specific controls
-    const axisControls = document.getElementById('axis-controls');
-    const isAxis = NAMED_USAGES[targetUsage]?.type === 'axis';
-    axisControls.classList.toggle('hidden', !isAxis);
-
-    if (isAxis && mapping) {
-        const scaling  = mapping.scaling ?? 1000;
-        const deadzone = mapping.deadzone ?? 0;  // stored as % * 10
-
-        const sensitSlider = document.getElementById('sensitivity-slider');
-        const sensitVal    = document.getElementById('sensitivity-val');
-        sensitSlider.value = scaling;
-        sensitVal.textContent = `${(scaling / 10).toFixed(0)}%`;
-
-        const deadzoneSlider = document.getElementById('deadzone-slider');
-        const deadzoneVal    = document.getElementById('deadzone-val');
-        deadzoneSlider.value = deadzone;
-        deadzoneVal.textContent = `${deadzone}%`;
-    }
-
-    // Layer checkboxes
-    renderLayerCheckboxes(mapping);
-
-    // Behavior toggles
-    const stickyEl = document.getElementById('toggle-sticky');
-    const tapEl    = document.getElementById('toggle-tap');
-    const holdEl   = document.getElementById('toggle-hold');
-    stickyEl.checked = mapping?.sticky ?? false;
-    tapEl.checked    = mapping?.tap    ?? false;
-    holdEl.checked   = mapping?.hold   ?? false;
-
-    // Source picker
-    renderSourcePicker(mapping?.source_usage);
-}
-
-function renderLayerCheckboxes(mapping) {
-    const container = document.getElementById('layer-checkboxes');
-    container.innerHTML = '';
-    for (let i = 0; i < NLAYERS; i++) {
-        // layers:[] means "all layers" — show all checkboxes as checked
-        const checked = mapping
-            ? (mapping.layers.length === 0 || mapping.layers.includes(i))
-            : (i === state.activeLayer);
-        const lbl = document.createElement('label');
-        lbl.className = `layer-check ${checked ? 'checked' : ''}`;
-        lbl.innerHTML = `<input type="checkbox" value="${i}" ${checked ? 'checked' : ''}> L${i + 1}`;
-        lbl.querySelector('input').addEventListener('change', () => {
-            lbl.classList.toggle('checked', lbl.querySelector('input').checked);
-            applyCurrentMapping();
-        });
-        container.appendChild(lbl);
-    }
-}
-
-function renderSourcePicker(currentSource) {
-    const search = document.getElementById('source-search').value.toLowerCase();
-    const activeCat = document.querySelector('.picker-cat.active')?.dataset.cat || 'gamepad';
-    const group  = SOURCE_GROUPS.find(g => g.id === activeCat);
-    if (!group) return;
-
-    const list = document.getElementById('usage-list');
-    list.innerHTML = '';
-
-    for (const code of group.codes) {
-        const usage = NAMED_USAGES[code];
-        if (!usage) continue;
-        if (search && !usage.name.toLowerCase().includes(search)) continue;
-
-        const item = document.createElement('div');
-        item.className = `usage-item ${code === currentSource ? 'selected' : ''}`;
-        item.innerHTML = `
-            <span class="usage-item-name">${usage.name}</span>
-            <span class="usage-item-type ${usage.type}">${usage.type}</span>
-        `;
-        item.addEventListener('click', () => assignSourceUsage(code));
-        list.appendChild(item);
-    }
-
-    if (list.childElementCount === 0) {
-        list.innerHTML = '<div class="usage-item" style="color:var(--text-3);cursor:default">No results</div>';
-    }
-}
-
-// ─── Mapping Operations ───────────────────────────────────────────────────────
-
-function assignSourceUsage(sourceCode) {
-    const targetUsage = getActivePanelUsage();
-    if (!targetUsage) return;
-
-    const layers = getSelectedLayers();
-    const existingIdx = state.config.mappings.findIndex(
-        m => m.target_usage === targetUsage && m.layers.some(l => layers.includes(l))
-    );
-
-    const newMapping = {
-        source_usage: sourceCode,
-        target_usage: targetUsage,
-        scaling:      1000,
-        layers,
-        sticky: false,
-        tap:    false,
-        hold:   false,
-        source_port: 0,
-        target_port: 0,
-    };
-
-    if (existingIdx >= 0) {
-        state.config.mappings[existingIdx] = {
-            ...state.config.mappings[existingIdx],
-            source_usage: sourceCode,
-            layers,
-        };
-    } else {
-        state.config.mappings.push(newMapping);
-    }
-
-    setDirty();
-    refreshControllerVisual();
-    renderAssignPanel();
-}
-
-function applyCurrentMapping() {
-    const targetUsage = getActivePanelUsage();
-    if (!targetUsage) return;
-
-    const layers   = getSelectedLayers();
-    const sticky   = document.getElementById('toggle-sticky').checked;
-    const tap      = document.getElementById('toggle-tap').checked;
-    const hold     = document.getElementById('toggle-hold').checked;
-    const scaling  = parseInt(document.getElementById('sensitivity-slider').value, 10);
-    const deadzone = parseInt(document.getElementById('deadzone-slider').value, 10);
-
-    const existingIdx = state.config.mappings.findIndex(m => m.target_usage === targetUsage);
-    if (existingIdx < 0) return;
-
-    state.config.mappings[existingIdx] = {
-        ...state.config.mappings[existingIdx],
-        layers, sticky, tap, hold, scaling, deadzone,
-    };
-    setDirty();
-}
-
-function removeMapping() {
-    const targetUsage = getActivePanelUsage();
-    if (!targetUsage) return;
-    state.config.mappings = state.config.mappings.filter(m => m.target_usage !== targetUsage);
-    setDirty();
-    refreshControllerVisual();
-    renderAssignPanel();
-}
-
-function getSelectedLayers() {
-    return Array.from(document.querySelectorAll('#layer-checkboxes input:checked'))
-        .map(el => parseInt(el.value, 10));
-}
-
-// ─── Capture Mode ─────────────────────────────────────────────────────────────
-
-async function startCapture() {
-    if (!state.connected) { notify('Connect a device first', 'error'); return; }
-    const targetUsage = getActivePanelUsage();
-    if (!targetUsage) return;
-
-    state.capturing   = true;
-    state.captureUsage = targetUsage;
-    renderAssignPanel();
-
-    const baseline = {};  // usage → at-rest axis value
-
-    try {
-        await enableMonitor((report) => {
-            if (!state.capturing) return;
-            const { usage, value } = report;
-
-            if (value === 0) return;  // ignore releases
-
-            if (value === 1) {
-                // Digital button press — capture immediately
-                stopCapture();
-                assignSourceUsage(usage);
-                notify(`Mapped from: ${getUsageName(usage)}`, 'success');
-                return;
-            }
-
-            // Analog axis — record at-rest baseline on first observation
-            if (!(usage in baseline)) { baseline[usage] = value; return; }
-            if (Math.abs(value - baseline[usage]) < 10) return;
-
-            stopCapture();
-            assignSourceUsage(usage);
-            notify(`Mapped from: ${getUsageName(usage)}`, 'success');
-        });
-    } catch (e) {
-        notify(`Capture error: ${e.message}`, 'error');
-        stopCapture();
-    }
-}
-
-async function stopCapture() {
-    state.capturing   = false;
-    state.captureUsage = null;
-    try { await disableMonitor(); } catch (_) {}
-    renderAssignPanel();
-}
-
-// ─── Tab Switching ────────────────────────────────────────────────────────────
-
-function switchTab(tabId) {
-    state.activeTab = tabId;
-    document.querySelectorAll('.tab').forEach(t =>
-        t.classList.toggle('active', t.dataset.tab === tabId)
-    );
-    document.querySelectorAll('.tab-panel').forEach(p =>
-        p.classList.toggle('active', p.id === `panel-${tabId}`)
-    );
-    if (tabId === 'overview') renderOverviewTab();
-    if (tabId === 'monitor') {
-        updateMonitorToggleBtn();
-        if (state.connected && !monitor.active && !state.capturing) startMonitor();
-    }
-}
-
-// ─── Layers Tab ───────────────────────────────────────────────────────────────
-
-function renderLayersTab() {
-    // LED color cards
-    const grid = document.getElementById('led-grid');
-    grid.innerHTML = '';
-    const names = ['Default (Layer 0)', 'Layer 1', 'Layer 2', 'Layer 3'];
-    for (let i = 0; i < 4; i++) {
-        const color = getLayerCSSColor(i);
-        const card  = document.createElement('div');
-        card.className = 'led-card';
-        card.innerHTML = `
-            <div class="led-card-header">
-                <div class="led-preview glow" style="background:${color}; --preview-color:${color}; box-shadow:0 0 10px ${color}"></div>
-                <div>
-                    <div class="led-layer-name">${names[i]}</div>
-                    <div class="led-layer-sub">WS2812 LED</div>
-                </div>
-            </div>
-            <input type="color" class="color-input led-color-input" value="${color}" data-layer="${i}">
-        `;
-        card.querySelector('.led-color-input').addEventListener('input', (e) => {
-            const fw = cssColorToFirmware(e.target.value);
-            if (!state.config.layer_colors) state.config.layer_colors = [...DEFAULT_LAYER_COLORS];
-            state.config.layer_colors[i] = fw;
-            const preview = card.querySelector('.led-preview');
-            preview.style.background = e.target.value;
-            preview.style.boxShadow  = `0 0 10px ${e.target.value}`;
-            // Update layer bar LEDs
-            const layerDot = document.querySelectorAll('.layer-led')[i];
-            if (layerDot) {
-                layerDot.style.background = e.target.value;
-                layerDot.style.boxShadow  = `0 0 6px ${e.target.value}`;
-            }
-            setDirty();
-        });
-        grid.appendChild(card);
-    }
-
-    // Passthrough checkboxes
-    const ptGrid = document.getElementById('passthrough-grid');
-    ptGrid.innerHTML = '';
-    for (let i = 0; i < NLAYERS; i++) {
-        const active = state.config.unmapped_passthrough_layers.includes(i);
-        const lbl = document.createElement('label');
-        lbl.className = `passthrough-toggle ${active ? 'active' : ''}`;
-        lbl.innerHTML = `<input type="checkbox" ${active ? 'checked' : ''}> Layer ${i + 1}`;
-        lbl.querySelector('input').addEventListener('change', (e) => {
-            lbl.classList.toggle('active', e.target.checked);
-            if (e.target.checked) {
-                if (!state.config.unmapped_passthrough_layers.includes(i))
-                    state.config.unmapped_passthrough_layers.push(i);
-            } else {
-                state.config.unmapped_passthrough_layers =
-                    state.config.unmapped_passthrough_layers.filter(l => l !== i);
-            }
-            setDirty();
-        });
-        ptGrid.appendChild(lbl);
-    }
-}
-
-// ─── Settings Tab ─────────────────────────────────────────────────────────────
-
-function renderSettingsTab() {
-    document.getElementById('polling-rate').value = String(state.config.interval_override);
-    document.getElementById('emulation-mode').value = String(state.config.our_descriptor_number);
-    document.getElementById('normalize-gamepad').checked = state.config.normalize_gamepad_inputs;
-    document.getElementById('tap-hold-ms').value = String(Math.round(state.config.tap_hold_threshold / 1000));
-    document.getElementById('scroll-timeout-ms').value = String(Math.round(state.config.partial_scroll_timeout / 1000));
-}
-
-// ─── Advanced Tab ─────────────────────────────────────────────────────────────
-
-function renderAdvancedTab() {
-    const exprContainer = document.getElementById('expressions-container');
-    exprContainer.innerHTML = '';
-    state.config.expressions.forEach((expr, i) => {
-        const sec = document.createElement('div');
-        sec.className = 'adv-subsection';
-        const preview = expr.trim() ? expr.substring(0, 40) + (expr.length > 40 ? '…' : '') : 'Empty';
-        sec.innerHTML = `
-            <div class="adv-subsection-header">
-                <span>Expression ${i + 1}</span>
-                <span style="color:var(--text-3);font-size:11px;flex:1;text-align:left;margin-left:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${preview}</span>
-                <span class="adv-chevron">›</span>
-            </div>
-            <div class="adv-subsection-body">
-                <textarea class="expr-input" rows="3" placeholder="Enter expression in RPN notation…">${expr}</textarea>
-                <p style="font-size:11px;color:var(--text-3);margin-top:6px">RPN expression — see <a href="https://github.com/jfedor2/hid-remapper/blob/master/EXPRESSIONS.md" target="_blank" style="color:var(--accent)">EXPRESSIONS.md</a> for syntax.</p>
-            </div>
-        `;
-        sec.querySelector('.adv-subsection-header').addEventListener('click', () => {
-            sec.classList.toggle('open');
-        });
-        sec.querySelector('.expr-input').addEventListener('input', (e) => {
-            state.config.expressions[i] = e.target.value;
-            setDirty();
-        });
-        exprContainer.appendChild(sec);
-    });
-}
-
-// ─── Overview Tab ─────────────────────────────────────────────────────────────
-
-function renderOverviewTab() {
-    const container = document.getElementById('overview-content');
-    if (!container) return;
-
-    const mappings = state.config.mappings;
-    if (!mappings || mappings.length === 0) {
-        container.innerHTML = '<p class="ov-empty">No mappings configured. Load a config or add mappings on the Remap tab.</p>';
+    if (q('#connect') || q('#connect2')) { connect(); return; }
+    if (q('#demo')) { startDemo(); return; }
+    if (q('#save')) { save(); return; }
+    if (!S.cfg) return;
+    if ((el = q('#tabs button'))) { S.tab = el.dataset.tab; S.listen = S.pending = S.listenSwitch = null; }
+    else if ((el = q('[data-sim]'))) {
+        const u = el.dataset.sim, analog = el.dataset.analog === '1';
+        onInput(u, analog ? 255 : 1);
+        setTimeout(() => onInput(u, analog ? 128 : 0), 250);
         return;
     }
-
-    const sorted = [...mappings].sort((a, b) => {
-        if (a.layers.length === 0 && b.layers.length > 0) return -1;
-        if (a.layers.length > 0 && b.layers.length === 0) return 1;
-        return (a.layers[0] ?? 0) - (b.layers[0] ?? 0);
-    });
-
-    let html = `<table class="ov-table">
-        <thead><tr>
-            <th>Source (input)</th>
-            <th>Target (output)</th>
-            <th>Layer(s)</th>
-            <th>Scaling</th>
-        </tr></thead>
-        <tbody>`;
-
-    for (const m of sorted) {
-        const srcName  = getUsageName(m.source_usage);
-        const tgtName  = getUsageName(m.target_usage);
-        const isPassthrough = m.source_usage === m.target_usage;
-        const layerText = m.layers.length === 0
-            ? '<span class="ov-badge ov-badge-all">All layers</span>'
-            : m.layers.map(l => `<span class="ov-badge">L${l + 1}</span>`).join('');
-        const scaling   = `${(m.scaling / 10).toFixed(0)}%`;
-        const rowClass  = isPassthrough ? ' class="ov-passthrough"' : '';
-        html += `<tr${rowClass}>
-            <td>
-                <div class="ov-name">${srcName}</div>
-                <div class="ov-code">${m.source_usage}</div>
-            </td>
-            <td>
-                <div class="ov-name">${tgtName}</div>
-                <div class="ov-code">${m.target_usage}</div>
-            </td>
-            <td class="ov-layers">${layerText}</td>
-            <td class="ov-scaling">${scaling}</td>
-        </tr>`;
+    else if ((el = q('[data-listen]'))) { S.listen = { id: S.selected, layer: Number(el.dataset.listen) }; S.pending = S.last = S.listenSwitch = null; }
+    else if ((el = q('[data-add]'))) { S.listen = { id: S.selected, layer: Number(el.dataset.add), add: true }; S.pending = S.last = S.listenSwitch = null; }
+    else if ((el = q('[data-remove]'))) {
+        const c = device().controls[S.selected], [l, src] = el.dataset.remove.split('|');
+        change(t('{source} bedient {control} niet meer op laag {n}.', { source: sourceName(src, stickLike(c)), control: tKey(c.name), n: layerNo(Number(l)) }),
+            () => M.removeSource(S.cfg, c, Number(l), src));
     }
-    html += '</tbody></table>';
-    container.innerHTML = html;
-}
-
-// ─── Connect / Load / Save ────────────────────────────────────────────────────
-
-async function onConnect() {
-    const btn = document.getElementById('connect-btn');
-    btn.disabled = true;
-
-    updateStatusDot('connecting', 'Connecting…');
-
-    try {
-        const info = await connectDevice();
-        state.connected = true;
-        document.getElementById('connect-screen').classList.add('hidden');
-        document.getElementById('device-name').textContent = info.name || 'HID Remapper';
-        updateStatusDot('connected', info.name || 'Connected');
-        document.getElementById('load-btn').disabled  = false;
-        document.getElementById('save-btn').disabled  = true;
-        document.getElementById('header-load-btn').disabled = false;
-        document.getElementById('header-save-btn').disabled = true;
-        updateMonitorToggleBtn();
-        notify('Device connected. Load your config to start.', 'success');
-    } catch (e) {
-        updateStatusDot('disconnected', 'Disconnected');
-        notify(e.message, 'error', 5000);
-    } finally {
-        btn.disabled = false;
+    else if ((el = q('[data-clear]'))) {
+        const c = device().controls[S.selected], l = Number(el.dataset.clear);
+        change(t('{control} doet niets meer op laag {n}.', { control: tKey(c.name), n: layerNo(l) }), () => M.clear(S.cfg, c, l));
     }
-}
-
-async function onLoadConfig() {
-    try {
-        disableDeviceBtns();
-        notify('Loading config from device…', 'info', 2000);
-        state.config = await loadConfig();
-        setDirty(false);
-
-        refreshControllerVisual();
-        refreshButtonLabels();
-        updateLayerLeds();
-        renderLayersTab();
-        renderSettingsTab();
-        renderAdvancedTab();
-        renderOverviewTab();
-        notify('Config loaded successfully!', 'success');
-    } catch (e) {
-        notify(`Load failed: ${e.message}`, 'error', 5000);
-    } finally {
-        enableDeviceBtns();
+    else if ((el = q('[data-inherit]'))) {
+        const c = device().controls[S.selected], l = Number(el.dataset.inherit);
+        change(t('{control} volgt op laag {n} weer laag 1.', { control: tKey(c.name), n: layerNo(l) }), () => M.inherit(S.cfg, c, l));
     }
-}
-
-async function onSaveConfig() {
-    try {
-        disableDeviceBtns();
-        notify('Saving config to device…', 'info', 2000);
-        await saveConfig(state.config);
-        setDirty(false);
-        // Show checkmark
-        const check = document.getElementById('save-check');
-        check.classList.add('visible');
-        setTimeout(() => check.classList.remove('visible'), 3000);
-        notify('Config saved!', 'success');
-    } catch (e) {
-        notify(`Save failed: ${e.message}`, 'error', 5000);
-    } finally {
-        enableDeviceBtns();
+    else if (q('[data-cancel]')) { S.listen = S.pending = S.listenSwitch = null; }
+    else if (q('[data-undo]')) { undo(); S.dirty = true; }
+    else if ((el = q('[data-unswitch]'))) {
+        const s = M.switches(S.cfg)[Number(el.dataset.unswitch)];
+        if (s) change(t('Laagknop verwijderd.'), () => M.removeSwitch(S.cfg, s.mapping));
     }
+    else if (q('#sw-add')) {
+        if (S.listenSwitch) S.listenSwitch = null;
+        else {
+            const from = Number($('sw-from').value), to = Number($('sw-to').value), type = $('sw-type').value;
+            if (from === to) { toast(t('Kies twee verschillende lagen.'), true); return; }
+            if (type === 'hold' && to === 0) { toast(t('Laag 1 is de basis; “zolang ingedrukt” werkt alleen naar laag 2, 3 of 4.'), true); return; }
+            S.listenSwitch = { type, from, to }; S.listen = S.pending = S.last = null;
+        }
+    }
+    else if ((el = q('#layers button'))) { S.shown = Number(el.dataset.layer); }
+    else if (q('#wipe')) {
+        change(null, () => { S.cfg.mappings = S.cfg.mappings.filter(m => (parseInt(m.target_usage, 16) >>> 16) >= 0xfff0); });
+        S.offerWipe = false;
+    }
+    else if (q('#keep')) { S.offerWipe = false; }
+    else if (q('#export')) { exportFile(); return; }
+    else if (q('#import')) { $('import-file').click(); return; }
+    else if ((el = q('#page-remap [data-id]'))) {
+        const id = el.dataset.id;
+        S.listen = null;
+        if (S.pending) {
+            // pressing first and clicking a control that already has an input adds to it, so nothing is lost
+            const src = S.pending, layer = Math.max(S.shown, 0);
+            S.pending = null;
+            doAssign(id, layer, src, M.layerState(S.cfg, device().controls[id], layer).state === 'set');
+        }
+        else S.selected = id;
+    }
+    else return;
+    render();
 }
-
-function disableDeviceBtns() {
-    document.getElementById('load-btn').disabled = true;
-    document.getElementById('save-btn').disabled = true;
-    document.getElementById('header-load-btn').disabled = true;
-    document.getElementById('header-save-btn').disabled = true;
+function onInputEvent(e) {
+    const tg = e.target;
+    if (!S.cfg) return;
+    const touched = () => { S.dirty = true; $('save').disabled = false; $('save').textContent = t('Opslaan op bordje'); };
+    if (tg.id === 'speed') { M.setSpeed(S.cfg, device().controls[S.selected], Number(tg.value)); $('speed-val').textContent = scalingText(Number(tg.value)); touched(); return; }
+    if (tg.id === 'deadzone') { M.setDeadzone(S.cfg, device().controls[S.selected], Number(tg.value) * 1280); $('deadzone-val').textContent = tg.value + '%'; touched(); return; }
+    if (tg.dataset.color !== undefined) { S.ext.led.colors[Number(tg.dataset.color)] = tg.value; }
+    else if (tg.id === 'bright') { S.ext.led.brightness = Number(tg.value); $('bright-val').textContent = Math.round(tg.value / 2.55) + '%'; }
+    else if (tg.dataset.pinname !== undefined) { const p = Number(tg.dataset.pinname); tg.value ? S.ext.pinNames[p] = tg.value : delete S.ext.pinNames[p]; touched(); return; }
+    else return;
+    touched();
+    applyLayerColors();
+    previewLed();
 }
-
-function enableDeviceBtns() {
-    const connected = isConnected();
-    document.getElementById('load-btn').disabled  = !connected;
-    document.getElementById('save-btn').disabled  = !state.dirty || !connected;
-    document.getElementById('header-load-btn').disabled = !connected;
-    document.getElementById('header-save-btn').disabled = !state.dirty || !connected;
+function onChange(e) {
+    const tg = e.target;
+    if (!S.cfg) return;
+    if (tg.id === 'devtype') {
+        S.cfg.our_descriptor_number = Number(tg.value); S.selected = null;
+        // usage codes mean different things on different devices, so old assignments rarely make sense
+        S.offerWipe = S.cfg.mappings.some(m => (parseInt(m.target_usage, 16) >>> 16) < 0xfff0);
+    }
+    else if (tg.id === 'pass') { S.cfg.unmapped_passthrough_layers = tg.checked ? [0, 1, 2, 3] : []; }
+    else if (tg.id === 'strip-pin') { S.ext.led.stripPin = tg.value === '' ? null : Number(tg.value); }
+    else if (tg.id === 'strip-count') { S.ext.led.stripCount = Math.max(0, Math.min(S.ext.maxStripLeds, Number(tg.value) || 0)); previewLed(); }
+    else if (tg.id === 'strip-order') { S.ext.led.stripOrder = Number(tg.value); previewLed(); }
+    else if (tg.id === 'lang') { pickLang(tg.value); return; }
+    else if (tg.id === 'import-file') { importFile(tg.files[0]); tg.value = ''; return; }
+    else return;
+    S.dirty = true;
+    render();
 }
-
-function updateStatusDot(status, label) {
-    const dot = document.getElementById('status-dot');
-    const lbl = document.getElementById('status-label');
-    dot.className = `status-dot ${status}`;
-    lbl.textContent = label;
-}
-
-function onHIDDisconnected() {
-    state.connected = false;
-    stopMonitor();
-    updateStatusDot('disconnected', 'Disconnected');
-    document.getElementById('load-btn').disabled = true;
-    document.getElementById('save-btn').disabled = true;
-    document.getElementById('header-load-btn').disabled = true;
-    document.getElementById('header-save-btn').disabled = true;
-    document.getElementById('connect-screen').classList.remove('hidden');
-    notify('Device disconnected.', 'info');
-}
-
-// ─── Import / Export ──────────────────────────────────────────────────────────
-
-function onExportJSON() {
-    const json = exportConfigJSON(state.config);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href     = url;
+function exportFile() {
+    const data = JSON.stringify({ ...S.cfg, techremap: S.ext ? { led: S.ext.led, pinNames: S.ext.pinNames } : undefined }, null, 2);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
     a.download = 'techremap-config.json';
     a.click();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
-
-function onImportJSON() {
-    const input = document.createElement('input');
-    input.type  = 'file';
-    input.accept = '.json';
-    input.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        try {
-            const text = await file.text();
-            state.config = importConfigJSON(text);
-            setDirty();
-            refreshControllerVisual();
-            refreshButtonLabels();
-            updateLayerLeds();
-            renderLayersTab();
-            renderSettingsTab();
-            renderAdvancedTab();
-            renderOverviewTab();
-            notify('Config imported!', 'success');
-        } catch (err) {
-            notify(`Import failed: ${err.message}`, 'error', 5000);
-        }
-    });
-    input.click();
-}
-
-// ─── Settings event handlers ──────────────────────────────────────────────────
-
-function bindSettingsEvents() {
-    document.getElementById('polling-rate').addEventListener('change', e => {
-        state.config.interval_override = parseInt(e.target.value, 10);
-        setDirty();
-    });
-    document.getElementById('emulation-mode').addEventListener('change', e => {
-        state.config.our_descriptor_number = parseInt(e.target.value, 10);
-        refreshButtonLabels();
-        updateRemapVisualMode();
-        setDirty();
-    });
-    document.getElementById('normalize-gamepad').addEventListener('change', e => {
-        state.config.normalize_gamepad_inputs = e.target.checked;
-        setDirty();
-    });
-    document.getElementById('tap-hold-ms').addEventListener('change', e => {
-        state.config.tap_hold_threshold = parseInt(e.target.value, 10) * 1000;
-        setDirty();
-    });
-    document.getElementById('scroll-timeout-ms').addEventListener('change', e => {
-        state.config.partial_scroll_timeout = parseInt(e.target.value, 10) * 1000;
-        setDirty();
-    });
-}
-
-// ─── Layer bar ────────────────────────────────────────────────────────────────
-
-function renderLayerBar() {
-    const bar = document.getElementById('layer-bar');
-    bar.innerHTML = '<span class="layer-bar-label" style="font-size:12px;color:var(--text-2);font-weight:500">Layer:</span>';
-    for (let i = 0; i < NLAYERS; i++) {
-        const btn = document.createElement('button');
-        btn.className = `layer-btn ${i === state.activeLayer ? 'active' : ''}`;
-        const color = getLayerCSSColor(i);
-        btn.innerHTML = `<span class="layer-led" style="background:${color};box-shadow:0 0 6px ${color}"></span>L${i + 1}`;
-        btn.addEventListener('click', () => {
-            state.activeLayer = i;
-            document.querySelectorAll('.layer-btn').forEach((b, j) =>
-                b.classList.toggle('active', j === i)
-            );
-            refreshControllerVisual();
-            if (state.selectedVisual) renderAssignPanel();
-        });
-        bar.appendChild(btn);
-    }
-}
-
-// ─── Monitor Tab ──────────────────────────────────────────────────────────────
-
-const monitor = {
-    active:    false,
-    inputs:    new Map(),   // usage → { value, hubPort, timestamp }
-    frameId:   null,
-    cleanupId: null,
-};
-
-function updateMonitorToggleBtn() {
-    const btn = document.getElementById('monitor-toggle-btn');
-    const txt = document.getElementById('monitor-status-text');
-    if (!btn) return;
-    btn.disabled = !state.connected;
-    if (monitor.active) {
-        btn.classList.add('monitoring');
-        btn.innerHTML = '<span class="capture-indicator"></span> Stop Monitoring';
-        if (txt) txt.textContent = 'Listening for inputs…';
-    } else {
-        btn.classList.remove('monitoring');
-        btn.innerHTML = '<span class="capture-indicator"></span> Start Monitoring';
-        if (txt) txt.textContent = state.connected ? 'Ready — press Start to begin' : 'Connect a device first';
-    }
-}
-
-async function toggleMonitor() {
-    if (!state.connected) { notify('Connect a device first', 'error'); return; }
-    if (monitor.active) await stopMonitor();
-    else               await startMonitor();
-}
-
-async function startMonitor() {
-    // Stop capture if running
-    if (state.capturing) await stopCapture();
+async function importFile(file) {
+    if (!file) return;
     try {
-        await enableMonitor((report) => {
-            monitor.inputs.set(report.usage, {
-                value:     report.value,
-                hubPort:   report.hubPort,
-                timestamp: Date.now(),
-            });
-            scheduleMonitorRender();
-        });
-        monitor.active    = true;
-        monitor.cleanupId = setInterval(cleanupMonitorInputs, 500);
-        updateMonitorToggleBtn();
+        const parsed = Dev.importConfigJSON(await file.text());
+        const extra = parsed.techremap; delete parsed.techremap;
+        S.cfg = M.normalize({ ...Dev.makeDefaultConfig(), ...parsed });
+        if (extra && S.ext) { Object.assign(S.ext.led, extra.led || {}); S.ext.pinNames = extra.pinNames || {}; previewLed(); }
+        S.dirty = true; S.selected = null; S.last = null;
+        toast(t('Bestand geladen. Klik op “Opslaan op bordje” om het te bewaren.'));
     } catch (e) {
-        notify(`Monitor error: ${e.message}`, 'error');
+        toast(t('Dit bestand kan ik niet lezen: {why}', { why: e.message || e }), true);
     }
+    render();
 }
-
-async function stopMonitor() {
-    if (!monitor.active) return;
-    try { await disableMonitor(); } catch (_) {}
-    monitor.active = false;
-    if (monitor.cleanupId) { clearInterval(monitor.cleanupId); monitor.cleanupId = null; }
-    if (monitor.frameId)   { cancelAnimationFrame(monitor.frameId); monitor.frameId = null; }
-    updateMonitorToggleBtn();
+function pickLang(l) {
+    setLang(l);
+    try { localStorage.setItem('techremap-lang', l); } catch (_) {}
+    S.last = null;   // its text was written in the other language
+    $('toast').hidden = true;
+    render();
 }
-
-function scheduleMonitorRender() {
-    if (!monitor.frameId) {
-        monitor.frameId = requestAnimationFrame(() => {
-            monitor.frameId = null;
-            renderMonitorDisplay();
-        });
-    }
+function showTheme() {
+    const cur = document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    document.querySelectorAll('#themes button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.themeSet === cur)));
 }
-
-function cleanupMonitorInputs() {
-    const cutoff = Date.now() - 4000;
-    for (const [usage, info] of monitor.inputs) {
-        if (info.timestamp < cutoff) monitor.inputs.delete(usage);
-    }
-    renderMonitorDisplay();
-}
-
-function renderMonitorDisplay() {
-    const container = document.getElementById('monitor-inputs');
-    if (!container) return;
-
-    if (monitor.inputs.size === 0) {
-        container.innerHTML = '<div class="mon-empty">No inputs detected yet. Move a stick or press a button on your device.</div>';
-        return;
-    }
-
-    const now     = Date.now();
-    const entries = Array.from(monitor.inputs.entries())
-        .map(([usage, info]) => ({ usage, ...info, age: now - info.timestamp }))
-        .sort((a, b) => a.age - b.age);
-
-    const MAX_VAL = 128000000;
-    let html = '<div class="mon-list">';
-    for (const e of entries) {
-        const name    = getUsageName(e.usage);
-        const absVal  = Math.abs(e.value);
-        const pct     = Math.min(100, absVal / MAX_VAL * 100);
-        const isNeg   = e.value < 0;
-        const fresh   = e.age < 150;
-        const fading  = e.age > 1500;
-        html += `<div class="mon-row${fresh ? ' fresh' : ''}${fading ? ' fading' : ''}">
-            <div class="mon-name">${name}</div>
-            <div class="mon-code">${e.usage}</div>
-            <div class="mon-bar-wrap"><div class="mon-bar ${isNeg ? 'negative' : 'positive'}" style="width:${pct.toFixed(1)}%"></div></div>
-            <div class="mon-value">${e.value.toLocaleString()}</div>
-        </div>`;
-    }
-    html += '</div>';
-    container.innerHTML = html;
-}
-
-// ─── Init ─────────────────────────────────────────────────────────────────────
 
 export function init() {
-    // Check WebHID support
-    if (!('hid' in navigator)) {
-        document.getElementById('no-webhid-warning').style.display = 'block';
-        return;
-    }
-
-    // Tab switching
-    document.querySelectorAll('.tab').forEach(t => {
-        t.addEventListener('click', () => switchTab(t.dataset.tab));
+    try { const th = localStorage.getItem('techremap-theme'); if (th) document.documentElement.dataset.theme = th; } catch (_) {}
+    let l = (navigator.language || 'nl').toLowerCase().startsWith('nl') ? 'nl' : 'en';
+    try { l = localStorage.getItem('techremap-lang') || l; } catch (_) {}
+    setLang(l);
+    showTheme();
+    if (!('hid' in navigator)) { $('nohid').hidden = false; $('connect').disabled = true; $('connect2').disabled = true; }
+    document.addEventListener('click', onClick);
+    document.addEventListener('input', onInputEvent);
+    document.addEventListener('change', onChange);
+    document.addEventListener('keydown', e => {
+        if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('.pad-hit')) { e.preventDefault(); e.target.dispatchEvent(new MouseEvent('click', { bubbles: true })); }
     });
-
-    // Header buttons
-    document.getElementById('connect-btn').addEventListener('click', onConnect);
-    document.getElementById('connect-screen-btn').addEventListener('click', onConnect);
-    document.getElementById('load-btn').addEventListener('click', onLoadConfig);
-    document.getElementById('save-btn').addEventListener('click', onSaveConfig);
-    document.getElementById('header-load-btn').addEventListener('click', onLoadConfig);
-    document.getElementById('header-save-btn').addEventListener('click', onSaveConfig);
-    document.getElementById('export-btn').addEventListener('click', onExportJSON);
-    document.getElementById('import-btn').addEventListener('click', onImportJSON);
-
-    // Gamepad / mouse+keyboard visuals — delegate clicks (multi-SVG gamepad skins + MK column)
-    const onPadClick = (e) => {
-        const el = e.target.closest('.pad-clickable');
-        if (!el?.dataset?.input) return;
-        if (state.capturing) stopCapture();
-        handleControllerClick(el.dataset.input);
-    };
-    document.getElementById('remap-visual-gamepad')?.addEventListener('click', onPadClick);
-    document.getElementById('remap-visual-mk')?.addEventListener('click', onPadClick);
-
-    // Stick sub-tabs
-    document.querySelectorAll('.stick-tab').forEach(t => {
-        t.addEventListener('click', () => {
-            state.stickSubMode = t.dataset.mode;
-            document.querySelectorAll('.stick-tab').forEach(s =>
-                s.classList.toggle('active', s.dataset.mode === t.dataset.mode)
-            );
-            renderAssignPanel();
-        });
+    window.addEventListener('beforeunload', e => { if (S.dirty && S.connected) { e.preventDefault(); e.returnValue = ''; } });
+    Dev.onHIDDisconnect(() => {
+        S.connected = false; S.cfg = null; S.ext = null; S.dirty = false;
+        toast(t('Het bordje is losgekoppeld.'));
+        render();
     });
-
-    // Capture button
-    document.getElementById('capture-btn').addEventListener('click', () => {
-        if (state.capturing) stopCapture();
-        else startCapture();
-    });
-
-    // Remove mapping button
-    document.getElementById('remove-mapping-btn').addEventListener('click', removeMapping);
-
-    // Source search
-    document.getElementById('source-search').addEventListener('input', () => {
-        const mapping = getPrimaryMapping(getActivePanelUsage());
-        renderSourcePicker(mapping?.source_usage);
-    });
-
-    // Picker category tabs
-    document.querySelectorAll('.picker-cat').forEach(t => {
-        t.addEventListener('click', () => {
-            document.querySelectorAll('.picker-cat').forEach(c =>
-                c.classList.toggle('active', c === t)
-            );
-            document.getElementById('source-search').value = '';
-            const mapping = getPrimaryMapping(getActivePanelUsage());
-            renderSourcePicker(mapping?.source_usage);
-        });
-    });
-
-    // Sensitivity slider
-    const sensitSlider = document.getElementById('sensitivity-slider');
-    const sensitVal    = document.getElementById('sensitivity-val');
-    sensitSlider.addEventListener('input', () => {
-        sensitVal.textContent = `${(sensitSlider.value / 10).toFixed(0)}%`;
-    });
-    sensitSlider.addEventListener('change', applyCurrentMapping);
-
-    // Deadzone slider
-    const deadzoneSlider = document.getElementById('deadzone-slider');
-    const deadzoneVal    = document.getElementById('deadzone-val');
-    deadzoneSlider.addEventListener('input', () => {
-        deadzoneVal.textContent = `${deadzoneSlider.value}%`;
-    });
-    deadzoneSlider.addEventListener('change', applyCurrentMapping);
-
-    // Behavior toggles
-    ['toggle-sticky','toggle-tap','toggle-hold'].forEach(id => {
-        document.getElementById(id).addEventListener('change', applyCurrentMapping);
-    });
-
-    // Monitor buttons (optional — missing markup must not break init)
-    document.getElementById('monitor-toggle-btn')?.addEventListener('click', toggleMonitor);
-    document.getElementById('monitor-clear-btn')?.addEventListener('click', () => {
-        monitor.inputs.clear();
-        renderMonitorDisplay();
-    });
-
-    // Settings
-    bindSettingsEvents();
-
-    // HID disconnect listener
-    onHIDDisconnect(onHIDDisconnected);
-
-    // Initial renders
-    renderLayerBar();
-    updateLayerLeds();
-    renderLayersTab();
-    renderSettingsTab();
-    renderAdvancedTab();
-    renderOverviewTab();
-    updateRemapVisualMode();
-
-    // Initial state
-    setDirty(false);
-    document.getElementById('load-btn').disabled = true;
-    document.getElementById('save-btn').disabled = true;
-    document.getElementById('header-load-btn').disabled = true;
-    document.getElementById('header-save-btn').disabled = true;
+    render();
 }
