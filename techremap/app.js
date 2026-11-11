@@ -228,12 +228,15 @@ function renderDetail(control) {
             `<span class="val${st.state === 'set' || on ? '' : ' same'}">${esc(on ? t(asStick ? 'Beweeg nu de joystick…' : 'Druk nu op je knop of jack…') : text)}</span>` +
             `<span class="acts">${acts.join('')}</span></div>`;
     }
-    const slider = (id, label, min, max, value) => `<div class="detail-row"><span class="lname">${esc(t(label))}</span>` +
-        `<span class="val"><input type="range" id="${id}" min="${min}" max="${max}" value="${value}" aria-label="${esc(t(label))}"></span><span class="acts"></span></div>`;
-    if (control.range) html += slider('speed', 'Snelheid', control.range[0], control.range[1], M.speed(S.cfg, control) ?? control.speed);
-    if (control.kind === 'expr') html += slider('deadzone', 'Dode zone', 0, 40, Math.round((M.deadzone(S.cfg, control) ?? control.dz) / 1280));
+    const slider = (id, label, min, max, value, shown) => `<div class="detail-row"><span class="lname">${esc(t(label))}</span>` +
+        `<span class="val"><input type="range" id="${id}" min="${min}" max="${max}" value="${value}" aria-label="${esc(t(label))}"></span><span class="acts" id="${id}-val">${shown}</span></div>`;
+    if (control.range) { const v = M.speed(S.cfg, control) ?? control.speed; html += slider('speed', 'Snelheid', control.range[0], control.range[1], v, scalingText(v)); }
+    if (control.kind === 'expr') { const v = Math.round((M.deadzone(S.cfg, control) ?? control.dz) / 1280); html += slider('deadzone', 'Dode zone', 0, 40, v, v + '%'); }
     $('detail-rows').innerHTML = html;
 }
+
+// The same number HID Remapper's own tool calls "scaling" (1 = normal speed).
+const scalingText = v => (v / 1000).toLocaleString(lang, { maximumFractionDigits: 3 }) + '×';
 
 function renderSwitches() {
     const sw = M.switches(S.cfg);
@@ -284,7 +287,7 @@ function renderBoard() {
     strip.hidden = false;
     const e = S.ext, led = e.led;
     const T = x => esc(t(x));
-    card.innerHTML = `<h3>${T('Jacks en pinnen')}</h3><p class="sub">${T('Geef elke pin waar je een jack of schakelaar aan hebt gesoldeerd een naam. Die naam zie je daarna overal in plaats van het pinnummer. Druk op een schakelaar om te zien welke pin het is.')}</p>` +
+    card.innerHTML = `<h3>${T('Jacks en pinnen')}</h3><p class="sub">${T('Geef elke pin waar je een jack of schakelaar aan hebt gesoldeerd een naam. Die naam zie je daarna overal in plaats van het pinnummer. Druk op een schakelaar om te zien welke pin het is.')} ${T('Een schakelaar of jack sluit je aan tussen de pin en GND; meerdere schakelaars mogen dezelfde GND delen.')}</p>` +
         `<div class="pins">` + e.boardPins.map(p => {
             const taken = p === e.activeStripPin || p === led.stripPin;
             return `<div class="pin${taken ? ' taken' : ''}" data-pin="${p}"><span class="lamp"></span><span class="n">GPIO ${p}</span>` +
@@ -474,8 +477,8 @@ function onInputEvent(e) {
     const tg = e.target;
     if (!S.cfg) return;
     const touched = () => { S.dirty = true; $('save').disabled = false; $('save').textContent = t('Opslaan op bordje'); };
-    if (tg.id === 'speed') { M.setSpeed(S.cfg, device().controls[S.selected], Number(tg.value)); touched(); return; }
-    if (tg.id === 'deadzone') { M.setDeadzone(S.cfg, device().controls[S.selected], Number(tg.value) * 1280); touched(); return; }
+    if (tg.id === 'speed') { M.setSpeed(S.cfg, device().controls[S.selected], Number(tg.value)); $('speed-val').textContent = scalingText(Number(tg.value)); touched(); return; }
+    if (tg.id === 'deadzone') { M.setDeadzone(S.cfg, device().controls[S.selected], Number(tg.value) * 1280); $('deadzone-val').textContent = tg.value + '%'; touched(); return; }
     if (tg.dataset.color !== undefined) { S.ext.led.colors[Number(tg.dataset.color)] = tg.value; }
     else if (tg.id === 'bright') { S.ext.led.brightness = Number(tg.value); $('bright-val').textContent = Math.round(tg.value / 2.55) + '%'; }
     else if (tg.dataset.pinname !== undefined) { const p = Number(tg.dataset.pinname); tg.value ? S.ext.pinNames[p] = tg.value : delete S.ext.pinNames[p]; touched(); return; }

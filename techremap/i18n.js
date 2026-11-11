@@ -101,6 +101,8 @@ const EN = {
     'Geef elke pin waar je een jack of schakelaar aan hebt gesoldeerd een naam. Die naam zie je daarna overal in plaats van het pinnummer. Druk op een schakelaar om te zien welke pin het is.':
         'Name every pin you soldered a jack or switch to. That name is then shown everywhere instead of the pin number. Press a switch to see which pin it is.',
     'bijv. Input Jack 1': 'e.g. Input Jack 1',
+    'Een schakelaar of jack sluit je aan tussen de pin en GND; meerdere schakelaars mogen dezelfde GND delen.':
+        'Wire a switch or jack between the pin and GND; several switches may share the same GND.',
     'LED-strip': 'LED strip',
     'Naam voor GPIO {n}': 'Name for GPIO {n}',
     'LED-strip of -ring': 'LED strip or ring',
