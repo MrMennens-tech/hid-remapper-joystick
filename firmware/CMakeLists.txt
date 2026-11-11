@@ -6,6 +6,12 @@ add_compile_definitions(PICO_DEFAULT_UART_BAUD_RATE=921600)
 add_compile_definitions(PERSISTED_CONFIG_SIZE=4096)
 add_compile_definitions(PICO_XOSC_STARTUP_DELAY_MULTIPLIER=64)
 
+# Debug logging over UART is opt-in on boards where it would otherwise
+# take pins away from GPIO (see the board headers in src/boards).
+if(DEFINED ENV{REMAPPER_DEBUG_UART})
+add_compile_definitions(REMAPPER_DEBUG_UART=1)
+endif()
+
 set(PICO_SDK_PATH "${CMAKE_CURRENT_LIST_DIR}/pico-sdk")
 set(PICO_TINYUSB_PATH "${CMAKE_CURRENT_LIST_DIR}/tinyusb")
 set(PICO_PIO_USB_PATH "${CMAKE_CURRENT_LIST_DIR}/Pico-PIO-USB")

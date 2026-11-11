@@ -19,6 +19,10 @@
 #define PICO_RP2350A 1
 
 // --- UART ---
+// The debug UART is off by default so that GP0/GP1 can be used as GPIO.
+// Build with REMAPPER_DEBUG_UART=1 in the environment to get debug logs
+// on GP0 (TX) / GP1 (RX); those two pins are then not available as GPIO.
+#ifdef REMAPPER_DEBUG_UART
 #ifndef PICO_DEFAULT_UART
 #define PICO_DEFAULT_UART 0
 #endif
@@ -27,6 +31,7 @@
 #endif
 #ifndef PICO_DEFAULT_UART_RX_PIN
 #define PICO_DEFAULT_UART_RX_PIN 1
+#endif
 #endif
 
 // --- LED ---
