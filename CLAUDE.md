@@ -12,6 +12,19 @@ This is **HID Remapper** — a configurable USB dongle (RP2040/RP2350 or nRF5284
 - `config-tool-web/` — Original upstream config tool (reference only, do not modify)
 - `config-tool/` — Python CLI alternative to the web tool
 
+## TechRemap (new UI) — techremap/
+
+The successor to `config-tool-web-v2/`, same no-build ES-module setup. The drawing shows the device the PC sees; each control lists which input drives it per layer.
+
+| File | Role |
+|------|------|
+| `model.js` | Pure logic: controls <-> firmware mappings, layer inheritance, layer switches. Tested by `node --test techremap/model.test.js` |
+| `pads.js` | Devices per emulated type: usage codes per control and the SVG drawings (right half mirrored) |
+| `device.js` | WebHID layer (copy of v2's) plus the TechRemap extension commands |
+| `app.js` | State, rendering, capture ("Probeer zonder bordje" gives a demo with simulated inputs) |
+
+Firmware extensions (go-to-layer, LED strip, pin names) are documented in `TECHREMAP.md`. The firmware has 4 layers. The UI is Dutch.
+
 ## Active development branch
 
 All UI work is done on branch `claude/simplify-hid-ui-yNeiI`. The `gh-pages` branch hosts the live site; push `config-tool-web-v2/` files there to deploy.
