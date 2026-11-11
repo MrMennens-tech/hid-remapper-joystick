@@ -10,6 +10,15 @@ add_compile_definitions(PICO_XOSC_STARTUP_DELAY_MULTIPLIER=64)
 # take pins away from GPIO (see the board headers in src/boards).
 # TechRemap extensions (LED strip, pin names); see src/techremap_ext.h
 add_compile_definitions(TECHREMAP_EXT=1)
+# Which board this is, as the config tool reports it (0 = unknown). Set here because
+# the board header's own macros are not visible to every source file.
+if(PICO_BOARD STREQUAL "waveshare_rp2040_zero")
+add_compile_definitions(TECHREMAP_BOARD_ID=1)
+elseif(PICO_BOARD STREQUAL "waveshare_rp2350_usb_a")
+add_compile_definitions(TECHREMAP_BOARD_ID=2)
+else()
+add_compile_definitions(TECHREMAP_BOARD_ID=0)
+endif()
 
 if(DEFINED ENV{REMAPPER_DEBUG_UART})
 add_compile_definitions(REMAPPER_DEBUG_UART=1)

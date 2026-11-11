@@ -112,10 +112,8 @@ bool techremap_ext_handle_get(ConfigCommand command, uint8_t* reply) {
         case ConfigCommand::TR_GET_INFO: {
             tr_info_t* info = (tr_info_t*) reply;
             info->ext_version = TECHREMAP_EXT_VERSION;
-#if defined(WAVESHARE_RP2040_ZERO_BOARD)
-            info->board = TECHREMAP_BOARD_RP2040_ZERO;
-#elif defined(WAVESHARE_RP2350_USB_A_BOARD)
-            info->board = TECHREMAP_BOARD_RP2350_USB_A;
+#ifdef TECHREMAP_BOARD_ID
+            info->board = TECHREMAP_BOARD_ID;
 #else
             info->board = TECHREMAP_BOARD_UNKNOWN;
 #endif
