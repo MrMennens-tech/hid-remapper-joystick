@@ -4,38 +4,42 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TechRemap — by Mennens.Tech</title>
-    <link rel="stylesheet" href="style.css?v=1">
+    <link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
 <div class="wrap">
     <div class="top">
         <div class="brand"><b>TechRemap</b><span>by Mennens.Tech</span></div>
-        <span class="status" id="status"><span class="led"></span><span id="status-text">Geen bordje verbonden</span></span>
+        <span class="status" id="status"><span class="led"></span><span id="status-text"></span></span>
         <span class="spacer"></span>
-        <button type="button" class="btn" id="connect">Verbind bordje</button>
-        <button type="button" class="btn primary" id="save" disabled>Opslaan op bordje</button>
+        <button type="button" class="btn" id="connect" data-t="Verbind bordje"></button>
+        <button type="button" class="btn primary" id="save" disabled></button>
         <div class="layers" id="themes">
-            <button type="button" data-theme-set="dark">Donker</button>
-            <button type="button" data-theme-set="light">Licht</button>
+            <button type="button" data-theme-set="dark" data-t="Donker"></button>
+            <button type="button" data-theme-set="light" data-t="Licht"></button>
+        </div>
+        <div class="layers" id="lang-pick">
+            <button type="button" data-lang-set="nl">NL</button>
+            <button type="button" data-lang-set="en">EN</button>
         </div>
     </div>
 
     <div class="card welcome" id="welcome">
-        <h2>Stel je bordje in</h2>
-        <p>Sluit het bordje met de USB-kabel aan op deze computer en klik op “Verbind bordje”. Dit werkt in Chrome en Edge.</p>
+        <h2 data-t="Stel je bordje in"></h2>
+        <p data-t="Sluit het bordje met de USB-kabel aan op deze computer en klik op “Verbind bordje”. Dit werkt in Chrome en Edge."></p>
         <div class="row2">
-            <button type="button" class="btn primary" id="connect2">Verbind bordje</button>
-            <button type="button" class="btn" id="demo">Probeer zonder bordje</button>
+            <button type="button" class="btn primary" id="connect2" data-t="Verbind bordje"></button>
+            <button type="button" class="btn" id="demo" data-t="Probeer zonder bordje"></button>
         </div>
-        <p id="nohid" hidden>Deze browser kan niet met het bordje praten. Gebruik Chrome of Edge op een computer.</p>
+        <p id="nohid" hidden data-t="Deze browser kan niet met het bordje praten. Gebruik Chrome of Edge op een computer."></p>
     </div>
 
     <div id="app" hidden>
         <div class="tabs" id="tabs" role="tablist">
-            <button type="button" role="tab" data-tab="remap" aria-selected="true">Knoppen</button>
-            <button type="button" role="tab" data-tab="led" aria-selected="false">Lampjes</button>
-            <button type="button" role="tab" data-tab="board" aria-selected="false">Bord inrichten</button>
-            <button type="button" role="tab" data-tab="settings" aria-selected="false">Instellingen</button>
+            <button type="button" role="tab" data-tab="remap" aria-selected="true" data-t="Knoppen"></button>
+            <button type="button" role="tab" data-tab="led" aria-selected="false" data-t="Lampjes"></button>
+            <button type="button" role="tab" data-tab="board" aria-selected="false" data-t="Bord inrichten"></button>
+            <button type="button" role="tab" data-tab="settings" aria-selected="false" data-t="Instellingen"></button>
         </div>
 
         <!-- ── Knoppen ─────────────────────────────────────────────────── -->
@@ -43,22 +47,22 @@
             <div class="bar">
                 <span class="device" id="device-pill"></span>
                 <div class="layers" id="layers">
-                    <span class="lbl">Toon</span>
-                    <button type="button" data-layer="-1" aria-pressed="true">Alle lagen</button>
-                    <button type="button" data-layer="0" aria-pressed="false"><span class="dot d1"></span>Laag 1</button>
-                    <button type="button" data-layer="1" aria-pressed="false"><span class="dot d2"></span>Laag 2</button>
-                    <button type="button" data-layer="2" aria-pressed="false"><span class="dot d3"></span>Laag 3</button>
-                    <button type="button" data-layer="3" aria-pressed="false"><span class="dot d4"></span>Laag 4</button>
+                    <span class="lbl" data-t="Toon"></span>
+                    <button type="button" data-layer="-1" aria-pressed="true" data-t="Alle lagen"></button>
+                    <button type="button" data-layer="0" aria-pressed="false"><span class="dot d1"></span><span class="ln" data-n="1"></span></button>
+                    <button type="button" data-layer="1" aria-pressed="false"><span class="dot d2"></span><span class="ln" data-n="2"></span></button>
+                    <button type="button" data-layer="2" aria-pressed="false"><span class="dot d3"></span><span class="ln" data-n="3"></span></button>
+                    <button type="button" data-layer="3" aria-pressed="false"><span class="dot d4"></span><span class="ln" data-n="4"></span></button>
                 </div>
             </div>
             <div class="layers sim" id="sim" hidden></div>
             <div class="banner" id="banner" hidden></div>
             <div class="stage-scroll">
-                <svg class="stage" id="stage" viewBox="0 44 1180 600" role="group" aria-label="Het apparaat dat de pc ziet, met toewijzingen per laag"></svg>
+                <svg class="stage" id="stage" viewBox="0 44 1180 600" role="group" data-t-label="Het apparaat dat de pc ziet, met toewijzingen per laag"></svg>
             </div>
             <div class="card" id="kbd-card" hidden>
-                <h3>Toetsenbord</h3>
-                <p class="sub">Klik op een toets om te kiezen welke knop of jack hem indrukt.</p>
+                <h3 data-t="Toetsenbord"></h3>
+                <p class="sub" data-t="Klik op een toets om te kiezen welke knop of jack hem indrukt."></p>
                 <div class="kbd-scroll"><div class="kbd" id="kbd"></div></div>
             </div>
             <div class="below">
@@ -68,16 +72,16 @@
                     <div id="detail-rows"></div>
                 </div>
                 <div class="card">
-                    <h3>Laag wisselen</h3>
-                    <p class="sub">Welke knop of jack schakelt naar een andere laag.</p>
+                    <h3 data-t="Laag wisselen"></h3>
+                    <p class="sub" data-t="Welke knop of jack schakelt naar een andere laag."></p>
                     <div class="panel" id="switches"></div>
                     <div class="warn" id="switch-warn" hidden></div>
                     <div class="switch-add">
-                        <span>Op</span>
-                        <select id="sw-from" aria-label="Vanaf laag"><option value="0">laag 1</option><option value="1">laag 2</option><option value="2">laag 3</option><option value="3">laag 4</option></select>
-                        <select id="sw-type" aria-label="Soort"></select>
-                        <select id="sw-to" aria-label="Naar laag"><option value="1">laag 2</option><option value="2">laag 3</option><option value="3">laag 4</option><option value="0">laag 1</option></select>
-                        <button type="button" class="btn" id="sw-add">Kies knop of jack</button>
+                        <span data-t="Op"></span>
+                        <select id="sw-from" data-t-label="Vanaf laag"><option value="0">laag 1</option><option value="1">laag 2</option><option value="2">laag 3</option><option value="3">laag 4</option></select>
+                        <select id="sw-type" data-t-label="Soort"></select>
+                        <select id="sw-to" data-t-label="Naar laag"><option value="1">laag 2</option><option value="2">laag 3</option><option value="3">laag 4</option><option value="0">laag 1</option></select>
+                        <button type="button" class="btn" id="sw-add"></button>
                     </div>
                 </div>
             </div>
@@ -103,7 +107,7 @@
 <div class="toast" id="toast" hidden></div>
 
 <script type="module">
-    import { init } from './app.js?v=1';
+    import { init } from './app.js?v=2';
     init();
 </script>
 </body>

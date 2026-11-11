@@ -31,6 +31,40 @@ export function isAnalog(usage) {
 // [x, y] of the stick this axis belongs to, or null
 export const stickPair = usage => STICK_PAIRS.find(p => p.includes(usage)) || null;
 
+// ── joystick -> cursor/scroll ────────────────────────────────────────────────
+// A stick rests at 128, so it cannot drive a relative output directly. The
+// firmware needs an expression: centre the axis, ignore a dead zone, scale.
+// (Same recipe as HID Remapper's "gamepad-to-mouse adapter" example. Numbers
+// in expressions are thousandths: -128000 is -128.)
+const EXPR_PAGE = 0xfff3;
+const STICK_EXPR = /^(0x[0-9a-f]{8}) input_state -128000 add dup abs (\d+) gt mul (?:(-?\d+) mul )?(\d+) mul$/;
+export function parseStickExpr(text) {
+    const m = STICK_EXPR.exec((text || '').trim().replace(/\s+/g, ' '));
+    return m ? { axis: m[1], dz: Number(m[2]), pre: m[3] === undefined ? null : Number(m[3]), speed: Number(m[4]) } : null;
+}
+const stickExprText = (axis, dz, pre, speed) =>
+    `${axis} input_state -128000 add dup abs ${dz} gt mul ${pre === null ? '' : pre + ' mul '}${speed} mul`;
+const exprUsage = i => hex((EXPR_PAGE << 16) | (i + 1));
+function exprOf(cfg, usage) {
+    const i = low(usage) - 1;
+    return page(usage) === EXPR_PAGE && cfg.expressions && i >= 0 && i < cfg.expressions.length ? parseStickExpr(cfg.expressions[i]) : null;
+}
+// Expression slot holding exactly this text; made if `create`. Returns its usage or null.
+function exprSlot(cfg, text, create) {
+    let i = cfg.expressions.findIndex(e => (e || '').trim() === text);
+    if (i < 0 && create) {
+        i = cfg.expressions.findIndex(e => !(e || '').trim());
+        if (i >= 0) cfg.expressions[i] = text;
+    }
+    return i < 0 ? null : exprUsage(i);
+}
+// Drop joystick expressions nothing points at any more.
+function sweepExpressions(cfg) {
+    (cfg.expressions || []).forEach((e, i) => {
+        if (parseStickExpr(e) && !cfg.mappings.some(m => m.source_usage === exprUsage(i))) cfg.expressions[i] = '';
+    });
+}
+
 // ── config housekeeping ──────────────────────────────────────────────────────
 // The firmware treats an empty layer list as "all layers"; make that explicit.
 export function normalize(cfg) {
@@ -38,6 +72,7 @@ export function normalize(cfg) {
         m.layers = (m.layers.length ? m.layers : [0, 1, 2, 3]).filter(l => l < NLAYERS).sort();
     }
     cfg.unmapped_passthrough_layers = cfg.unmapped_passthrough_layers.filter(l => l < NLAYERS);
+    cfg.expressions = cfg.expressions || [];
     return cfg;
 }
 const newMapping = (source, target, scaling, layers) => ({
@@ -59,58 +94,81 @@ function addLayer(m, layer) {
 // kind 'stick' : axes [x, y]             driven by a joystick, axis for axis
 // kind 'dir'   : targets [{ u, d }]      one direction of a stick, from a button
 // kind 'rel'   : targets [{ u }], sign   one direction of cursor/scroll, from a button
+// kind 'expr'  : targets [{ u, ax, pre }] cursor/scroll from a joystick, through an expression
 const DIR_MID = 128000;
 
 function entries(control) {
     return control.kind === 'stick' ? control.axes.map(u => ({ u })) : control.targets;
 }
-function matches(control, i, m) {
+const isDigital = u => !isAnalog(u) && page(u) !== EXPR_PAGE;
+function matches(cfg, control, i, m) {
     const e = entries(control)[i];
     if (m.target_usage !== e.u) return false;
     switch (control.kind) {
         case 'stick': return isAnalog(m.source_usage);
-        case 'dir': return !isAnalog(m.source_usage) && (m.scaling >= DIR_MID) === (e.d >= DIR_MID);
-        case 'rel': return Math.sign(m.scaling) === control.sign;
+        case 'dir': return isDigital(m.source_usage) && (m.scaling >= DIR_MID) === (e.d >= DIR_MID);
+        case 'rel': return isDigital(m.source_usage) && Math.sign(m.scaling) === control.sign;
+        case 'expr': { const x = exprOf(cfg, m.source_usage); return !!x && x.pre === (e.pre ?? null); }
         default: return true;
     }
 }
-const own = (cfg, control, i) => cfg.mappings.filter(m => matches(control, i, m));
+const own = (cfg, control, i) => cfg.mappings.filter(m => matches(cfg, control, i, m));
 
 // What kind of input a control takes. Returns null if `source` fits, else a reason.
-export function rejects(control, source) {
-    if (control.kind === 'stick' && !isAnalog(source)) return 'stick-needs-stick';
+export function rejects(control, source, cfg) {
+    if ((control.kind === 'stick' || control.kind === 'expr') && !isAnalog(source)) return 'stick-needs-stick';
+    if (control.kind === 'expr') {
+        const texts = exprTexts(cfg, control, source);
+        const missing = new Set(texts.filter(t => !exprSlot(cfg, t, false))).size;
+        if (missing > cfg.expressions.filter(e => !(e || '').trim()).length) return 'no-slot';
+    }
     if ((control.kind === 'dir' || control.kind === 'rel') && isAnalog(source)) return 'needs-button';
     return null;
 }
+function exprTexts(cfg, control, source) {
+    const pair = stickPair(source) || [source, source];
+    const sp = speed(cfg, control) ?? control.speed, dz = deadzone(cfg, control) ?? control.dz;
+    return control.targets.map(e => stickExprText(pair[e.ax], dz, e.pre ?? null, sp));
+}
 // The inputs that feed each target of the control when `source` is assigned.
-function sourcesFor(control, source) {
+function sourcesFor(cfg, control, source, create = true) {
+    if (control.kind === 'expr') return exprTexts(cfg, control, source).map(t => exprSlot(cfg, t, create));
     if (control.kind !== 'stick') return entries(control).map(() => source);
     const pair = stickPair(source);
     return pair ? pair : [source];       // an odd axis only drives X
 }
 function scalingFor(control, i, source) {
     const e = entries(control)[i];
-    if (control.kind === 'stick') return 1000;
+    if (control.kind === 'stick' || control.kind === 'expr') return 1000;
     if (control.kind === 'rel') return control.sign * (control.speed || 500);
     if (control.kind === 'dir') return e.d;
     return isAnalog(source) ? (e.a ?? 1000) : (e.d ?? 1000);
 }
 // Label input for a mapping of this control: sticks are named by their X axis.
-function canonical(control, m) {
-    if (control.kind !== 'stick') return m.source_usage;
-    const pair = stickPair(m.source_usage);
-    return pair ? pair[0] : m.source_usage;
+function canonical(cfg, control, m) {
+    if (control.kind !== 'stick' && control.kind !== 'expr') return m.source_usage;
+    const axis = control.kind === 'expr' ? exprOf(cfg, m.source_usage).axis : m.source_usage;
+    const pair = stickPair(axis);
+    return pair ? pair[0] : axis;
 }
+
+// Which physical input a source is. The two axes of a stick count as one input,
+// also when they come in through a joystick expression, so a stick does one thing per layer.
+function inputKey(cfg, usage) {
+    const x = exprOf(cfg, usage), pair = stickPair(x ? x.axis : usage);
+    return pair ? 'stick:' + pair[0] : usage;
+}
+const sameInput = (cfg, a, b) => a === b || inputKey(cfg, a) === inputKey(cfg, b);
 
 // Has this input been given a job of its own on `layer` (not inherited from the base)?
 const hasOwnJob = (cfg, source, layer) =>
-    cfg.mappings.some(m => m.source_usage === source && m.layers.includes(layer) && !isBase(m));
+    cfg.mappings.some(m => sameInput(cfg, m.source_usage, source) && m.layers.includes(layer) && !isBase(m));
 
 // Give the input's base jobs back to `layer` once it no longer has a job of its own there.
 function restoreBase(cfg, source, layer) {
     if (hasOwnJob(cfg, source, layer)) return;
     for (const m of cfg.mappings) {
-        if (m.source_usage !== source || !isBase(m) || isSwitch(m)) continue;
+        if (!sameInput(cfg, m.source_usage, source) || !isBase(m) || isSwitch(m)) continue;
         const taken = cfg.mappings.some(o => o !== m && o.target_usage === m.target_usage && o.layers.includes(layer) && !isBase(o));
         if (!taken) addLayer(m, layer);
     }
@@ -122,7 +180,7 @@ function restoreBase(cfg, source, layer) {
 export function chips(cfg, control) {
     const out = [];
     for (const m of own(cfg, control, 0)) {
-        const source = canonical(control, m);
+        const source = canonical(cfg, control, m);
         if (isBase(m)) out.push({ layer: 0, source, base: true });
         else for (const l of m.layers) out.push({ layer: l, source, base: false });
     }
@@ -139,27 +197,28 @@ export function layerState(cfg, control, layer) {
     const mine = own(cfg, control, 0);
     const here = mine.filter(m => m.layers.includes(layer));
     const set = here.filter(m => layer === 0 || !isBase(m));
-    if (set.length) return { state: 'set', sources: set.map(m => canonical(control, m)) };
-    if (here.length) return { state: 'same', sources: here.map(m => canonical(control, m)) };
+    if (set.length) return { state: 'set', sources: set.map(m => canonical(cfg, control, m)) };
+    if (here.length) return { state: 'same', sources: here.map(m => canonical(cfg, control, m)) };
     const base = mine.find(isBase);
     if (!base || layer === 0) return { state: 'empty' };
-    const other = cfg.mappings.find(m => m.source_usage === base.source_usage && m.layers.includes(layer) && !isBase(m));
-    return other ? { state: 'moved', source: canonical(control, base), to: other.target_usage, toMapping: other }
-                 : { state: 'off', source: canonical(control, base) };
+    const other = cfg.mappings.find(m => sameInput(cfg, m.source_usage, base.source_usage) && m.layers.includes(layer) && !isBase(m));
+    return other ? { state: 'moved', source: canonical(cfg, control, base), to: other.target_usage, toMapping: other }
+                 : { state: 'off', source: canonical(cfg, control, base) };
 }
 
 // Other targets this input also drives on the layer (to tell the user after assigning).
 export function alsoDrives(cfg, control, source, layer) {
     const mineTargets = new Set(entries(control).map(e => e.u));
-    const srcs = new Set(sourcesFor(control, source));
+    if (control.kind === 'expr') return [];
+    const srcs = new Set(sourcesFor(cfg, control, source, false));
     return cfg.mappings.filter(m => srcs.has(m.source_usage) && m.layers.includes(layer) && !mineTargets.has(m.target_usage));
 }
 
 // ── writing ──────────────────────────────────────────────────────────────────
 export function assign(cfg, control, layer, source) {
-    const srcs = sourcesFor(control, source);
+    const srcs = sourcesFor(cfg, control, source);
     srcs.forEach((src, i) => {
-        if (i >= entries(control).length) return;
+        if (i >= entries(control).length || src === null) return;
         const target = entries(control)[i].u;
         const mine = own(cfg, control, i);
         if (layer === 0) {
@@ -174,12 +233,13 @@ export function assign(cfg, control, layer, source) {
             const replaced = mine.filter(m => m.layers.includes(layer) && !isBase(m)).map(m => m.source_usage);
             mine.filter(m => m.layers.includes(layer)).forEach(m => strip(cfg, m, layer));
             // on this layer the input now does this instead of its base jobs
-            cfg.mappings.filter(m => m.source_usage === src && isBase(m) && m.layers.includes(layer) && !isSwitch(m))
+            cfg.mappings.filter(m => sameInput(cfg, m.source_usage, src) && isBase(m) && m.layers.includes(layer) && !isSwitch(m))
                 .forEach(m => strip(cfg, m, layer));
             cfg.mappings.push(newMapping(src, target, scalingFor(control, i, src), [layer]));
             replaced.forEach(s => restoreBase(cfg, s, layer));
         }
     });
+    sweepExpressions(cfg);
 }
 
 // Nothing drives the control on this layer. On layer 1 that removes the base assignment.
@@ -194,6 +254,7 @@ export function clear(cfg, control, layer) {
             freed.forEach(s => restoreBase(cfg, s, layer));
         }
     });
+    sweepExpressions(cfg);
 }
 
 // The layer follows layer 1 again.
@@ -208,14 +269,32 @@ export function inherit(cfg, control, layer) {
     });
 }
 
-// Cursor/scroll speed of a 'rel' control (magnitude of the scaling), or null if unassigned.
+// Cursor/scroll speed of a 'rel' or 'expr' control, or null if unassigned.
 export function speed(cfg, control) {
     const m = own(cfg, control, 0)[0];
-    return m ? Math.abs(m.scaling) : null;
+    if (!m) return null;
+    return control.kind === 'expr' ? exprOf(cfg, m.source_usage).speed : Math.abs(m.scaling);
+}
+export function deadzone(cfg, control) {
+    const m = control.kind === 'expr' ? own(cfg, control, 0)[0] : null;
+    return m ? exprOf(cfg, m.source_usage).dz : null;
+}
+// Rewrite the control's joystick expressions with other numbers.
+function retune(cfg, control, change) {
+    entries(control).forEach((_, i) => own(cfg, control, i).forEach(m => {
+        const x = { ...exprOf(cfg, m.source_usage), ...change };
+        m.source_usage = exprSlot(cfg, stickExprText(x.axis, x.dz, x.pre, x.speed), true) || m.source_usage;
+    }));
+    sweepExpressions(cfg);
 }
 export function setSpeed(cfg, control, value) {
     control.speed = value;
-    own(cfg, control, 0).forEach(m => { m.scaling = control.sign * value; });
+    if (control.kind === 'expr') retune(cfg, control, { speed: value });
+    else own(cfg, control, 0).forEach(m => { m.scaling = control.sign * value; });
+}
+export function setDeadzone(cfg, control, value) {
+    control.dz = value;
+    retune(cfg, control, { dz: value });
 }
 
 // ── layer switching ──────────────────────────────────────────────────────────
@@ -231,7 +310,7 @@ export function addSwitch(cfg, type, from, to, source) {
     const dup = cfg.mappings.find(m => m.target_usage === target && m.source_usage === source && m.layers.includes(from));
     if (dup) return dup;
     if (from > 0) {
-        cfg.mappings.filter(m => m.source_usage === source && isBase(m) && m.layers.includes(from) && !isSwitch(m))
+        cfg.mappings.filter(m => sameInput(cfg, m.source_usage, source) && isBase(m) && m.layers.includes(from) && !isSwitch(m))
             .forEach(m => strip(cfg, m, from));
     }
     const m = newMapping(source, target, 1000, [from]);

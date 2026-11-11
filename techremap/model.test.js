@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as M from './model.js';
 
-const cfg = () => ({ mappings: [], unmapped_passthrough_layers: [0, 1, 2, 3] });
+const cfg = () => ({ mappings: [], expressions: Array(8).fill(''), unmapped_passthrough_layers: [0, 1, 2, 3] });
 const btn = u => ({ kind: 'button', targets: [{ u, d: 1000, a: 1000 }] });
 const A = btn('0x00090005'), B = btn('0x00090006'), X = btn('0x0009000b'), Y = btn('0x0009000c');
 const J1 = '0xfff40002', J2 = '0xfff40003', STAR = '0x00090001';
@@ -152,4 +152,55 @@ test('normalize spells out "all layers" and drops layers the firmware lacks', ()
     M.normalize(c);
     assert.deepEqual(c.mappings.map(m => m.layers), [[0, 1, 2, 3], [1]]);
     assert.deepEqual(c.unmapped_passthrough_layers, [0, 1, 2, 3]);
+});
+
+test('a joystick drives the cursor through expressions with a dead zone', () => {
+    const c = cfg();
+    const cursor = { kind: 'expr', speed: 12, dz: 15000, targets: [{ u: '0x00010030', ax: 0 }, { u: '0x00010031', ax: 1 }] };
+    const scroll = { kind: 'expr', speed: 12, dz: 15000, targets: [{ u: '0x00010038', ax: 1, pre: -10 }] };
+    assert.equal(M.rejects(cursor, J1, c), 'stick-needs-stick');
+    assert.equal(M.rejects(cursor, '0x00010035', c), null);
+    M.assign(c, cursor, 0, '0x00010035');         // moved the right stick
+    assert.equal(c.expressions[0], '0x00010032 input_state -128000 add dup abs 15000 gt mul 12 mul');
+    assert.equal(c.expressions[1], '0x00010035 input_state -128000 add dup abs 15000 gt mul 12 mul');
+    assert.deepEqual(c.mappings.map(m => [m.source_usage, m.target_usage, m.scaling]),
+        [['0xfff30001', '0x00010030', 1000], ['0xfff30002', '0x00010031', 1000]]);
+    assert.deepEqual(M.chips(c, cursor), [{ layer: 0, source: '0x00010032', base: true }]);
+    assert.deepEqual(M.chips(c, scroll), []);
+
+    M.assign(c, scroll, 1, '0x00010035');         // on layer 2 the same stick scrolls instead
+    assert.equal(c.expressions[2], '0x00010035 input_state -128000 add dup abs 15000 gt mul -10 mul 12 mul');
+    assert.deepEqual(M.chips(c, scroll), [{ layer: 1, source: '0x00010032', base: false }]);
+    // ...and the cursor stands still there, on both axes
+    assert.deepEqual(c.mappings.filter(m => m.target_usage !== '0x00010038').map(m => m.layers), [[0, 2, 3], [0, 2, 3]]);
+    assert.equal(M.layerState(c, cursor, 1).state, 'moved');
+
+    M.setSpeed(c, cursor, 20);
+    M.setDeadzone(c, cursor, 25000);
+    assert.equal(M.speed(c, cursor), 20);
+    assert.equal(M.deadzone(c, cursor), 25000);
+    assert.equal(c.expressions.filter(e => e).length, 3);       // old texts were swept
+    assert.ok(c.expressions.includes('0x00010032 input_state -128000 add dup abs 25000 gt mul 20 mul'));
+
+    M.clear(c, cursor, 0);
+    M.clear(c, scroll, 1);
+    assert.deepEqual(c.expressions, Array(8).fill(''));
+    assert.equal(c.mappings.length, 0);
+});
+
+test('a joystick mapping is refused when the expression slots are full', () => {
+    const c = cfg();
+    c.expressions = Array(8).fill('1000');
+    const cursor = { kind: 'expr', speed: 12, dz: 15000, targets: [{ u: '0x00010030', ax: 0 }, { u: '0x00010031', ax: 1 }] };
+    assert.equal(M.rejects(cursor, '0x00010030', c), 'no-slot');
+});
+
+test('cursor buttons and cursor joystick do not get mixed up', () => {
+    const c = cfg();
+    const right = { kind: 'rel', sign: 1, speed: 500, targets: [{ u: '0x00010030' }] };
+    const cursor = { kind: 'expr', speed: 12, dz: 15000, targets: [{ u: '0x00010030', ax: 0 }, { u: '0x00010031', ax: 1 }] };
+    M.assign(c, cursor, 0, '0x00010030');
+    M.assign(c, right, 0, J1);
+    assert.deepEqual(M.chips(c, right).map(x => x.source), [J1]);
+    assert.deepEqual(M.chips(c, cursor).map(x => x.source), ['0x00010030']);
 });

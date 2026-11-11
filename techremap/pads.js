@@ -221,9 +221,16 @@ export const keyName = usage => {
 };
 
 function buildMouse(label) {
-    const rel = (g, name, u, sign, speed) => ({ g, name, kind: 'rel', sign, speed, targets: [{ u }] });
+    const rel = (g, name, u, sign, speed) => ({ g, name, kind: 'rel', sign, speed, range: speed >= 100 ? [50, 2000] : [1, 50], targets: [{ u }] });
     const VSCROLL = '0x00010038', HSCROLL = '0x000c0238';
+    // Defaults follow HID Remapper's own examples where there is one: 500 for cursor keys
+    // ("arrows act as mouse"), 25 and a dead zone of 10 for a stick ("gamepad-to-mouse adapter").
+    // Speeds: a button moves `speed` thousandths of a pixel (or scroll notch) per millisecond;
+    // a joystick at full tilt moves 0.128 * speed pixels per millisecond (scroll: a hundredth of that).
+    const joy = (name, speed, targets) => ({ g: 'Joy', name, kind: 'expr', speed, dz: 10240, range: [2, 60], targets });
     const controls = {
+        cj: joy('Cursor met joystick', 25, [{ u: LX, ax: 0 }, { u: LY, ax: 1 }]),
+        sj: joy('Scrollen met joystick', 12, [{ u: VSCROLL, ax: 1, pre: -10 }]),
         mb1: button('L', 'Linkermuisknop', 1), mb3: button('M', 'Middelste knop (wiel)', 3), mb2: button('R', 'Rechtermuisknop', 2),
         mb5: button('▲', 'Zijknop vooruit', 5), mb4: button('▼', 'Zijknop terug', 4),
         su: rel('↑', 'Scrollen omhoog', VSCROLL, 1, 10), sd: rel('↓', 'Scrollen omlaag', VSCROLL, -1, 10),
@@ -253,12 +260,12 @@ function buildMouse(label) {
             hit('mb3', '<rect class="pad-well" x="578" y="150" width="24" height="56" rx="12"/><rect class="pad-part" x="584" y="160" width="12" height="36" rx="6"/>'),
             hit('cl', pad(701, 304, 26, 32) + tri('M705,320 l16,-12 v24 Z')), hit('cr', pad(763, 304, 26, 32) + tri('M785,320 l-16,-12 v24 Z')),
             hit('cu', pad(729, 276, 32, 26) + tri('M745,280 l12,16 h-24 Z')), hit('cd', pad(729, 338, 32, 26) + tri('M745,360 l12,-16 h-24 Z')),
-            '<circle class="pad-well" cx="745" cy="320" r="6" pointer-events="none"/>',
+            hit('cj', '<circle class="pad-part" cx="745" cy="320" r="9"/>'),
         ].join('');
         const markAt = {
             mb1: [552, 214], mb2: [628, 214], mb3: [606, 154], mb5: [510, 252], mb4: [510, 322],
             su: [602, 126], sd: [602, 232], sl: [556, 166], sr: [626, 166],
-            cl: [707, 306], cr: [790, 306], cu: [760, 280], cd: [760, 362],
+            cl: [707, 306], cr: [790, 306], cu: [760, 280], cd: [760, 362], cj: [754, 311],
         };
         const L = (d, ex, ey) => `<path class="leader" d="${d}"/><circle class="leader-end" cx="${ex}" cy="${ey}" r="3"/>`;
         const leaders = [
@@ -268,10 +275,10 @@ function buildMouse(label) {
         const panels = [
             { title: 'Knoppen', ids: ['mb1', 'mb3', 'mb2'], x: LEFT_X, y: 82, h: panelH(3) },
             { title: 'Zijknoppen', ids: ['mb5', 'mb4'], x: LEFT_X, y: 236, h: panelH(2) },
-            { title: 'Scrollen', ids: ['su', 'sd', 'sl', 'sr'], x: RIGHT_X, y: 62, h: panelH(4) },
-            { title: 'Cursor bewegen', ids: ['cu', 'cd', 'cl', 'cr'], x: RIGHT_X, y: 246, h: panelH(4) },
+            { title: 'Scrollen', ids: ['sj', 'su', 'sd', 'sl', 'sr'], x: RIGHT_X, y: 62, h: panelH(5) },
+            { title: 'Cursor bewegen', ids: ['cj', 'cu', 'cd', 'cl', 'cr'], x: RIGHT_X, y: 278, h: panelH(5) },
         ];
-        return { drawing, leaders, markAt, stands: {}, panels, bottom: 420 };
+        return { drawing, leaders, markAt, stands: {}, panels, bottom: 278 + panelH(5) };
     }
     return { key: 'mouse', label, controls, scene, keyboard: KB_ROWS };
 }

@@ -592,7 +592,9 @@ function exprToElems(expr) {
             if (tok.toLowerCase().startsWith('0x')) {
                 tokens.push([ops.PUSH_USAGE, parseInt(tok, 16)]);
             } else if (/^-?[0-9]/.test(tok)) {
-                tokens.push([ops.PUSH, Math.round(parseFloat(tok) * 1000)]);
+                // numbers are kept exactly as the device stores them (thousandths), the same
+                // way they are read back, so loading and saving does not change an expression
+                tokens.push([ops.PUSH, parseInt(tok, 10)]);
             } else if (tok === '\n' || tok.toLowerCase() === 'eol') {
                 tokens.push([ops.EOL]);
             } else {
