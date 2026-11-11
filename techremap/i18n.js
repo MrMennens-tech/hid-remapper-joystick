@@ -59,8 +59,8 @@ const EN = {
     'Hier hoort een joystick bij. Beweeg een joystick, of gebruik de richtingen ← → ↑ ↓ voor losse knoppen.':
         'This needs a joystick. Move a joystick, or use the directions ← → ↑ ↓ for separate buttons.',
     'Hier hoort een knop of jack bij, geen joystick.': 'This needs a button or jack, not a joystick.',
-    'Er is geen ruimte meer voor nog een joystick-koppeling. Verwijder eerst een andere, of een expressie in de klassieke weergave.':
-        'There is no room for another joystick link. Remove another one first, or an expression in the classic view.',
+    'Er is geen ruimte meer voor nog een joystick-koppeling. Verwijder eerst een andere, of een expressie in de originele HID Remapper-tool.':
+        'There is no room for another joystick link. Remove another one first, or an expression in the original HID Remapper tool.',
 
     // layer switching
     'Laag wisselen': 'Switching layers',
@@ -135,7 +135,7 @@ const EN = {
     'Bewaar als bestand': 'Save as file',
     'Laad uit bestand': 'Load from file',
     'Voor gevorderden': 'For experts',
-    'Open de klassieke weergave': 'Open the classic view',
+    'Open de originele HID Remapper-tool': 'Open the original HID Remapper tool',
     'Macro’s, expressies en quirks stel je voorlopig daar in. Wat je hier instelt blijft daar zichtbaar, en andersom.':
         'Macros, expressions and quirks are set up there for now. What you set here stays visible there, and the other way round.',
     'Firmware': 'Firmware',

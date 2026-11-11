@@ -5,7 +5,7 @@ import * as M from './model.js?v=2';
 import { DEVICES, DEVICE_ORDER, PANEL_W, keyName } from './pads.js?v=2';
 import { t, tKey, setLang, lang } from './i18n.js?v=2';
 
-const CLASSIC_URL = '../config-tool-web-v2/';
+const CLASSIC_URL = 'https://www.remapper.org/config/';   // HID Remapper's own tool
 const BOARD_NAMES = { 1: 'Waveshare RP2040-Zero', 2: 'Waveshare RP2350-USB-A' };
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -51,7 +51,7 @@ function targetName(u) {
 const REASONS = {
     'stick-needs-stick': 'Hier hoort een joystick bij. Beweeg een joystick, of gebruik de richtingen ← → ↑ ↓ voor losse knoppen.',
     'needs-button': 'Hier hoort een knop of jack bij, geen joystick.',
-    'no-slot': 'Er is geen ruimte meer voor nog een joystick-koppeling. Verwijder eerst een andere, of een expressie in de klassieke weergave.',
+    'no-slot': 'Er is geen ruimte meer voor nog een joystick-koppeling. Verwijder eerst een andere, of een expressie in de originele HID Remapper-tool.',
 };
 const stickLike = c => c.kind === 'stick' || c.kind === 'expr';
 
@@ -317,7 +317,7 @@ function renderSettings() {
             <span class="hint">${T('Handig als je een gewone controller insteekt en maar een paar knoppen wilt veranderen.')}</span></div>
         <div class="field"><label for="lang">${T('Taal')}</label><select id="lang"><option value="nl"${lang === 'nl' ? ' selected' : ''}>Nederlands</option><option value="en"${lang === 'en' ? ' selected' : ''}>English</option></select></div>
         <div class="field"><span class="flabel">${T('Reservekopie')}</span><div class="inline"><button type="button" class="btn" id="export">${T('Bewaar als bestand')}</button><button type="button" class="btn" id="import">${T('Laad uit bestand')}</button><input type="file" id="import-file" accept=".json,application/json" hidden></div></div>
-        <div class="field"><span class="flabel">${T('Voor gevorderden')}</span><div class="inline"><a class="btn" href="${CLASSIC_URL}" target="_blank" rel="noopener">${T('Open de klassieke weergave')}</a></div>
+        <div class="field"><span class="flabel">${T('Voor gevorderden')}</span><div class="inline"><a class="btn" href="${CLASSIC_URL}" target="_blank" rel="noopener">${T('Open de originele HID Remapper-tool')}</a></div>
             <span class="hint">${T('Macro’s, expressies en quirks stel je voorlopig daar in. Wat je hier instelt blijft daar zichtbaar, en andersom.')}</span></div>
         <div class="field"><span class="flabel">${T('Firmware')}</span><span>${esc(fw)}</span></div>`;
 }
