@@ -66,7 +66,7 @@ const PAD_SPECS = {
         notes: {
             title: 'Goed om te weten bij PlayStation',
             items: [
-                'Op een PS4 werkt dit direct. Op een PS5 werkt het rechtstreeks alleen bij vechtspellen, en dan met een apart authenticatie-apparaat; via een Brook Wingman FGC2-adapter werkt het in alle PS5-spellen.',
+                'Op een PS4 werkt dit direct. Op een PS5 werkt het rechtstreeks alleen bij vechtspellen, en dan met een apart authenticatie-apparaat. Via een adapter zoals de Brook Wingman FGC2, Beloader of Besavior werkt het in alle PS5-spellen.',
                 'Van de touchpad wordt alleen de klik doorgegeven, geen vingerbeweging.',
             ],
         },

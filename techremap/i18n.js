@@ -174,8 +174,8 @@ const EN = {
     'Analoge trekkers werken op de Xbox Adaptive Controller alleen als aan/uit-knop.': 'On the Xbox Adaptive Controller, analog triggers only work as on/off buttons.',
     'De Hori Flex accepteert via USB alleen een analoge stick, geen knoppen, en één stick per poort.': 'The Hori Flex only accepts an analog stick over USB, no buttons, and one stick per port.',
     'Goed om te weten bij PlayStation': 'Good to know for PlayStation',
-    'Op een PS4 werkt dit direct. Op een PS5 werkt het rechtstreeks alleen bij vechtspellen, en dan met een apart authenticatie-apparaat; via een Brook Wingman FGC2-adapter werkt het in alle PS5-spellen.':
-        'On a PS4 this works directly. On a PS5 it only works directly in fighting games, and then with a separate authentication device; through a Brook Wingman FGC2 adapter it works in all PS5 games.',
+    'Op een PS4 werkt dit direct. Op een PS5 werkt het rechtstreeks alleen bij vechtspellen, en dan met een apart authenticatie-apparaat. Via een adapter zoals de Brook Wingman FGC2, Beloader of Besavior werkt het in alle PS5-spellen.':
+        'On a PS4 this works directly. On a PS5 it only works directly in fighting games, and then with a separate authentication device. Through an adapter such as the Brook Wingman FGC2, Beloader or Besavior it works in all PS5 games.',
     'Van de touchpad wordt alleen de klik doorgegeven, geen vingerbeweging.': 'Only the click of the touchpad is passed on, not finger movement.',
 
     // devices and controls
