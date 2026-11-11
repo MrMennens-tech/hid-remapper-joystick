@@ -215,28 +215,45 @@ export function alsoDrives(cfg, control, source, layer) {
 }
 
 // ── writing ──────────────────────────────────────────────────────────────────
-export function assign(cfg, control, layer, source) {
+// With `add`, the input joins the ones already driving the control on that layer
+// (two people, or two switches, for the same button) instead of replacing them.
+export function assign(cfg, control, layer, source, add = false) {
     const srcs = sourcesFor(cfg, control, source);
     srcs.forEach((src, i) => {
         if (i >= entries(control).length || src === null) return;
         const target = entries(control)[i].u;
         const mine = own(cfg, control, i);
+        if (add && mine.some(m => m.source_usage === src && m.layers.includes(layer) && (layer > 0 || isBase(m)))) return;
         if (layer === 0) {
-            mine.filter(isBase).forEach(m => cfg.mappings.splice(cfg.mappings.indexOf(m), 1));
+            if (!add) mine.filter(isBase).forEach(m => cfg.mappings.splice(cfg.mappings.indexOf(m), 1));
             const layers = [0];
             for (let l = 1; l < NLAYERS; l++) {
-                const takenHere = own(cfg, control, i).some(m => m.layers.includes(l));
+                const takenHere = own(cfg, control, i).some(m => m.layers.includes(l) && !isBase(m));
                 if (!takenHere && !hasOwnJob(cfg, src, l)) layers.push(l);
             }
             cfg.mappings.push(newMapping(src, target, scalingFor(control, i, src), layers));
         } else {
-            const replaced = mine.filter(m => m.layers.includes(layer) && !isBase(m)).map(m => m.source_usage);
-            mine.filter(m => m.layers.includes(layer)).forEach(m => strip(cfg, m, layer));
+            const replaced = add ? [] : mine.filter(m => m.layers.includes(layer) && !isBase(m)).map(m => m.source_usage);
+            if (!add) mine.filter(m => m.layers.includes(layer)).forEach(m => strip(cfg, m, layer));
             // on this layer the input now does this instead of its base jobs
             cfg.mappings.filter(m => sameInput(cfg, m.source_usage, src) && isBase(m) && m.layers.includes(layer) && !isSwitch(m))
                 .forEach(m => strip(cfg, m, layer));
             cfg.mappings.push(newMapping(src, target, scalingFor(control, i, src), [layer]));
             replaced.forEach(s => restoreBase(cfg, s, layer));
+        }
+    });
+    sweepExpressions(cfg);
+}
+
+// Take one input away from the control on this layer, leaving the others.
+export function removeSource(cfg, control, layer, source) {
+    sourcesFor(cfg, control, source, false).forEach((src, i) => {
+        if (i >= entries(control).length || src === null) return;
+        const mine = own(cfg, control, i).filter(m => m.source_usage === src);
+        if (layer === 0) mine.filter(isBase).forEach(m => cfg.mappings.splice(cfg.mappings.indexOf(m), 1));
+        else {
+            mine.filter(m => m.layers.includes(layer) && !isBase(m)).forEach(m => strip(cfg, m, layer));
+            restoreBase(cfg, src, layer);
         }
     });
     sweepExpressions(cfg);

@@ -49,6 +49,12 @@ const EN = {
     'Dode zone': 'Dead zone',
     ' en ': ' and ',
     'Ongedaan maken': 'Undo',
+    'Nog een': 'Add another',
+    '{source} bedient nu ook {control} op laag {n}.': '{source} now also drives {control} on layer {n}.',
+    '{source} bedient {control} niet meer op laag {n}.': '{source} no longer drives {control} on layer {n}.',
+    'Verwijder {source}': 'Remove {source}',
+    'Twee mensen dezelfde knop geven? Wijs de eerste toe, klik daarna op “Nog een” en druk op de tweede.':
+        'Giving two people the same button? Assign the first, then click “Add another” and press the second.',
     'Druk nu op de knop of jack die de laag moet wisselen.': 'Now press the button or jack that should switch the layer.',
     '{source} ingedrukt. Klik op wat hij moet bedienen op laag {n}.': '{source} pressed. Click what it should drive on layer {n}.',
     '{source} bedient nu {control} op laag {n}.': '{source} now drives {control} on layer {n}.',

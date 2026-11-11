@@ -67,12 +67,13 @@ function undo() {
     S.cfg.mappings = JSON.parse(S.last.undo);
     S.last = null;
 }
-function doAssign(id, layer, source) {
+function doAssign(id, layer, source, add = false) {
     const control = device().controls[id];
     const reason = M.rejects(control, source, S.cfg);
     if (reason) { toast(t(REASONS[reason]), true); return false; }
     const label = sourceName(source, stickLike(control));
-    change(t('{source} bedient nu {control} op laag {n}.', { source: label, control: tKey(control.name), n: layerNo(layer) }), () => M.assign(S.cfg, control, layer, source));
+    change(t(add ? '{source} bedient nu ook {control} op laag {n}.' : '{source} bedient nu {control} op laag {n}.', { source: label, control: tKey(control.name), n: layerNo(layer) }),
+        () => M.assign(S.cfg, control, layer, source, add));
     const also = M.alsoDrives(S.cfg, control, source, layer).filter(m => (parseInt(m.target_usage, 16) >>> 16) < 0xfff0);
     if (also.length) S.last.text += t(' Let op: op deze laag bedient {source} ook {others}.', { source: label, others: [...new Set(also.map(m => targetName(m.target_usage)))].join(t(' en ')) });
     S.selected = id;
@@ -104,8 +105,8 @@ function captured(usage) {
         const msg = type === 'goto' ? '{source} gaat naar laag {to} (op laag {from}).' : '{source} activeert laag {to} zolang ingedrukt (op laag {from}).';
         change(t(msg, { source: sourceName(usage), to: layerNo(to), from: layerNo(from) }), () => M.addSwitch(S.cfg, type, from, to, usage));
     } else if (S.listen) {
-        const { id, layer } = S.listen;
-        if (doAssign(id, layer, usage)) S.listen = null;
+        const { id, layer, add } = S.listen;
+        if (doAssign(id, layer, usage, add)) S.listen = null;
     } else if (S.tab === 'remap') {
         S.pending = usage;
         S.last = null;
@@ -180,6 +181,7 @@ function renderRemap() {
     $('hub-note').innerHTML = `<summary>${esc(t('Samen spelen: meerdere apparaten tegelijk'))}</summary><ul>` +
         ['Met een USB-hub tussen het bordje en je apparaten sluit je er meerdere tegelijk aan, bijvoorbeeld een controller, losse knoppen, een muis en een toetsenbord.',
          'Alles komt samen in één apparaat voor de pc of console. Zo kan iemand meespelen als copiloot: de een gebruikt de controller, de ander een paar knoppen.',
+         'Twee mensen dezelfde knop geven? Wijs de eerste toe, klik daarna op “Nog een” en druk op de tweede.',
          'Het bordje meldt zich altijd als één apparaat; twee aparte controllers als uitvoer kan niet.',
          'Dit staat zo in de handleiding van HID Remapper. Wij hebben het met een hub zelf nog niet getest.'].map(n => `<li>${esc(t(n))}</li>`).join('') + '</ul>';
 
@@ -222,6 +224,8 @@ function renderDetail(control) {
         const st = M.layerState(S.cfg, control, l);
         const on = S.listen && S.listen.id === S.selected && S.listen.layer === l;
         const names = (st.sources || []).map(s => sourceName(s, asStick)).join(t(' en '));
+        // each input can be taken away on its own when there is more than one
+        const several = st.state === 'set' && st.sources.length > 1 && !on;
         const text = st.state === 'set' ? names
             : st.state === 'same' ? t('Zelfde als laag 1 ({names})', { names })
             : st.state === 'moved' ? t('Niets. {source} doet hier: {what}.', { source: sourceName(st.source, asStick), what: targetName(st.to) })
@@ -230,12 +234,15 @@ function renderDetail(control) {
         if (on) acts.push(btn('data-cancel', 'Annuleer', 'go'));
         else {
             acts.push(btn(`data-listen="${l}"`, 'Wijzig'));
+            if (st.state === 'set') acts.push(btn(`data-add="${l}"`, 'Nog een'));
             if (l === 0 && st.state === 'set') acts.push(btn(`data-clear="${l}"`, 'Wis'));
             if (l > 0 && ['set', 'off', 'moved'].includes(st.state) && M.layerState(S.cfg, control, 0).state === 'set') acts.push(btn(`data-inherit="${l}"`, 'Zelfde als laag 1'));
             if (l > 0 && ['set', 'same'].includes(st.state)) acts.push(btn(`data-clear="${l}"`, 'Niets'));
         }
         html += `<div class="detail-row${on ? ' listening' : ''}"><span class="lname"><span class="dot d${l + 1}"></span>${esc(t('Laag {n}', { n: layerNo(l) }))}</span>` +
-            `<span class="val${st.state === 'set' || on ? '' : ' same'}">${esc(on ? t(asStick ? 'Beweeg nu de joystick…' : 'Druk nu op je knop of jack…') : text)}</span>` +
+            `<span class="val${st.state === 'set' || on ? '' : ' same'}">${several
+                ? st.sources.map(s => `<span class="src">${esc(sourceName(s, asStick))}<button type="button" data-remove="${l}|${s}" aria-label="${esc(t('Verwijder {source}', { source: sourceName(s, asStick) }))}">✕</button></span>`).join('')
+                : esc(on ? t(asStick ? 'Beweeg nu de joystick…' : 'Druk nu op je knop of jack…') : text)}</span>` +
             `<span class="acts">${acts.join('')}</span></div>`;
     }
     const slider = (id, label, min, max, value, shown) => `<div class="detail-row"><span class="lname">${esc(t(label))}</span>` +
@@ -443,6 +450,12 @@ function onClick(e) {
         return;
     }
     else if ((el = q('[data-listen]'))) { S.listen = { id: S.selected, layer: Number(el.dataset.listen) }; S.pending = S.last = S.listenSwitch = null; }
+    else if ((el = q('[data-add]'))) { S.listen = { id: S.selected, layer: Number(el.dataset.add), add: true }; S.pending = S.last = S.listenSwitch = null; }
+    else if ((el = q('[data-remove]'))) {
+        const c = device().controls[S.selected], [l, src] = el.dataset.remove.split('|');
+        change(t('{source} bedient {control} niet meer op laag {n}.', { source: sourceName(src, stickLike(c)), control: tKey(c.name), n: layerNo(Number(l)) }),
+            () => M.removeSource(S.cfg, c, Number(l), src));
+    }
     else if ((el = q('[data-clear]'))) {
         const c = device().controls[S.selected], l = Number(el.dataset.clear);
         change(t('{control} doet niets meer op laag {n}.', { control: tKey(c.name), n: layerNo(l) }), () => M.clear(S.cfg, c, l));
@@ -477,7 +490,12 @@ function onClick(e) {
     else if ((el = q('#page-remap [data-id]'))) {
         const id = el.dataset.id;
         S.listen = null;
-        if (S.pending) { const src = S.pending; S.pending = null; doAssign(id, Math.max(S.shown, 0), src); }
+        if (S.pending) {
+            // pressing first and clicking a control that already has an input adds to it, so nothing is lost
+            const src = S.pending, layer = Math.max(S.shown, 0);
+            S.pending = null;
+            doAssign(id, layer, src, M.layerState(S.cfg, device().controls[id], layer).state === 'set');
+        }
         else S.selected = id;
     }
     else return;

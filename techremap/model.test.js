@@ -204,3 +204,28 @@ test('cursor buttons and cursor joystick do not get mixed up', () => {
     assert.deepEqual(M.chips(c, right).map(x => x.source), [J1]);
     assert.deepEqual(M.chips(c, cursor).map(x => x.source), ['0x00010030']);
 });
+
+test('two inputs can drive the same control (co-pilot)', () => {
+    const c = cfg();
+    M.assign(c, A, 0, J1);
+    M.assign(c, A, 0, STAR, true);
+    M.assign(c, A, 0, STAR, true);                 // adding twice changes nothing
+    assert.deepEqual(layersOf(c, J1, A.targets[0].u), [[0, 1, 2, 3]]);
+    assert.deepEqual(layersOf(c, STAR, A.targets[0].u), [[0, 1, 2, 3]]);
+    assert.deepEqual(M.chips(c, A).map(x => x.source), [J1, STAR]);
+    assert.deepEqual(M.layerState(c, A, 0).sources, [J1, STAR]);
+
+    M.assign(c, B, 2, J1);                         // layer 3: jack 1 does B, the other input still does A
+    assert.deepEqual(layersOf(c, J1, A.targets[0].u), [[0, 1, 3]]);
+    assert.deepEqual(layersOf(c, STAR, A.targets[0].u), [[0, 1, 2, 3]]);
+    M.assign(c, B, 2, J2, true);                   // and a second input for B on that layer
+    assert.deepEqual(M.layerState(c, B, 2).sources, [J1, J2]);
+    M.removeSource(c, B, 2, J1);
+    assert.deepEqual(M.layerState(c, B, 2).sources, [J2]);
+    assert.deepEqual(layersOf(c, J1, A.targets[0].u), [[0, 1, 2, 3]]);   // jack 1 is A again on layer 3
+
+    M.removeSource(c, A, 0, J1);
+    assert.deepEqual(M.chips(c, A).map(x => x.source), [STAR]);
+    M.assign(c, A, 0, J2);                         // "Change" still replaces everything
+    assert.deepEqual(M.chips(c, A).map(x => x.source), [J2]);
+});
