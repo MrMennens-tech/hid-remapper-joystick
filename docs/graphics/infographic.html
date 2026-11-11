@@ -61,7 +61,7 @@ body.therapist .url { display: inline-block; margin-top: 30px; font-size: 25px; 
     </div>
     <div class="art" id="art"></div>
     <div class="points">
-        <div class="point"><h2><i></i>Sluit aan wat bij je past</h2><p>Een grote knop, een joystick, een schakelaar of een gewone controller.</p></div>
+        <div class="point"><h2><i></i>Sluit aan wat bij je past</h2><p>Bijna elk USB-apparaat: een gamepad, muis of toetsenbord. Of losse knoppen en schakelaars.</p></div>
         <div class="point"><h2><i></i>Kies wat elke knop doet</h2><p>Eén keer instellen in je browser. Het bordje onthoudt het.</p></div>
         <div class="point"><h2><i></i>Gebruik het overal</h2><p>Steek het bordje in een ander apparaat en het werkt meteen.</p></div>
     </div>
@@ -75,8 +75,8 @@ const therapist = flags.has('therapist'), tall = flags.has('tall');
 document.getElementById('eyebrow').textContent = therapist ? 'Voor therapeuten en begeleiders' : 'TechRemap by Mennens.Tech';
 document.getElementById('title').innerHTML = therapist ? 'Eén vertrouwde bediening. Overal inzetbaar.' : 'Jouw bediening.<br>Voor alles.';
 document.getElementById('lead').textContent = therapist
-    ? 'Heeft iemand een knop of joystick gevonden die goed werkt? Met TechRemap werkt die ook op de computer, de tablet en de spelcomputer. Niemand hoeft per apparaat iets nieuws aan te leren.'
-    : 'Gebruik de knop, joystick of schakelaar waar jij goed mee overweg kunt, op elke computer, tablet of spelcomputer.';
+    ? 'Heeft iemand een bediening gevonden die goed werkt, zoals een gamepad, een muis of een grote knop? Met TechRemap werkt die ook op de computer, de tablet en de spelcomputer. Niemand hoeft per apparaat iets nieuws aan te leren.'
+    : 'Gebruik het apparaat waar jij goed mee overweg kunt: een gamepad, muis, toetsenbord of losse knoppen. Op elke computer, tablet of spelcomputer.';
 
 // ── the picture ──────────────────────────────────────────────────────────────
 const bigButton = (x, y, s = 1) => `<g transform="translate(${x},${y}) scale(${s})">
@@ -104,21 +104,21 @@ let svg;
 if (tall) {
     // from top to bottom: your control, the board, three devices
     svg = `<svg viewBox="0 0 950 660">${defs}
-        ${cable('M475,150 V230')}${cable('M475,410 C475,470 170,440 170,520')}${cable('M475,410 V520')}${cable('M475,410 C475,470 780,440 780,520')}
-        ${bigButton(475, 80, 0.95)}${label(590, 78, 'Jouw bediening', 'knop, joystick, schakelaar', 'start', 30)}
+        ${cable('M360,140 C360,200 475,170 475,230')}${cable('M590,130 C590,200 475,170 475,230')}${cable('M475,410 C475,470 170,440 170,520')}${cable('M475,410 V520')}${cable('M475,410 C475,470 780,440 780,520')}
+        ${bigButton(360, 78, 0.85)}${device(590, 82, 'game', 0.95)}
         <g transform="rotate(90 475 320)">${board(475, 320, 0.95)}</g>
         ${device(170, 580, 'computer', 0.95)}${device(475, 580, 'tablet', 0.95)}${device(780, 580, 'game', 0.95)}
     </svg>`;
 } else if (therapist) {
     svg = `<svg viewBox="0 0 900 640">${defs}
-        ${cable('M150,320 H300')}${cable('M632,320 C720,320 700,130 790,130')}${cable('M632,320 H790')}${cable('M632,320 C720,320 700,510 790,510')}
-        ${bigButton(100, 300, 0.95)}${board(466, 320)}
+        ${cable('M170,210 C250,210 220,320 300,320')}${cable('M170,440 C250,440 220,320 300,320')}${cable('M632,320 C720,320 700,130 790,130')}${cable('M632,320 H790')}${cable('M632,320 C720,320 700,510 790,510')}
+        ${bigButton(100, 195, 0.85)}${device(100, 440, 'game', 0.95)}${board(466, 320)}
         ${device(820, 130, 'computer', 0.8)}${device(820, 320, 'tablet', 0.8)}${device(820, 510, 'game', 0.8)}
     </svg>`;
 } else {
     svg = `<svg viewBox="0 0 1728 430">${defs}
-        ${cable('M330,215 H640')}${cable('M972,215 C1100,215 1080,70 1200,70')}${cable('M972,215 H1200')}${cable('M972,215 C1100,215 1080,360 1200,360')}
-        ${bigButton(230, 190, 1.05)}${label(230, 330, 'Jouw bediening', 'knop, joystick, schakelaar', 'middle')}
+        ${cable('M320,95 C480,95 480,215 640,215')}${cable('M300,250 C460,250 500,215 640,215')}${cable('M972,215 C1100,215 1080,70 1200,70')}${cable('M972,215 H1200')}${cable('M972,215 C1100,215 1080,360 1200,360')}
+        ${bigButton(230, 80, 0.9)}${device(230, 250, 'game', 1.05)}${label(230, 358, 'Jouw bediening', 'gamepad, muis, toetsenbord, knoppen', 'middle')}
         ${board(806, 215)}${label(806, 362, 'TechRemap', '', 'middle')}
         ${device(1260, 70, 'computer', 0.9)}${label(1340, 82, 'Computer')}
         ${device(1260, 215, 'tablet', 0.9)}${label(1340, 227, 'Tablet')}
