@@ -1,5 +1,10 @@
 # TechRemap firmware extensions
 
+TechRemap by Mennens.Tech is built on [HID Remapper](https://github.com/jfedor2/hid-remapper)
+by Jacek Fedoryński (jfedor2), who wrote the firmware this all runs on. It is
+released under the MIT license (see `LICENSE`); keep that notice and credit
+with any board or copy you hand out.
+
 This fork adds a few things on top of HID Remapper. The upstream configuration
 format (version 18) and its commands are unchanged, so the upstream config tool
 still works with this firmware; it just does not know about the extras below.
