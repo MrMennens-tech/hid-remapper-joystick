@@ -165,6 +165,19 @@ const EN = {
     'Rempedaal': 'Brake',
     'Expressie {n}': 'Expression {n}',
 
+    // device notes
+    'Goed om te weten bij de Xbox Adaptive Controller en Hori Flex': 'Good to know for the Xbox Adaptive Controller and Hori Flex',
+    'Een Xbox Adaptive Controller met recente firmware leest per USB-poort twee sticks, het D-pad en 12 knoppen. Met oudere firmware is dat minder; werk de controller bij in de Xbox Accessories-app.':
+        'An Xbox Adaptive Controller with recent firmware reads two sticks, the D-pad and 12 buttons per USB port. Older firmware reads less; update the controller in the Xbox Accessories app.',
+    'De knopnamen hier kloppen als je het bordje in de linker USB-poort van de Xbox Adaptive Controller steekt. In de rechterpoort zijn sommige knoppen verwisseld.':
+        'The button names here are right when the board is in the left USB port of the Xbox Adaptive Controller. In the right port some buttons are swapped.',
+    'Analoge trekkers werken op de Xbox Adaptive Controller alleen als aan/uit-knop.': 'On the Xbox Adaptive Controller, analog triggers only work as on/off buttons.',
+    'De Hori Flex accepteert via USB alleen een analoge stick, geen knoppen, en één stick per poort.': 'The Hori Flex only accepts an analog stick over USB, no buttons, and one stick per port.',
+    'Goed om te weten bij PlayStation': 'Good to know for PlayStation',
+    'Op een PS4 werkt dit direct. Op een PS5 werkt het rechtstreeks alleen bij vechtspellen, en dan met een apart authenticatie-apparaat; via een Brook Wingman FGC2-adapter werkt het in alle PS5-spellen.':
+        'On a PS4 this works directly. On a PS5 it only works directly in fighting games, and then with a separate authentication device; through a Brook Wingman FGC2 adapter it works in all PS5 games.',
+    'Van de touchpad wordt alleen de klik doorgegeven, geen vingerbeweging.': 'Only the click of the touchpad is passed on, not finger movement.',
+
     // devices and controls
     'Muis + toetsenbord': 'Mouse + keyboard',
     'Muis (absoluut) + toetsenbord': 'Mouse (absolute) + keyboard',

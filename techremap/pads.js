@@ -39,6 +39,16 @@ const PAD_SPECS = {
     // XAC/Flex compatible: an Xbox-style pad. It has X1/X2 where triggers would be and no guide button.
     5: {
         key: 'xbox', label: 'Xbox (XAC/Flex)',
+        // From the HID Remapper manual and Xbox's May 2024 Adaptive Controller update.
+        notes: {
+            title: 'Goed om te weten bij de Xbox Adaptive Controller en Hori Flex',
+            items: [
+                'Een Xbox Adaptive Controller met recente firmware leest per USB-poort twee sticks, het D-pad en 12 knoppen. Met oudere firmware is dat minder; werk de controller bij in de Xbox Accessories-app.',
+                'De knopnamen hier kloppen als je het bordje in de linker USB-poort van de Xbox Adaptive Controller steekt. In de rechterpoort zijn sommige knoppen verwisseld.',
+                'Analoge trekkers werken op de Xbox Adaptive Controller alleen als aan/uit-knop.',
+                'De Hori Flex accepteert via USB alleen een analoge stick, geen knoppen, en één stick per poort.',
+            ],
+        },
         half: 'M590,152 L672,152 C712,152 738,166 752,196 C778,252 800,340 796,402 C793,442 764,456 742,432 C722,410 708,372 688,356 C678,348 668,346 656,346 L590,346',
         sticks: 'offset', lowerY: 296,
         lt: button('X1', 'X1-knop', 1), rt: button('X2', 'X2-knop', 2),
@@ -53,6 +63,13 @@ const PAD_SPECS = {
     },
     3: {
         key: 'ps4', label: 'PS4',
+        notes: {
+            title: 'Goed om te weten bij PlayStation',
+            items: [
+                'Op een PS4 werkt dit direct. Op een PS5 werkt het rechtstreeks alleen bij vechtspellen, en dan met een apart authenticatie-apparaat; via een Brook Wingman FGC2-adapter werkt het in alle PS5-spellen.',
+                'Van de touchpad wordt alleen de klik doorgegeven, geen vingerbeweging.',
+            ],
+        },
         half: 'M590,158 L700,158 C738,158 762,170 774,196 C790,232 796,268 800,300 L822,418 C828,452 808,470 784,468 C764,466 752,452 744,432 L716,366 C708,348 694,338 676,338 L590,338',
         sticks: 'low', lowerY: 290,
         lt: button('L2', 'L2', 7, '0x00010033'), rt: button('R2', 'R2', 8, '0x00010034'),
@@ -191,7 +208,7 @@ function buildPad(spec) {
             (br ? '' : `<circle class="leader-end" cx="${CX}" cy="${spec.lead.end}" r="3"/>`));
         return { drawing, leaders: leaders.join(''), markAt, stands, panels, bottom: Math.max(cy + ch, yL - 18, yR - 18) };
     }
-    return { key: spec.key, label: spec.label, controls, scene, keyboard: null };
+    return { key: spec.key, label: spec.label, notes: spec.notes || null, controls, scene, keyboard: null };
 }
 
 // ── mouse and keyboard ───────────────────────────────────────────────────────
@@ -280,7 +297,7 @@ function buildMouse(label) {
         ];
         return { drawing, leaders, markAt, stands: {}, panels, bottom: 278 + panelH(5) };
     }
-    return { key: 'mouse', label, controls, scene, keyboard: KB_ROWS };
+    return { key: 'mouse', label, notes: null, controls, scene, keyboard: KB_ROWS };
 }
 
 // descriptor number (the firmware's "emulated device type") -> device

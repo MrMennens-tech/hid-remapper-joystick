@@ -173,6 +173,10 @@ function renderRemap() {
     stage.setAttribute('viewBox', `0 44 1180 ${scene.bottom + 14 - 44}`);
     stage.innerHTML = scene.drawing + scene.leaders + marks + panels;
 
+    const notes = $('notes');
+    notes.hidden = !dev.notes;
+    if (dev.notes) notes.innerHTML = `<summary>${esc(t(dev.notes.title))}</summary><ul>${dev.notes.items.map(n => `<li>${esc(t(n))}</li>`).join('')}</ul>`;
+
     $('kbd-card').hidden = !dev.keyboard;
     $('kbd').innerHTML = !dev.keyboard ? '' : dev.keyboard.map(r => '<div class="kbd-row">' + r.map(k =>
         `<button type="button" class="kkey" data-id="${k.id}" style="flex-grow:${k.w}" aria-label="${esc(tKey(k.name))}">${esc(t(k.g))}` +
