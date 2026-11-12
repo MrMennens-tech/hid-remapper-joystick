@@ -482,6 +482,13 @@ export async function rebootToBootloader() {
     await sendFeatureCommand(RESET_INTO_BOOTSEL);
 }
 
+// Boards with two chips: the first one writes the firmware it carries to the second.
+export async function flashBSide() {
+    if (!device) throw new Error('No device connected.');
+    if (busy) throw new Error('Device is busy.');
+    await sendFeatureCommand(FLASH_B_SIDE);
+}
+
 // ─── TechRemap extensions ─────────────────────────────────────────────────────
 // Returns null on firmware without the extensions (upstream HID Remapper).
 export async function loadExt() {

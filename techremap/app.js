@@ -6,7 +6,9 @@ import { DEVICES, DEVICE_ORDER, PANEL_W, keyName } from './pads.js?v=2';
 import { t, tKey, setLang, lang } from './i18n.js?v=2';
 
 const CLASSIC_URL = 'https://www.remapper.org/config/';   // HID Remapper's own tool
-const BOARD_NAMES = { 1: 'Waveshare RP2040-Zero', 2: 'Waveshare RP2350-USB-A' };
+const BOARD_NAMES = { 1: 'Waveshare RP2040-Zero', 2: 'Waveshare RP2350-USB-A', 3: 'HID Remapper-bord v1, v2, v5 of v6', 4: 'HID Remapper-bord v7', 5: 'HID Remapper-bord v8', 6: 'HID Remapper-bord v3 of v4' };
+// boards with two chips: the second (B side) gets its firmware from the first
+const DUAL_BOARDS = [3, 4];
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -329,10 +331,14 @@ const FIRMWARE = [
     { file: 'firmware/techremap_rp2040_zero.uf2', name: 'Waveshare RP2040-Zero', note: 'USB-poort zelf aansluiten: D+ op GP0, D- op GP1, 5V en GND.' },
     { file: 'firmware/techremap_rp2350_usb_a.uf2', name: 'Waveshare RP2350-USB-A', note: 'Voor betrouwbare herkenning: weerstand R13 verwijderen.' },
     { file: 'firmware/techremap_pico.uf2', name: 'Raspberry Pi Pico (RP2040)', note: 'USB-poort zelf aansluiten: D+ op GPIO0, D- op GPIO1, VBUS en GND.' },
+    { file: 'firmware/techremap_board_v3_v4.uf2', name: 'HID Remapper-bord v3 (USB-stick) en v4', note: 'Het bord van jfedor2 in de vorm van een USB-stick, en de versie met jacks.' },
+    { file: 'firmware/techremap_board_v1_v2_v5_v6.uf2', name: 'HID Remapper-bord v1, v2, v5 en v6', note: 'Bord met twee chips. Na het flashen: Instellingen → “Flash de tweede chip”.' },
+    { file: 'firmware/techremap_board_v7.uf2', name: 'HID Remapper-bord v7', note: 'Bord met twee chips. Na het flashen: Instellingen → “Flash de tweede chip”.' },
+    { file: 'firmware/techremap_board_v8.uf2', name: 'HID Remapper-bord v8', note: 'Bord met één jack voor analoge invoer.' },
 ];
 function firmwareHTML() {
     const T = x => esc(t(x));
-    return `<div class="fw-list">${FIRMWARE.map(f => `<div class="fw"><div><b>${esc(f.name)}</b><span>${T(f.note)}</span></div>` +
+    return `<div class="fw-list">${FIRMWARE.map(f => `<div class="fw"><div><b>${T(f.name)}</b><span>${T(f.note)}</span></div>` +
         `<a class="btn" href="${f.file}" download>${T('Download')}</a></div>`).join('')}</div>
         <ol class="fw-steps"><li>${T('Houd de BOOT-knop op het bordje ingedrukt en steek het in je computer.')}</li>
         <li>${T('Er verschijnt een USB-schijf (RPI-RP2 of RP2350). Sleep het gedownloade bestand erop.')}</li>
@@ -346,7 +352,7 @@ const wipeHTML = () => S.offerWipe ? `<div class="warn"><span><b>${esc(t('Let op
 function renderSettings() {
     const c = S.cfg, pass = c.unmapped_passthrough_layers.length > 0, T = x => esc(t(x));
     const fw = S.demo ? t('Demo, geen bordje verbonden')
-        : S.ext ? (BOARD_NAMES[S.ext.board] ? t('TechRemap-firmware op {board}', { board: BOARD_NAMES[S.ext.board] }) : t('TechRemap-firmware')) : t('Officiële HID Remapper-firmware');
+        : S.ext ? (BOARD_NAMES[S.ext.board] ? t('TechRemap-firmware op {board}', { board: t(BOARD_NAMES[S.ext.board]) }) : t('TechRemap-firmware')) : t('Officiële HID Remapper-firmware');
     $('settings-card').innerHTML = `<h3>${T('Instellingen')}</h3>
         <div class="field"><label for="pass">${T('Niet-toegewezen knoppen')}</label><div class="inline"><input type="checkbox" id="pass"${pass ? ' checked' : ''}><label for="pass">${T('gewoon doorgeven aan de pc')}</label></div>
             <span class="hint">${T('Handig als je een gewone controller insteekt en maar een paar knoppen wilt veranderen.')}</span></div>
@@ -361,6 +367,8 @@ function renderSettings() {
                    <button type="button" class="btn primary" id="flash-go">${T('Ja, start de firmware-update')}</button> <button type="button" class="btn" id="flash-no">${T('Annuleer')}</button>`
                 : `<button type="button" class="btn" id="flash">${T('Zet het bordje klaar voor een firmware-update')}</button>
                    <span class="hint">${T('Het bordje start opnieuw als USB-schijf, zonder dat je de BOOT-knop hoeft in te drukken. Sleep daarna het juiste bestand hieronder erop.')}</span>`}</div>` : ''}
+            ${S.connected && S.ext && DUAL_BOARDS.includes(S.ext.board) ? `<div class="flash"><button type="button" class="btn" id="flash-b">${T('Flash de tweede chip')}</button>
+                <span class="hint">${T('Dit bord heeft twee chips. Doe dit na elke firmware-update; het duurt ongeveer tien seconden.')}</span></div>` : ''}
             ${firmwareHTML()}</details>`;
 }
 
@@ -511,6 +519,11 @@ function onClick(e) {
         S.offerWipe = false;
     }
     else if (q('#keep')) { S.offerWipe = false; }
+    else if (q('#flash-b')) {
+        Dev.flashBSide().then(() => toast(t('De tweede chip wordt nu bijgewerkt. Wacht ongeveer tien seconden voordat je verder gaat.')))
+            .catch(e => toast(String(e.message || e), true));
+        return;
+    }
     else if (q('#flash')) { S.flashAsk = true; }
     else if (q('#flash-no')) { S.flashAsk = false; }
     else if (q('#flash-go')) {

@@ -23,11 +23,25 @@ const EN = {
     'Ja, start de firmware-update': 'Yes, start the firmware update',
     'Het bordje is nu een USB-schijf. Sleep het firmwarebestand erop.': 'The board is now a USB drive. Drag the firmware file onto it.',
 
+    'Het bord van jfedor2 in de vorm van een USB-stick, en de versie met jacks.': 'The jfedor2 board shaped like a USB stick, and the version with jacks.',
+    'Bord met twee chips. Na het flashen: Instellingen → “Flash de tweede chip”.': 'Board with two chips. After flashing: Settings → “Flash the second chip”.',
+    'Bord met één jack voor analoge invoer.': 'Board with one jack for analog input.',
+    'Flash de tweede chip': 'Flash the second chip',
+    'Dit bord heeft twee chips. Doe dit na elke firmware-update; het duurt ongeveer tien seconden.': 'This board has two chips. Do this after every firmware update; it takes about ten seconds.',
+    'De tweede chip wordt nu bijgewerkt. Wacht ongeveer tien seconden voordat je verder gaat.': 'The second chip is being updated. Wait about ten seconds before you continue.',
+    'HID Remapper-bord v1, v2, v5 of v6': 'HID Remapper board v1, v2, v5 or v6',
+    'HID Remapper-bord v7': 'HID Remapper board v7',
+    'HID Remapper-bord v3 (USB-stick) en v4': 'HID Remapper board v3 (USB stick) and v4',
+    'HID Remapper-bord v1, v2, v5 en v6': 'HID Remapper board v1, v2, v5 and v6',
+    'HID Remapper-bord v8': 'HID Remapper board v8',
+    'HID Remapper-bord v3 of v4': 'HID Remapper board v3 or v4',
+
     // credits
     'TechRemap is gebouwd op': 'TechRemap is built on',
     'van Jacek Fedoryński (jfedor2). Hij schreef de firmware waar alles op draait; TechRemap voegt een eenvoudigere bediening, lampjes en jacks toe.':
         'by Jacek Fedoryński (jfedor2). He wrote the firmware everything runs on; TechRemap adds simpler controls, lights and jacks.',
     'Vrijgegeven onder de': 'Released under the',
+    'MIT-licentie': 'MIT license',
     'Handleiding van HID Remapper': 'HID Remapper manual',
 
     // shell
