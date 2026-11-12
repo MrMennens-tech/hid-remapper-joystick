@@ -32,6 +32,7 @@
             <button type="button" class="btn" id="demo" data-t="Probeer zonder bordje"></button>
         </div>
         <p id="nohid" hidden data-t="Deze browser kan niet met het bordje praten. Gebruik Chrome of Edge op een computer."></p>
+        <details class="fw-welcome"><summary data-t="Nog geen firmware op je bordje? Download hem hier."></summary><div id="fw-welcome"></div></details>
     </div>
 
     <div id="app" hidden>
@@ -55,6 +56,8 @@
                     <button type="button" data-layer="3" aria-pressed="false"><span class="dot d4"></span><span class="ln" data-n="4"></span></button>
                 </div>
             </div>
+            <div id="device-wipe"></div>
+            <p class="hint-line" id="device-hint" hidden data-t="Een ander apparaat werkt nadat je hebt opgeslagen en het bordje opnieuw hebt ingestoken."></p>
             <div class="layers sim" id="sim" hidden></div>
             <div class="banner" id="banner" hidden></div>
             <details class="notes" id="notes" open hidden></details>

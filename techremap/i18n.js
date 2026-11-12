@@ -2,6 +2,19 @@
 // t('Laag {n}', { n: 2 }) -> "Laag 2" / "Layer 2". A missing entry falls back to the Dutch text.
 
 const EN = {
+    // firmware download
+    'Download': 'Download',
+    'USB-poort zelf aansluiten: D+ op GP0, D- op GP1, 5V en GND.': 'Wire the USB port yourself: D+ to GP0, D- to GP1, 5V and GND.',
+    'Voor betrouwbare herkenning: weerstand R13 verwijderen.': 'For reliable detection: remove resistor R13.',
+    'USB-poort zelf aansluiten: D+ op GPIO0, D- op GPIO1, VBUS en GND.': 'Wire the USB port yourself: D+ to GPIO0, D- to GPIO1, VBUS and GND.',
+    'Houd de BOOT-knop op het bordje ingedrukt en steek het in je computer.': 'Hold the BOOT button on the board and plug it into your computer.',
+    'Er verschijnt een USB-schijf (RPI-RP2 of RP2350). Sleep het gedownloade bestand erop.': 'A USB drive appears (RPI-RP2 or RP2350). Drag the downloaded file onto it.',
+    'Het bordje start vanzelf opnieuw. Klik daarna op “Verbind bordje”.': 'The board restarts by itself. Then click “Connect board”.',
+    'Andere borden en de originele firmware vind je bij': 'Other boards and the original firmware are at',
+    'Firmware downloaden of bijwerken': 'Download or update firmware',
+    'Nog geen firmware op je bordje? Download hem hier.': 'No firmware on your board yet? Download it here.',
+    'Een ander apparaat werkt nadat je hebt opgeslagen en het bordje opnieuw hebt ingestoken.': 'A different device takes effect after you have saved and plugged the board in again.',
+
     // credits
     'TechRemap is gebouwd op': 'TechRemap is built on',
     'van Jacek Fedoryński (jfedor2). Hij schreef de firmware waar alles op draait; TechRemap voegt een eenvoudigere bediening, lampjes en jacks toe.':
