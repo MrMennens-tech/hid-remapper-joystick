@@ -1,7 +1,7 @@
 ---
 title: TechRemap
 subtitle: Eén vertrouwde bediening voor computer, tablet en spelcomputer
-category: software
+category: hulpmiddelen
 status: In ontwikkeling
 link: https://remap.mennens.tech
 image: techremap.jpg

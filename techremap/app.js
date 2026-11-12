@@ -355,7 +355,13 @@ function renderSettings() {
         <div class="field"><span class="flabel">${T('Voor gevorderden')}</span><div class="inline"><a class="btn" href="${CLASSIC_URL}" target="_blank" rel="noopener">${T('Open de originele HID Remapper-tool')}</a></div>
             <span class="hint">${T('Macro’s, expressies en quirks stel je voorlopig daar in. Wat je hier instelt blijft daar zichtbaar, en andersom.')}</span></div>
         <div class="field"><span class="flabel">${T('Firmware')}</span><span>${esc(fw)}</span></div>
-        <details class="field-details"><summary>${T('Firmware downloaden of bijwerken')}</summary>${firmwareHTML()}</details>`;
+        <details class="field-details"${S.flashAsk ? ' open' : ''}><summary>${T('Firmware downloaden of bijwerken')}</summary>
+            ${S.connected ? `<div class="flash">${S.flashAsk
+                ? `<p>${T(S.dirty ? 'Je hebt wijzigingen die nog niet zijn opgeslagen. Die gaan verloren.' : 'Het bordje stopt even met werken en verschijnt als USB-schijf.')}</p>
+                   <button type="button" class="btn primary" id="flash-go">${T('Ja, start de firmware-update')}</button> <button type="button" class="btn" id="flash-no">${T('Annuleer')}</button>`
+                : `<button type="button" class="btn" id="flash">${T('Zet het bordje klaar voor een firmware-update')}</button>
+                   <span class="hint">${T('Het bordje start opnieuw als USB-schijf, zonder dat je de BOOT-knop hoeft in te drukken. Sleep daarna het juiste bestand hieronder erop.')}</span>`}</div>` : ''}
+            ${firmwareHTML()}</details>`;
 }
 
 function render() {
@@ -505,6 +511,13 @@ function onClick(e) {
         S.offerWipe = false;
     }
     else if (q('#keep')) { S.offerWipe = false; }
+    else if (q('#flash')) { S.flashAsk = true; }
+    else if (q('#flash-no')) { S.flashAsk = false; }
+    else if (q('#flash-go')) {
+        S.flashAsk = false; S.flashing = true;
+        Dev.rebootToBootloader().catch(e => { S.flashing = false; toast(String(e.message || e), true); });
+        return;
+    }
     else if (q('#export')) { exportFile(); return; }
     else if (q('#import')) { $('import-file').click(); return; }
     else if ((el = q('#page-remap [data-id]'))) {
@@ -604,7 +617,12 @@ export function init() {
     window.addEventListener('beforeunload', e => { if (S.dirty && S.connected) { e.preventDefault(); e.returnValue = ''; } });
     Dev.onHIDDisconnect(() => {
         S.connected = false; S.cfg = null; S.ext = null; S.dirty = false;
-        toast(t('Het bordje is losgekoppeld.'));
+        if (S.flashing) {
+            // the board went into update mode on purpose: show the downloads straight away
+            S.flashing = false;
+            toast(t('Het bordje is nu een USB-schijf. Sleep het firmwarebestand erop.'));
+            setTimeout(() => { const d = document.querySelector('.fw-welcome'); if (d) d.open = true; }, 0);
+        } else toast(t('Het bordje is losgekoppeld.'));
         render();
     });
     render();
