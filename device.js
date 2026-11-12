@@ -473,6 +473,15 @@ export async function saveConfig(cfg, ext = null) {
     }
 }
 
+// ─── Firmware update ──────────────────────────────────────────────────────────
+// Restarts the board as a USB drive (BOOTSEL) so new firmware can be copied on.
+// The board disconnects right away, so no answer is read.
+export async function rebootToBootloader() {
+    if (!device) throw new Error('No device connected.');
+    if (busy) throw new Error('Device is busy.');
+    await sendFeatureCommand(RESET_INTO_BOOTSEL);
+}
+
 // ─── TechRemap extensions ─────────────────────────────────────────────────────
 // Returns null on firmware without the extensions (upstream HID Remapper).
 export async function loadExt() {

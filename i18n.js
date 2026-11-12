@@ -15,6 +15,14 @@ const EN = {
     'Nog geen firmware op je bordje? Download hem hier.': 'No firmware on your board yet? Download it here.',
     'Een ander apparaat werkt nadat je hebt opgeslagen en het bordje opnieuw hebt ingestoken.': 'A different device takes effect after you have saved and plugged the board in again.',
 
+    'Zet het bordje klaar voor een firmware-update': 'Prepare the board for a firmware update',
+    'Het bordje start opnieuw als USB-schijf, zonder dat je de BOOT-knop hoeft in te drukken. Sleep daarna het juiste bestand hieronder erop.':
+        'The board restarts as a USB drive, without pressing the BOOT button. Then drag the right file below onto it.',
+    'Je hebt wijzigingen die nog niet zijn opgeslagen. Die gaan verloren.': 'You have changes that are not saved yet. They will be lost.',
+    'Het bordje stopt even met werken en verschijnt als USB-schijf.': 'The board stops working for a moment and appears as a USB drive.',
+    'Ja, start de firmware-update': 'Yes, start the firmware update',
+    'Het bordje is nu een USB-schijf. Sleep het firmwarebestand erop.': 'The board is now a USB drive. Drag the firmware file onto it.',
+
     // credits
     'TechRemap is gebouwd op': 'TechRemap is built on',
     'van Jacek Fedoryński (jfedor2). Hij schreef de firmware waar alles op draait; TechRemap voegt een eenvoudigere bediening, lampjes en jacks toe.':
