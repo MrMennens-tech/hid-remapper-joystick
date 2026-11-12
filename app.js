@@ -160,7 +160,9 @@ function renderRemap() {
     const dev = device(), ctl = dev.controls, scene = dev.scene();
     S.scene = scene;
     if (!ctl[S.selected]) S.selected = Object.keys(ctl)[0];
-    $('device-pill').innerHTML = `${esc(t('De pc ziet:'))} <b>${esc(t(dev.label))}</b>`;
+    $('device-pill').innerHTML = `<label for="devtype">${esc(t('De pc ziet:'))}</label> ${devtypeSelect('devtype', S.cfg.our_descriptor_number)}`;
+    $('device-wipe').innerHTML = wipeHTML();
+    $('device-hint').hidden = !S.devChanged;
 
     const row = id => `<button type="button" class="row" data-id="${id}"><span class="glyph">${esc(ctl[id].g)}</span><span class="chips">${chipsHTML(ctl[id])}</span></button>`;
     let marks = '';
@@ -322,21 +324,38 @@ function renderBoard() {
         : `<p class="sub">${T('Deze firmware kan geen strip aansturen.')}</p>`);
     paintPins();
 }
+// Firmware offered for download (files live next to the app on the site).
+const FIRMWARE = [
+    { file: 'firmware/techremap_rp2040_zero.uf2', name: 'Waveshare RP2040-Zero', note: 'USB-poort zelf aansluiten: D+ op GP0, D- op GP1, 5V en GND.' },
+    { file: 'firmware/techremap_rp2350_usb_a.uf2', name: 'Waveshare RP2350-USB-A', note: 'Voor betrouwbare herkenning: weerstand R13 verwijderen.' },
+    { file: 'firmware/techremap_pico.uf2', name: 'Raspberry Pi Pico (RP2040)', note: 'USB-poort zelf aansluiten: D+ op GPIO0, D- op GPIO1, VBUS en GND.' },
+];
+function firmwareHTML() {
+    const T = x => esc(t(x));
+    return `<div class="fw-list">${FIRMWARE.map(f => `<div class="fw"><div><b>${esc(f.name)}</b><span>${T(f.note)}</span></div>` +
+        `<a class="btn" href="${f.file}" download>${T('Download')}</a></div>`).join('')}</div>
+        <ol class="fw-steps"><li>${T('Houd de BOOT-knop op het bordje ingedrukt en steek het in je computer.')}</li>
+        <li>${T('Er verschijnt een USB-schijf (RPI-RP2 of RP2350). Sleep het gedownloade bestand erop.')}</li>
+        <li>${T('Het bordje start vanzelf opnieuw. Klik daarna op “Verbind bordje”.')}</li></ol>
+        <p class="hint">${T('Andere borden en de originele firmware vind je bij')} <a href="https://github.com/jfedor2/hid-remapper/releases/latest" target="_blank" rel="noopener">HID Remapper</a>.</p>`;
+}
+const devtypeSelect = (id, cur) => `<select id="${id}" aria-label="${esc(t('De pc ziet het bordje als'))}">` +
+    DEVICE_ORDER.map(n => `<option value="${n}"${n === cur ? ' selected' : ''}>${esc(t(DEVICES[n].label))}</option>`).join('') + '</select>';
+const wipeHTML = () => S.offerWipe ? `<div class="warn"><span><b>${esc(t('Let op.'))}</b> ${esc(t('De toewijzingen die je al had zijn voor het vorige apparaat gemaakt en betekenen hier iets anders.'))} <button type="button" class="btn" id="wipe">${esc(t('Begin met een lege indeling'))}</button> <button type="button" class="btn" id="keep">${esc(t('Behoud ze toch'))}</button></span></div>` : '';
+
 function renderSettings() {
     const c = S.cfg, pass = c.unmapped_passthrough_layers.length > 0, T = x => esc(t(x));
     const fw = S.demo ? t('Demo, geen bordje verbonden')
         : S.ext ? (BOARD_NAMES[S.ext.board] ? t('TechRemap-firmware op {board}', { board: BOARD_NAMES[S.ext.board] }) : t('TechRemap-firmware')) : t('Officiële HID Remapper-firmware');
     $('settings-card').innerHTML = `<h3>${T('Instellingen')}</h3>
-        <div class="field"><label for="devtype">${T('De pc ziet het bordje als')}</label><select id="devtype">${DEVICE_ORDER.map(n => `<option value="${n}"${n === c.our_descriptor_number ? ' selected' : ''}>${T(DEVICES[n].label)}</option>`).join('')}</select>
-            <span class="hint">${T('Werkt nadat je hebt opgeslagen en het bordje opnieuw hebt ingestoken.')}</span></div>
-        ${S.offerWipe ? `<div class="warn"><span><b>${T('Let op.')}</b> ${T('De toewijzingen die je al had zijn voor het vorige apparaat gemaakt en betekenen hier iets anders.')} <button type="button" class="btn" id="wipe">${T('Begin met een lege indeling')}</button> <button type="button" class="btn" id="keep">${T('Behoud ze toch')}</button></span></div>` : ''}
         <div class="field"><label for="pass">${T('Niet-toegewezen knoppen')}</label><div class="inline"><input type="checkbox" id="pass"${pass ? ' checked' : ''}><label for="pass">${T('gewoon doorgeven aan de pc')}</label></div>
             <span class="hint">${T('Handig als je een gewone controller insteekt en maar een paar knoppen wilt veranderen.')}</span></div>
         <div class="field"><label for="lang">${T('Taal')}</label><select id="lang"><option value="nl"${lang === 'nl' ? ' selected' : ''}>Nederlands</option><option value="en"${lang === 'en' ? ' selected' : ''}>English</option></select></div>
         <div class="field"><span class="flabel">${T('Reservekopie')}</span><div class="inline"><button type="button" class="btn" id="export">${T('Bewaar als bestand')}</button><button type="button" class="btn" id="import">${T('Laad uit bestand')}</button><input type="file" id="import-file" accept=".json,application/json" hidden></div></div>
         <div class="field"><span class="flabel">${T('Voor gevorderden')}</span><div class="inline"><a class="btn" href="${CLASSIC_URL}" target="_blank" rel="noopener">${T('Open de originele HID Remapper-tool')}</a></div>
             <span class="hint">${T('Macro’s, expressies en quirks stel je voorlopig daar in. Wat je hier instelt blijft daar zichtbaar, en andersom.')}</span></div>
-        <div class="field"><span class="flabel">${T('Firmware')}</span><span>${esc(fw)}</span></div>`;
+        <div class="field"><span class="flabel">${T('Firmware')}</span><span>${esc(fw)}</span></div>
+        <details class="field-details"><summary>${T('Firmware downloaden of bijwerken')}</summary>${firmwareHTML()}</details>`;
 }
 
 function render() {
@@ -346,6 +365,7 @@ function render() {
     document.querySelectorAll('[data-t-label]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.tLabel)); });
     document.querySelectorAll('#lang-pick button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.langSet === lang)));
     $('welcome').hidden = has;
+    if (!has) $('fw-welcome').innerHTML = firmwareHTML();
     $('app').hidden = !has;
     $('status').classList.toggle('on', S.connected);
     $('status-text').textContent = S.connected ? S.deviceName : t(S.demo ? 'Demo zonder bordje' : 'Geen bordje verbonden');
@@ -522,6 +542,7 @@ function onChange(e) {
         S.cfg.our_descriptor_number = Number(tg.value); S.selected = null;
         // usage codes mean different things on different devices, so old assignments rarely make sense
         S.offerWipe = S.cfg.mappings.some(m => (parseInt(m.target_usage, 16) >>> 16) < 0xfff0);
+        S.devChanged = true;
     }
     else if (tg.id === 'pass') { S.cfg.unmapped_passthrough_layers = tg.checked ? [0, 1, 2, 3] : []; }
     else if (tg.id === 'strip-pin') { S.ext.led.stripPin = tg.value === '' ? null : Number(tg.value); }
