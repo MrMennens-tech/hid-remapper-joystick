@@ -275,3 +275,20 @@ a.btn { text-decoration: none; display: inline-block; }
 .flash { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 12px; padding: 12px; border: 1px solid var(--border-hi); border-radius: 10px; }
 .flash p { margin: 0; width: 100%; font-size: 13px; color: var(--text-1); }
 .flash .hint { font-size: 12px; color: var(--text-2); }
+.test-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+#test-list { display: flex; flex-direction: column; gap: 6px; }
+.test-empty { padding: 8px 0; }
+.test-row { display: grid; grid-template-columns: minmax(130px, 220px) minmax(120px, 260px) 16px 1fr; align-items: center; gap: 12px;
+            padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
+.test-row .num { display: none; }
+.test-row.on { border-color: var(--l2); }
+.test-row.stale { opacity: .55; }
+.tname { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.meter { position: relative; height: 10px; border-radius: 5px; background: var(--surface-3); }
+.meter i { position: absolute; top: -3px; width: 16px; height: 16px; margin-left: -8px; border-radius: 50%; background: var(--accent); }
+.test-row.on .meter i { background: var(--l2); }
+.state { font-size: 12px; font-weight: 600; color: var(--text-3); }
+.state.on { color: var(--l2); }
+.test-row .arrow { color: var(--text-3); }
+.test-row .chips { flex-wrap: wrap; overflow: visible; }
+@media (max-width: 700px) { .test-row { grid-template-columns: 1fr 1fr; } .test-row .arrow { display: none; } .test-row .chips { grid-column: 1 / -1; } }

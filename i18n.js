@@ -36,6 +36,15 @@ const EN = {
     'HID Remapper-bord v8': 'HID Remapper board v8',
     'HID Remapper-bord v3 of v4': 'HID Remapper board v3 or v4',
 
+    'Testen': 'Test',
+    'Druk op je knoppen of beweeg je joystick. Links zie je wat het bordje binnenkrijgt, rechts wat de pc ervan krijgt.':
+        'Press your buttons or move your joystick. On the left is what the board receives, on the right what the PC gets from it.',
+    'Wis lijst': 'Clear list',
+    'Nog niets binnengekregen. Druk op een knop of beweeg een joystick.': 'Nothing received yet. Press a button or move a joystick.',
+    'Verbind eerst een bordje.': 'Connect a board first.',
+    'ingedrukt': 'pressed',
+    'los': 'released',
+
     // credits
     'TechRemap is gebouwd op': 'TechRemap is built on',
     'van Jacek Fedoryński (jfedor2). Hij schreef de firmware waar alles op draait; TechRemap voegt een eenvoudigere bediening, lampjes en jacks toe.':
