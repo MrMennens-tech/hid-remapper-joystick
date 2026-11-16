@@ -451,9 +451,11 @@ function renderTest() {
         return;
     }
     const now = Date.now(), ctl = device().controls;
-    const rows = [...S.values.entries()].sort((a, b) => b[1].t - a[1].t).map(([u, x]) => {
+    // newest input on top, but each keeps its place once seen: sticks report all the
+    // time, so ordering by "last changed" made the rows jump around
+    const rows = [...S.values.entries()].reverse().map(([u, x]) => {
         const analog = M.isAnalog(u), range = x.max - x.min;
-        const on = analog ? Math.abs(x.v - (S.rest[u] ?? x.v)) > (Math.abs(x.v) > 1023 ? 8000 : 40) : x.v !== 0;
+        const on = !analog && x.v !== 0;
         // most sticks report 0-255; for anything else, use the range seen so far
         const byte = x.min >= 0 && x.max <= 255;
         const pct = analog ? (byte ? Math.round(x.v / 255 * 100) : range > 0 ? Math.round((x.v - x.min) / range * 100) : 50) : (x.v ? 100 : 0);
