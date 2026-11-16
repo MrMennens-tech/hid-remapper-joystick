@@ -40,6 +40,7 @@
             <button type="button" role="tab" data-tab="remap" aria-selected="true" data-t="Knoppen"></button>
             <button type="button" role="tab" data-tab="led" aria-selected="false" data-t="Lampjes"></button>
             <button type="button" role="tab" data-tab="board" aria-selected="false" data-t="Bord inrichten"></button>
+            <button type="button" role="tab" data-tab="test" aria-selected="false" data-t="Testen"></button>
             <button type="button" role="tab" data-tab="settings" aria-selected="false" data-t="Instellingen"></button>
         </div>
 
@@ -101,6 +102,17 @@
         <div class="page" id="page-board" style="margin-top:20px" hidden>
             <div class="card" id="board-card"></div>
             <div class="card" id="strip-card"></div>
+        </div>
+
+        <!-- ── Testen ──────────────────────────────────────────────────── -->
+        <div class="page" id="page-test" style="margin-top:20px" hidden>
+            <div class="card">
+                <div class="test-head">
+                    <div><h3 data-t="Testen"></h3><p class="sub" data-t="Druk op je knoppen of beweeg je joystick. Links zie je wat het bordje binnenkrijgt, rechts wat de pc ervan krijgt."></p></div>
+                    <button type="button" class="btn" id="test-clear" data-t="Wis lijst"></button>
+                </div>
+                <div id="test-list"></div>
+            </div>
         </div>
 
         <!-- ── Instellingen ────────────────────────────────────────────── -->

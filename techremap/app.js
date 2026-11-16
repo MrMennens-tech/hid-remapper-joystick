@@ -21,6 +21,7 @@ const S = {
     last: null,          // { text, undo }: last change, for "Ongedaan maken"
     active: new Map(),   // inputs currently pressed -> time last seen
     rest: {},            // resting value of analog inputs
+    values: new Map(),   // every input seen: usage -> { v, t, min, max } (for the Testen tab)
 };
 const device = () => DEVICES[S.cfg.our_descriptor_number] || DEVICES[0];
 const layerNo = l => l + 1;
@@ -86,6 +87,9 @@ function doAssign(id, layer, source, add = false) {
 function onInput(usage, value) {
     const now = Date.now();
     let fired = false;
+    const seenBefore = S.values.get(usage);
+    S.values.set(usage, { v: value, t: now, min: Math.min(value, seenBefore ? seenBefore.min : value), max: Math.max(value, seenBefore ? seenBefore.max : value) });
+    if (S.tab === 'test') scheduleTest();
     if (M.isAnalog(usage)) {
         if (!(usage in S.rest)) { S.rest[usage] = value; return; }
         const big = Math.abs(S.rest[usage]) > 1023 || Math.abs(value) > 1023;
@@ -389,13 +393,15 @@ function render() {
     if (!has) return;
     applyLayerColors();
     document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === S.tab)));
-    for (const t of ['remap', 'led', 'board', 'settings']) $('page-' + t).hidden = t !== S.tab;
+    for (const t of ['remap', 'led', 'board', 'test', 'settings']) $('page-' + t).hidden = t !== S.tab;
     $('sim').hidden = !S.demo;
     if (S.demo) renderSim();
     if (S.tab === 'remap') renderRemap();
     if (S.tab === 'led') renderLed();
     if (S.tab === 'board') renderBoard();
     if (S.tab === 'settings') renderSettings();
+    if (S.tab === 'test') renderTest();
+    syncMonitor();
 }
 
 let toastTimer = 0;
@@ -415,12 +421,55 @@ async function connect() {
         S.connected = true; S.demo = false; S.dirty = false;
         S.deviceName = info.name || 'HID Remapper';
         S.selected = null; S.listen = S.pending = S.last = S.listenSwitch = null;
-        await Dev.enableMonitor(r => onInput(r.usage, r.value));
+        S.monitorOn = false;
         render();
     } catch (e) {
         if (e && e.name !== 'NotFoundError') toast(String(e.message || e), true);
     }
 }
+// The live input stream is only switched on where the page uses it, and off when
+// the page is hidden or closed, so the board does no extra work in normal use.
+const MONITOR_TABS = ['remap', 'board', 'test'];
+function syncMonitor() {
+    const want = S.connected && MONITOR_TABS.includes(S.tab) && document.visibilityState === 'visible';
+    if (want === !!S.monitorOn) return;
+    S.monitorOn = want;
+    (want ? Dev.enableMonitor(r => onInput(r.usage, r.value)) : Dev.disableMonitor()).catch(() => {});
+}
+
+// ── Testen tab ───────────────────────────────────────────────────────────────
+let testFrame = 0;
+function scheduleTest() {
+    if (testFrame) return;
+    testFrame = requestAnimationFrame(() => { testFrame = 0; renderTest(); });
+}
+function renderTest() {
+    const list = $('test-list');
+    if (!list) return;
+    if (!S.values.size) {
+        list.innerHTML = `<p class="muted test-empty">${esc(t(S.connected || S.demo ? 'Nog niets binnengekregen. Druk op een knop of beweeg een joystick.' : 'Verbind eerst een bordje.'))}</p>`;
+        return;
+    }
+    const now = Date.now(), ctl = device().controls;
+    const rows = [...S.values.entries()].sort((a, b) => b[1].t - a[1].t).map(([u, x]) => {
+        const analog = M.isAnalog(u), range = x.max - x.min;
+        const on = analog ? Math.abs(x.v - (S.rest[u] ?? x.v)) > (Math.abs(x.v) > 1023 ? 8000 : 40) : x.v !== 0;
+        // most sticks report 0-255; for anything else, use the range seen so far
+        const byte = x.min >= 0 && x.max <= 255;
+        const pct = analog ? (byte ? Math.round(x.v / 255 * 100) : range > 0 ? Math.round((x.v - x.min) / range * 100) : 50) : (x.v ? 100 : 0);
+        const targets = [];
+        for (const id in ctl) M.chips(S.cfg, ctl[id]).forEach(c => {
+            if (c.source === u || (M.stickPair(c.source) || []).includes(u)) targets.push({ l: c.layer, name: tKey(ctl[id].name) });
+        });
+        const meter = analog
+            ? `<span class="meter"><i style="left:${pct}%"></i></span><span class="num">${x.v}</span>`
+            : `<span class="state${on ? ' on' : ''}">${esc(t(on ? 'ingedrukt' : 'los'))}</span>`;
+        return `<div class="test-row${on ? ' on' : ''}${now - x.t > 5000 ? ' stale' : ''}"><span class="tname">${esc(sourceName(u))}</span>${meter}` +
+            `<span class="arrow">→</span><span class="chips">${targets.length ? targets.map(x => chip(x.l, x.name)).join('') : `<span class="muted">${esc(t('Niet toegewezen'))}</span>`}</span></div>`;
+    });
+    list.innerHTML = rows.join('');
+}
+
 let previewTimer = 0;
 function previewLed() {
     if (!S.connected) return;
@@ -519,6 +568,7 @@ function onClick(e) {
         S.offerWipe = false;
     }
     else if (q('#keep')) { S.offerWipe = false; }
+    else if (q('#test-clear')) { S.values.clear(); }
     else if (q('#flash-b')) {
         Dev.flashBSide().then(() => toast(t('De tweede chip wordt nu bijgewerkt. Wacht ongeveer tien seconden voordat je verder gaat.')))
             .catch(e => toast(String(e.message || e), true));
@@ -627,9 +677,11 @@ export function init() {
     document.addEventListener('keydown', e => {
         if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('.pad-hit')) { e.preventDefault(); e.target.dispatchEvent(new MouseEvent('click', { bubbles: true })); }
     });
+    document.addEventListener('visibilitychange', syncMonitor);
+    window.addEventListener('pagehide', () => { if (S.monitorOn) Dev.disableMonitor().catch(() => {}); });
     window.addEventListener('beforeunload', e => { if (S.dirty && S.connected) { e.preventDefault(); e.returnValue = ''; } });
     Dev.onHIDDisconnect(() => {
-        S.connected = false; S.cfg = null; S.ext = null; S.dirty = false;
+        S.connected = false; S.cfg = null; S.ext = null; S.dirty = false; S.monitorOn = false; S.values.clear();
         if (S.flashing) {
             // the board went into update mode on purpose: show the downloads straight away
             S.flashing = false;
