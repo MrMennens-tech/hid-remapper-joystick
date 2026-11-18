@@ -28,8 +28,13 @@
 
 // NeoPixel through the config tool (see techremap_ext.cc for the defaults)
 #define TECHREMAP_LED_STRIP
+#ifndef TECHREMAP_DEFAULT_STRIP_PIN
 #define TECHREMAP_DEFAULT_STRIP_PIN 16
+#endif
+// build with -DTECHREMAP_DEFAULT_STRIP_COUNT=0 for a version that never touches the LED
+#ifndef TECHREMAP_DEFAULT_STRIP_COUNT
 #define TECHREMAP_DEFAULT_STRIP_COUNT 1
+#endif
 
 // --- FLASH ---
 

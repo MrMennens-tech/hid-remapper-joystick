@@ -30,6 +30,11 @@ else()
 add_compile_definitions(TECHREMAP_BOARD_ID=0)
 endif()
 
+# Test builds that never touch the LED: TECHREMAP_NO_LED=1 cmake ...
+if(DEFINED ENV{TECHREMAP_NO_LED})
+add_compile_definitions(TECHREMAP_DEFAULT_STRIP_COUNT=0)
+endif()
+
 if(DEFINED ENV{REMAPPER_DEBUG_UART})
 add_compile_definitions(REMAPPER_DEBUG_UART=1)
 endif()
