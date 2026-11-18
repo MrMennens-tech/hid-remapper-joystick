@@ -256,3 +256,20 @@ test('a single analog input can drive one stick axis on its own', () => {
     assert.deepEqual(M.chips(c, AX).map(x => x.source), ['0xfff80002']);
     assert.deepEqual(M.chips(c, AY).map(x => x.source), ['0xfff80000']);
 });
+
+test('analog stick can be tuned and inverted per axis', () => {
+    const c = cfg();
+    const LS = { kind: 'stick', axes: ['0x00010030', '0x00010031'] };
+    M.setStickPairs([['0xfff80002', '0xfff80000']], { x: -100, y: 100 });
+    M.assign(c, LS, 0, '0xfff80000');
+    assert.equal(M.inverted(c, LS, 0), false);
+    M.setInverted(c, LS, 0, true);
+    assert.equal(M.inverted(c, LS, 0), true);
+    assert.equal(M.inverted(c, LS, 1), false);
+    assert.match(c.expressions.join('|'), /0xfff80002 input_state 2048000 sub .* 100 mul/);
+    M.setAdcTuning(c, LS, { gain: 200, dz: 80000 });
+    assert.deepEqual(M.adcTuning(c, LS), { gain: 200, dz: 80000 });
+    assert.equal(M.inverted(c, LS, 0), true);
+    assert.equal(c.expressions.filter(e => e).length, 2);
+    M.setStickPairs([]);
+});

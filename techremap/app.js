@@ -266,6 +266,17 @@ function renderDetail(control) {
         `<span class="val"><input type="range" id="${id}" min="${min}" max="${max}" value="${value}" aria-label="${esc(t(label))}"></span><span class="acts" id="${id}-val">${shown}</span></div>`;
     if (control.range) { const v = M.speed(S.cfg, control) ?? control.speed; html += slider('speed', 'Snelheid', control.range[0], control.range[1], v, scalingText(v)); }
     if (control.kind === 'expr') { const v = Math.round((M.deadzone(S.cfg, control) ?? control.dz) / 1280); html += slider('deadzone', 'Dode zone', 0, 40, v, v + '%'); }
+    // Only for joysticks on the board's own analog inputs: gain, dead zone and flipping.
+    const adc = M.adcTuning(S.cfg, control);
+    if (adc) {
+        html += slider('adc-gain', 'Gevoeligheid', 20, 300, adc.gain, (adc.gain / 100).toLocaleString(lang) + '×');
+        html += slider('adc-dz', 'Dode zone', 0, 400, adc.dz / 1000, String(adc.dz / 1000));
+        const names = control.kind === 'axis' ? [control.targets[0].u === '0x00010031' ? 'Omkeren omhoog/omlaag' : 'Omkeren links/rechts']
+            : ['Omkeren links/rechts', 'Omkeren omhoog/omlaag'];
+        names.forEach((n, i) => {
+            html += `<div class="detail-row"><span class="lname">${esc(t(n))}</span><span class="val"><input type="checkbox" data-invert="${i}" ${M.inverted(S.cfg, control, i) ? 'checked' : ''} aria-label="${esc(t(n))}"></span><span class="acts"></span></div>`;
+        });
+    }
     $('detail-rows').innerHTML = html;
 }
 
@@ -615,6 +626,9 @@ function onInputEvent(e) {
     if (!S.cfg) return;
     const touched = () => { S.dirty = true; $('save').disabled = false; $('save').textContent = t('Opslaan op bordje'); };
     if (tg.id === 'speed') { M.setSpeed(S.cfg, device().controls[S.selected], Number(tg.value)); $('speed-val').textContent = scalingText(Number(tg.value)); touched(); return; }
+    if (tg.id === 'adc-gain') { M.setAdcTuning(S.cfg, device().controls[S.selected], { gain: Number(tg.value) }); $('adc-gain-val').textContent = (tg.value / 100).toLocaleString(lang) + '×'; touched(); return; }
+    if (tg.id === 'adc-dz') { M.setAdcTuning(S.cfg, device().controls[S.selected], { dz: Number(tg.value) * 1000 }); $('adc-dz-val').textContent = tg.value; touched(); return; }
+    if (tg.dataset.invert !== undefined) { M.setInverted(S.cfg, device().controls[S.selected], Number(tg.dataset.invert), tg.checked); touched(); return; }
     if (tg.id === 'deadzone') { M.setDeadzone(S.cfg, device().controls[S.selected], Number(tg.value) * 1280); $('deadzone-val').textContent = tg.value + '%'; touched(); return; }
     if (tg.dataset.color !== undefined) { S.ext.led.colors[Number(tg.dataset.color)] = tg.value; }
     else if (tg.id === 'bright') { S.ext.led.brightness = Number(tg.value); $('bright-val').textContent = Math.round(tg.value / 2.55) + '%'; }

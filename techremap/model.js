@@ -51,12 +51,12 @@ export function parseStickExpr(text) {
 }
 const stickExprText = (axis, dz, pre, speed) =>
     `${axis} input_state -128000 add dup abs ${dz} gt mul ${pre === null ? '' : pre + ' mul '}${speed} mul`;
-const ADC_EXPR = /^(0xfff8[0-9a-f]{4}) input_state 2048000 sub dup sign swap abs 50000 sub relu mul (-?\d+) mul 128000 add 0 255000 clamp$/;
-const adcExprText = (axis, gain) => `${axis} input_state 2048000 sub dup sign swap abs 50000 sub relu mul ${gain} mul 128000 add 0 255000 clamp`;
+const ADC_EXPR = /^(0xfff8[0-9a-f]{4}) input_state 2048000 sub dup sign swap abs (\d+) sub relu mul (-?\d+) mul 128000 add 0 255000 clamp$/;
+const adcExprText = (axis, gain, dz = 50000) => `${axis} input_state 2048000 sub dup sign swap abs ${dz} sub relu mul ${gain} mul 128000 add 0 255000 clamp`;
 function adcOf(cfg, usage) {
     const i = low(usage) - 1;
     const m = page(usage) === EXPR_PAGE && cfg.expressions && i >= 0 ? ADC_EXPR.exec((cfg.expressions[i] || '').trim().replace(/\s+/g, ' ')) : null;
-    return m ? { axis: m[1], gain: Number(m[2]) } : null;
+    return m ? { axis: m[1], dz: Number(m[2]), gain: Number(m[3]) } : null;
 }
 // The physical input behind a source: an ADC conditioning expression counts as its raw ADC.
 const rawOf = (cfg, usage) => { const a = adcOf(cfg, usage); return a ? a.axis : usage; };
@@ -317,6 +317,42 @@ export function speed(cfg, control) {
     const m = own(cfg, control, 0)[0];
     if (!m) return null;
     return control.kind === 'expr' ? exprOf(cfg, m.source_usage).speed : Math.abs(m.scaling);
+}
+
+// ── inverting and tuning analog (ADC) joystick axes ─────────────────────────
+// Only for joysticks on the board's own analog inputs. Target i of the control
+// is flipped relative to the board's normal direction for that axis.
+const normalGain = (control, i) => (control.kind === 'axis' ? control.targets[0].u === '0x00010031' : i === 1) ? adcSigns.y : adcSigns.x;
+export function inverted(cfg, control, i) {
+    const m = own(cfg, control, i)[0], a = m && adcOf(cfg, m.source_usage);
+    return !!a && Math.sign(a.gain) !== Math.sign(normalGain(control, i));
+}
+// true when the control is driven by an analog input (so the options apply)
+export const isAdcControl = (cfg, control) => adcTuning(cfg, control) !== null;
+export function setInverted(cfg, control, i, flag) {
+    if (inverted(cfg, control, i) === flag) return;
+    own(cfg, control, i).forEach(m => {
+        const a = adcOf(cfg, m.source_usage);
+        if (a) m.source_usage = exprSlot(cfg, adcExprText(a.axis, -a.gain, a.dz), true) || m.source_usage;
+    });
+    sweepExpressions(cfg);
+}
+// Gain (always positive) and dead zone of an ADC stick control, or null.
+export function adcTuning(cfg, control) {
+    for (let i = 0; i < entries(control).length; i++) {
+        const m = own(cfg, control, i)[0], a = m && adcOf(cfg, m.source_usage);
+        if (a) return { gain: Math.abs(a.gain), dz: a.dz };
+    }
+    return null;
+}
+export function setAdcTuning(cfg, control, change) {
+    entries(control).forEach((_, i) => own(cfg, control, i).forEach(m => {
+        const a = adcOf(cfg, m.source_usage);
+        if (!a) return;
+        const gain = (change.gain ?? Math.abs(a.gain)) * Math.sign(a.gain || 1);
+        m.source_usage = exprSlot(cfg, adcExprText(a.axis, gain, change.dz ?? a.dz), true) || m.source_usage;
+    }));
+    sweepExpressions(cfg);
 }
 export function deadzone(cfg, control) {
     const m = control.kind === 'expr' ? own(cfg, control, 0)[0] : null;
