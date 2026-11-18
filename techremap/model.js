@@ -31,7 +31,11 @@ export function isAnalog(usage) {
 // [x, y] of the stick this axis belongs to, or null
 // Boards with their own analog inputs add pairs here: [x, y] (see setStickPairs).
 let extraPairs = [];
-export const setStickPairs = pairs => { extraPairs = pairs || []; };
+// Raw ADC inputs are 12-bit and need centring, a dead zone and gain before they make a
+// good stick (same recipe as HID Remapper's own ADC joystick example). `signs` gives the
+// gain of the X and Y output; its sign says whether that axis is flipped.
+let adcSigns = { x: 100, y: -100 };
+export const setStickPairs = (pairs, signs) => { extraPairs = pairs || []; adcSigns = signs || { x: 100, y: -100 }; };
 export const stickPair = usage => STICK_PAIRS.concat(extraPairs).find(p => p.includes(usage)) || null;
 
 // ── joystick -> cursor/scroll ────────────────────────────────────────────────
@@ -47,6 +51,15 @@ export function parseStickExpr(text) {
 }
 const stickExprText = (axis, dz, pre, speed) =>
     `${axis} input_state -128000 add dup abs ${dz} gt mul ${pre === null ? '' : pre + ' mul '}${speed} mul`;
+const ADC_EXPR = /^(0xfff8[0-9a-f]{4}) input_state 2048000 sub dup sign swap abs 50000 sub relu mul (-?\d+) mul 128000 add 0 255000 clamp$/;
+const adcExprText = (axis, gain) => `${axis} input_state 2048000 sub dup sign swap abs 50000 sub relu mul ${gain} mul 128000 add 0 255000 clamp`;
+function adcOf(cfg, usage) {
+    const i = low(usage) - 1;
+    const m = page(usage) === EXPR_PAGE && cfg.expressions && i >= 0 ? ADC_EXPR.exec((cfg.expressions[i] || '').trim().replace(/\s+/g, ' ')) : null;
+    return m ? { axis: m[1], gain: Number(m[2]) } : null;
+}
+// The physical input behind a source: an ADC conditioning expression counts as its raw ADC.
+const rawOf = (cfg, usage) => { const a = adcOf(cfg, usage); return a ? a.axis : usage; };
 const exprUsage = i => hex((EXPR_PAGE << 16) | (i + 1));
 function exprOf(cfg, usage) {
     const i = low(usage) - 1;
@@ -64,7 +77,7 @@ function exprSlot(cfg, text, create) {
 // Drop joystick expressions nothing points at any more.
 function sweepExpressions(cfg) {
     (cfg.expressions || []).forEach((e, i) => {
-        if (parseStickExpr(e) && !cfg.mappings.some(m => m.source_usage === exprUsage(i))) cfg.expressions[i] = '';
+        if ((parseStickExpr(e) || adcOf(cfg, exprUsage(i))) && !cfg.mappings.some(m => m.source_usage === exprUsage(i))) cfg.expressions[i] = '';
     });
 }
 
@@ -109,8 +122,7 @@ function matches(cfg, control, i, m) {
     const e = entries(control)[i];
     if (m.target_usage !== e.u) return false;
     switch (control.kind) {
-        case 'stick': return isAnalog(m.source_usage);
-        case 'axis': return isAnalog(m.source_usage);
+        case 'stick': case 'axis': return isAnalog(rawOf(cfg, m.source_usage));
         case 'dir': return isDigital(m.source_usage) && (m.scaling >= DIR_MID) === (e.d >= DIR_MID);
         case 'rel': return isDigital(m.source_usage) && Math.sign(m.scaling) === control.sign;
         case 'expr': { const x = exprOf(cfg, m.source_usage); return !!x && x.pre === (e.pre ?? null); }
@@ -121,6 +133,8 @@ const own = (cfg, control, i) => cfg.mappings.filter(m => matches(cfg, control, 
 
 // What kind of input a control takes. Returns null if `source` fits, else a reason.
 export function rejects(control, source, cfg) {
+    if (control.kind === 'axis' && page(source) === 0xfff8 && !cfg.expressions.some(e => !(e || '').trim())
+        && !exprSlot(cfg, adcExprText(source, adcSigns.x), false) && !exprSlot(cfg, adcExprText(source, adcSigns.y), false)) return 'no-slot';
     if ((control.kind === 'stick' || control.kind === 'expr' || control.kind === 'axis') && !isAnalog(source)) return 'stick-needs-stick';
     if (control.kind === 'expr') {
         const texts = exprTexts(cfg, control, source);
@@ -138,6 +152,12 @@ function exprTexts(cfg, control, source) {
 // The inputs that feed each target of the control when `source` is assigned.
 function sourcesFor(cfg, control, source, create = true) {
     if (control.kind === 'expr') return exprTexts(cfg, control, source).map(t => exprSlot(cfg, t, create));
+    if (control.kind === 'stick' && page(source) === 0xfff8) {
+        const pair = stickPair(source) || [source];
+        return pair.map((raw, i) => exprSlot(cfg, adcExprText(raw, i ? adcSigns.y : adcSigns.x), create));
+    }
+    if (control.kind === 'axis' && page(source) === 0xfff8)
+        return [exprSlot(cfg, adcExprText(source, control.targets[0].u === '0x00010031' ? adcSigns.y : adcSigns.x), create)];
     if (control.kind !== 'stick') return entries(control).map(() => source);
     const pair = stickPair(source);
     return pair ? pair : [source];       // an odd axis only drives X
@@ -151,8 +171,9 @@ function scalingFor(control, i, source) {
 }
 // Label input for a mapping of this control: sticks are named by their X axis.
 function canonical(cfg, control, m) {
+    if (control.kind === 'axis') return rawOf(cfg, m.source_usage);
     if (control.kind !== 'stick' && control.kind !== 'expr') return m.source_usage;
-    const axis = control.kind === 'expr' ? exprOf(cfg, m.source_usage).axis : m.source_usage;
+    const axis = control.kind === 'expr' ? exprOf(cfg, m.source_usage).axis : rawOf(cfg, m.source_usage);
     const pair = stickPair(axis);
     return pair ? pair[0] : axis;
 }
@@ -160,8 +181,8 @@ function canonical(cfg, control, m) {
 // Which physical input a source is. The two axes of a stick count as one input,
 // also when they come in through a joystick expression, so a stick does one thing per layer.
 function inputKey(cfg, usage) {
-    const x = exprOf(cfg, usage), pair = stickPair(x ? x.axis : usage);
-    return pair ? 'stick:' + pair[0] : usage;
+    const x = exprOf(cfg, usage), pair = stickPair(x ? x.axis : rawOf(cfg, usage));
+    return pair ? 'stick:' + pair[0] : rawOf(cfg, usage);
 }
 const sameInput = (cfg, a, b) => a === b || inputKey(cfg, a) === inputKey(cfg, b);
 

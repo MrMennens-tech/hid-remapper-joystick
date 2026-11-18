@@ -233,11 +233,15 @@ test('two inputs can drive the same control (co-pilot)', () => {
 test('analog inputs of a board form a stick pair: one capture maps both axes', () => {
     const c = cfg();
     const LS = { kind: 'stick', axes: ['0x00010030', '0x00010031'] };
-    M.setStickPairs([['0xfff80002', '0xfff80000']]);      // X on analog 3, Y on analog 1
+    M.setStickPairs([['0xfff80002', '0xfff80000']], { x: -100, y: 100 });      // X on analog 3, Y on analog 1
     M.assign(c, LS, 0, '0xfff80000');                      // moved the Y input
-    assert.deepEqual(c.mappings.map(m => [m.source_usage, m.target_usage]),
-        [['0xfff80002', '0x00010030'], ['0xfff80000', '0x00010031']]);
+    assert.deepEqual(c.mappings.map(m => m.target_usage), ['0x00010030', '0x00010031']);
+    assert.match(c.expressions[0], /^0xfff80002 input_state 2048000 sub .* -100 mul 128000 add 0 255000 clamp$/);
+    assert.match(c.expressions[1], /^0xfff80000 input_state 2048000 sub .* 100 mul 128000 add 0 255000 clamp$/);
     assert.deepEqual(M.chips(c, LS).map(x => x.source), ['0xfff80002']);
+    M.removeSource(c, LS, 0, '0xfff80002');
+    assert.equal(c.mappings.length, 0);
+    assert.equal(c.expressions.filter(e => e).length, 0);
     M.setStickPairs([]);
 });
 
@@ -248,8 +252,7 @@ test('a single analog input can drive one stick axis on its own', () => {
     assert.equal(M.rejects(AX, J1), 'stick-needs-stick');
     M.assign(c, AX, 0, '0xfff80002');
     M.assign(c, AY, 0, '0xfff80000');
-    assert.deepEqual(c.mappings.map(m => [m.source_usage, m.target_usage]),
-        [['0xfff80002', '0x00010030'], ['0xfff80000', '0x00010031']]);
+    assert.deepEqual(c.mappings.map(m => m.target_usage), ['0x00010030', '0x00010031']);
     assert.deepEqual(M.chips(c, AX).map(x => x.source), ['0xfff80002']);
     assert.deepEqual(M.chips(c, AY).map(x => x.source), ['0xfff80000']);
 });
