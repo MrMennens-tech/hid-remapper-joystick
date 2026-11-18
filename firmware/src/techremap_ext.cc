@@ -18,10 +18,18 @@ struct __attribute__((packed)) tr_persist_t {
     char pin_names[TECHREMAP_NPINS][TECHREMAP_PIN_NAME_LEN];
 };
 
+// A board can start with a strip or LED already set up (see its header in src/boards).
+#ifndef TECHREMAP_DEFAULT_STRIP_PIN
+#define TECHREMAP_DEFAULT_STRIP_PIN TECHREMAP_NO_PIN
+#endif
+#ifndef TECHREMAP_DEFAULT_STRIP_COUNT
+#define TECHREMAP_DEFAULT_STRIP_COUNT 0
+#endif
+
 static tr_led_t led = {
     .brightness = 64,
-    .strip_pin = TECHREMAP_NO_PIN,
-    .strip_count = 0,
+    .strip_pin = TECHREMAP_DEFAULT_STRIP_PIN,
+    .strip_count = TECHREMAP_DEFAULT_STRIP_COUNT,
     .strip_order = 0,
     .layer_colors = { 0x000000FF, 0x0000FF00, 0x00FF0000, 0x00FFFF00 },
 };

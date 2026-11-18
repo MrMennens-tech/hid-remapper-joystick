@@ -24,6 +24,8 @@ elseif(PICO_BOARD STREQUAL "remapper_v8")
 add_compile_definitions(TECHREMAP_BOARD_ID=5)
 elseif(PICO_BOARD STREQUAL "feather_host")
 add_compile_definitions(TECHREMAP_BOARD_ID=6)
+elseif(PICO_BOARD STREQUAL "remapper_v8_3adc")
+add_compile_definitions(TECHREMAP_BOARD_ID=7)
 else()
 add_compile_definitions(TECHREMAP_BOARD_ID=0)
 endif()
@@ -96,7 +98,7 @@ target_link_libraries(remapper
     hardware_pio
     hardware_dma
     hardware_flash
-    $<$<STREQUAL:${PICO_BOARD},remapper_v8>:hardware_adc>
+    $<$<OR:$<STREQUAL:${PICO_BOARD},remapper_v8>,$<STREQUAL:${PICO_BOARD},remapper_v8_3adc>>:hardware_adc>
     tinyusb_device
     tinyusb_host
     tinyusb_board

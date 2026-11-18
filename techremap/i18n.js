@@ -45,6 +45,11 @@ const EN = {
     'ingedrukt': 'pressed',
     'los': 'released',
 
+    'HID Remapper-bord v8, 3 analoge ingangen': 'HID Remapper board v8, 3 analog inputs',
+    'Aangepaste v8 met GPIO26, 27 en 28 als analoog en een NeoPixel (standaard op GP16, te wijzigen onder Bord inrichten).':
+        'Modified v8 with GPIO26, 27 and 28 as analog and a NeoPixel (GP16 by default, changeable under Board setup).',
+    'Analoge ingang {n}': 'Analog input {n}',
+
     // credits
     'TechRemap is gebouwd op': 'TechRemap is built on',
     'van Jacek Fedoryński (jfedor2). Hij schreef de firmware waar alles op draait; TechRemap voegt een eenvoudigere bediening, lampjes en jacks toe.':

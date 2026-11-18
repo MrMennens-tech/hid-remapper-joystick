@@ -6,7 +6,7 @@ import { DEVICES, DEVICE_ORDER, PANEL_W, keyName } from './pads.js?v=2';
 import { t, tKey, setLang, lang } from './i18n.js?v=2';
 
 const CLASSIC_URL = 'https://www.remapper.org/config/';   // HID Remapper's own tool
-const BOARD_NAMES = { 1: 'Waveshare RP2040-Zero', 2: 'Waveshare RP2350-USB-A', 3: 'HID Remapper-bord v1, v2, v5 of v6', 4: 'HID Remapper-bord v7', 5: 'HID Remapper-bord v8', 6: 'HID Remapper-bord v3 of v4' };
+const BOARD_NAMES = { 1: 'Waveshare RP2040-Zero', 2: 'Waveshare RP2350-USB-A', 3: 'HID Remapper-bord v1, v2, v5 of v6', 4: 'HID Remapper-bord v7', 5: 'HID Remapper-bord v8', 6: 'HID Remapper-bord v3 of v4', 7: 'HID Remapper-bord v8, 3 analoge ingangen' };
 // boards with two chips: the second (B side) gets its firmware from the first
 const DUAL_BOARDS = [3, 4];
 const $ = id => document.getElementById(id);
@@ -41,6 +41,7 @@ function sourceName(u, asStick = false) {
     if (page === 0x0002 && low === 0xc4) return t('Gaspedaal');
     if (page === 0x0002 && low === 0xc5) return t('Rempedaal');
     if (page === 0xfff3) return t('Expressie {n}', { n: low });
+    if (page === 0xfff8) return t('Analoge ingang {n}', { n: low + 1 });
     return u;
 }
 function targetName(u) {
@@ -92,8 +93,11 @@ function onInput(usage, value) {
     if (S.tab === 'test') scheduleTest();
     if (M.isAnalog(usage)) {
         if (!(usage in S.rest)) { S.rest[usage] = value; return; }
+        // 8-bit axes report 0-255, scaled HID axes thousands, and the board's own analog
+        // inputs (page 0xfff8) raw 12-bit values from 0 to 4095
+        const adc = (parseInt(usage, 16) >>> 16) === 0xfff8;
         const big = Math.abs(S.rest[usage]) > 1023 || Math.abs(value) > 1023;
-        const moved = Math.abs(value - S.rest[usage]) >= (big ? 8000 : 40);
+        const moved = Math.abs(value - S.rest[usage]) >= (adc ? 300 : big ? 8000 : 40);
         fired = moved && !S.active.has(usage);
         moved ? S.active.set(usage, now) : S.active.delete(usage);
     } else {
@@ -339,6 +343,7 @@ const FIRMWARE = [
     { file: 'firmware/techremap_board_v1_v2_v5_v6.uf2', name: 'HID Remapper-bord v1, v2, v5 en v6', note: 'Bord met twee chips. Na het flashen: Instellingen → “Flash de tweede chip”.' },
     { file: 'firmware/techremap_board_v7.uf2', name: 'HID Remapper-bord v7', note: 'Bord met twee chips. Na het flashen: Instellingen → “Flash de tweede chip”.' },
     { file: 'firmware/techremap_board_v8.uf2', name: 'HID Remapper-bord v8', note: 'Bord met één jack voor analoge invoer.' },
+    { file: 'firmware/techremap_board_v8_3adc.uf2', name: 'HID Remapper-bord v8, 3 analoge ingangen', note: 'Aangepaste v8 met GPIO26, 27 en 28 als analoog en een NeoPixel (standaard op GP16, te wijzigen onder Bord inrichten).' },
 ];
 function firmwareHTML() {
     const T = x => esc(t(x));
