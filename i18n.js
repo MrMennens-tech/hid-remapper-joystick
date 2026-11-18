@@ -60,6 +60,12 @@ const EN = {
     'Omkeren links/rechts': 'Invert left/right',
     'Omkeren omhoog/omlaag': 'Invert up/down',
 
+    'Midden': 'Centre',
+    'Laat de stick los en klik. Dan wordt de rustpositie het midden.': 'Let go of the stick and click. Its resting position becomes the centre.',
+    'Stel midden in': 'Set centre',
+    'Nog geen waarde ontvangen. Beweeg de stick even en probeer het opnieuw.': 'No value received yet. Move the stick a little and try again.',
+    'Midden ingesteld. Sla op op het bordje.': 'Centre set. Save to the board.',
+
     // credits
     'TechRemap is gebouwd op': 'TechRemap is built on',
     'van Jacek Fedoryński (jfedor2). Hij schreef de firmware waar alles op draait; TechRemap voegt een eenvoudigere bediening, lampjes en jacks toe.':
