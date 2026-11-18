@@ -428,7 +428,7 @@ async function connect() {
         const info = await Dev.connectDevice();
         S.cfg = M.normalize(await Dev.loadConfig());
         S.ext = await Dev.loadExt();
-        M.setStickPairs(S.ext ? ANALOG_PAIRS[S.ext.board] || [] : []);
+        M.setStickPairs(S.ext ? ANALOG_PAIRS[S.ext.board] || [] : [], S.ext && S.ext.board === 7 ? { x: -100, y: 100 } : null);
         S.connected = true; S.demo = false; S.dirty = false;
         S.deviceName = info.name || 'HID Remapper';
         S.selected = null; S.listen = S.pending = S.last = S.listenSwitch = null;
