@@ -29,7 +29,10 @@ export function isAnalog(usage) {
     return (p === 0x0001 && l >= 0x30 && l <= 0x38) || (p === 0x0002 && (l === 0xc4 || l === 0xc5)) || p === 0xfff8;
 }
 // [x, y] of the stick this axis belongs to, or null
-export const stickPair = usage => STICK_PAIRS.find(p => p.includes(usage)) || null;
+// Boards with their own analog inputs add pairs here: [x, y] (see setStickPairs).
+let extraPairs = [];
+export const setStickPairs = pairs => { extraPairs = pairs || []; };
+export const stickPair = usage => STICK_PAIRS.concat(extraPairs).find(p => p.includes(usage)) || null;
 
 // ── joystick -> cursor/scroll ────────────────────────────────────────────────
 // A stick rests at 128, so it cannot drive a relative output directly. The
@@ -92,6 +95,7 @@ function addLayer(m, layer) {
 // ── controls ─────────────────────────────────────────────────────────────────
 // kind 'button': targets [{ u, d, a }]   d/a = scaling for a digital/analog input
 // kind 'stick' : axes [x, y]             driven by a joystick, axis for axis
+// kind 'axis'  : targets [{ u }]         one stick axis, driven by one analog input
 // kind 'dir'   : targets [{ u, d }]      one direction of a stick, from a button
 // kind 'rel'   : targets [{ u }], sign   one direction of cursor/scroll, from a button
 // kind 'expr'  : targets [{ u, ax, pre }] cursor/scroll from a joystick, through an expression
@@ -106,6 +110,7 @@ function matches(cfg, control, i, m) {
     if (m.target_usage !== e.u) return false;
     switch (control.kind) {
         case 'stick': return isAnalog(m.source_usage);
+        case 'axis': return isAnalog(m.source_usage);
         case 'dir': return isDigital(m.source_usage) && (m.scaling >= DIR_MID) === (e.d >= DIR_MID);
         case 'rel': return isDigital(m.source_usage) && Math.sign(m.scaling) === control.sign;
         case 'expr': { const x = exprOf(cfg, m.source_usage); return !!x && x.pre === (e.pre ?? null); }
@@ -116,7 +121,7 @@ const own = (cfg, control, i) => cfg.mappings.filter(m => matches(cfg, control, 
 
 // What kind of input a control takes. Returns null if `source` fits, else a reason.
 export function rejects(control, source, cfg) {
-    if ((control.kind === 'stick' || control.kind === 'expr') && !isAnalog(source)) return 'stick-needs-stick';
+    if ((control.kind === 'stick' || control.kind === 'expr' || control.kind === 'axis') && !isAnalog(source)) return 'stick-needs-stick';
     if (control.kind === 'expr') {
         const texts = exprTexts(cfg, control, source);
         const missing = new Set(texts.filter(t => !exprSlot(cfg, t, false))).size;
@@ -139,7 +144,7 @@ function sourcesFor(cfg, control, source, create = true) {
 }
 function scalingFor(control, i, source) {
     const e = entries(control)[i];
-    if (control.kind === 'stick' || control.kind === 'expr') return 1000;
+    if (control.kind === 'stick' || control.kind === 'expr' || control.kind === 'axis') return 1000;
     if (control.kind === 'rel') return control.sign * (control.speed || 500);
     if (control.kind === 'dir') return e.d;
     return isAnalog(source) ? (e.a ?? 1000) : (e.d ?? 1000);
