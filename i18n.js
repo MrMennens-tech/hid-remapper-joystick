@@ -56,6 +56,10 @@ const EN = {
     'Rechter stick as links/rechts': 'Right stick axis left/right',
     'Rechter stick as omhoog/omlaag': 'Right stick axis up/down',
 
+    'Gevoeligheid': 'Sensitivity',
+    'Omkeren links/rechts': 'Invert left/right',
+    'Omkeren omhoog/omlaag': 'Invert up/down',
+
     // credits
     'TechRemap is gebouwd op': 'TechRemap is built on',
     'van Jacek Fedoryński (jfedor2). Hij schreef de firmware waar alles op draait; TechRemap voegt een eenvoudigere bediening, lampjes en jacks toe.':
