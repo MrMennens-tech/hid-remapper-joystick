@@ -273,3 +273,17 @@ test('analog stick can be tuned and inverted per axis', () => {
     assert.equal(c.expressions.filter(e => e).length, 2);
     M.setStickPairs([]);
 });
+
+test('centre of an analog stick can be set from its resting value', () => {
+    const c = cfg();
+    const LS = { kind: 'stick', axes: ['0x00010030', '0x00010031'] };
+    M.setStickPairs([['0xfff80002', '0xfff80000']], { x: -100, y: 100 });
+    M.assign(c, LS, 0, '0xfff80000');
+    assert.equal(M.setAdcNeutral(c, LS, { '0xfff80002': 2301, '0xfff80000': 1950 }), 2);
+    assert.match(c.expressions.join('|'), /0xfff80002 input_state 2301000 sub/);
+    assert.match(c.expressions.join('|'), /0xfff80000 input_state 1950000 sub/);
+    assert.deepEqual(M.adcAxes(c, LS).sort(), ['0xfff80000', '0xfff80002']);
+    M.setInverted(c, LS, 0, true);
+    assert.match(c.expressions.join('|'), /2301000 sub/);
+    M.setStickPairs([]);
+});

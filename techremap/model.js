@@ -51,12 +51,12 @@ export function parseStickExpr(text) {
 }
 const stickExprText = (axis, dz, pre, speed) =>
     `${axis} input_state -128000 add dup abs ${dz} gt mul ${pre === null ? '' : pre + ' mul '}${speed} mul`;
-const ADC_EXPR = /^(0xfff8[0-9a-f]{4}) input_state 2048000 sub dup sign swap abs (\d+) sub relu mul (-?\d+) mul 128000 add 0 255000 clamp$/;
-const adcExprText = (axis, gain, dz = 50000) => `${axis} input_state 2048000 sub dup sign swap abs ${dz} sub relu mul ${gain} mul 128000 add 0 255000 clamp`;
+const ADC_EXPR = /^(0xfff8[0-9a-f]{4}) input_state (\d+) sub dup sign swap abs (\d+) sub relu mul (-?\d+) mul 128000 add 0 255000 clamp$/;
+const adcExprText = (axis, gain, dz = 50000, neutral = 2048000) => `${axis} input_state ${neutral} sub dup sign swap abs ${dz} sub relu mul ${gain} mul 128000 add 0 255000 clamp`;
 function adcOf(cfg, usage) {
     const i = low(usage) - 1;
     const m = page(usage) === EXPR_PAGE && cfg.expressions && i >= 0 ? ADC_EXPR.exec((cfg.expressions[i] || '').trim().replace(/\s+/g, ' ')) : null;
-    return m ? { axis: m[1], dz: Number(m[2]), gain: Number(m[3]) } : null;
+    return m ? { axis: m[1], neutral: Number(m[2]), dz: Number(m[3]), gain: Number(m[4]) } : null;
 }
 // The physical input behind a source: an ADC conditioning expression counts as its raw ADC.
 const rawOf = (cfg, usage) => { const a = adcOf(cfg, usage); return a ? a.axis : usage; };
@@ -333,7 +333,7 @@ export function setInverted(cfg, control, i, flag) {
     if (inverted(cfg, control, i) === flag) return;
     own(cfg, control, i).forEach(m => {
         const a = adcOf(cfg, m.source_usage);
-        if (a) m.source_usage = exprSlot(cfg, adcExprText(a.axis, -a.gain, a.dz), true) || m.source_usage;
+        if (a) m.source_usage = exprSlot(cfg, adcExprText(a.axis, -a.gain, a.dz, a.neutral), true) || m.source_usage;
     });
     sweepExpressions(cfg);
 }
@@ -345,12 +345,29 @@ export function adcTuning(cfg, control) {
     }
     return null;
 }
+// Take the stick's resting position as its middle. `raw` maps a raw ADC usage to its
+// current 12-bit value. Returns how many axes were set.
+export function setAdcNeutral(cfg, control, raw) {
+    let n = 0;
+    entries(control).forEach((_, i) => own(cfg, control, i).forEach(m => {
+        const a = adcOf(cfg, m.source_usage), v = a && raw[a.axis];
+        if (v === undefined || v === null) return;
+        m.source_usage = exprSlot(cfg, adcExprText(a.axis, a.gain, a.dz, Math.round(v) * 1000), true) || m.source_usage;
+        n++;
+    }));
+    sweepExpressions(cfg);
+    return n;
+}
+// The raw ADC inputs behind a control (for reading their resting value).
+export function adcAxes(cfg, control) {
+    return entries(control).flatMap((_, i) => own(cfg, control, i).map(m => adcOf(cfg, m.source_usage)).filter(Boolean).map(a => a.axis));
+}
 export function setAdcTuning(cfg, control, change) {
     entries(control).forEach((_, i) => own(cfg, control, i).forEach(m => {
         const a = adcOf(cfg, m.source_usage);
         if (!a) return;
         const gain = (change.gain ?? Math.abs(a.gain)) * Math.sign(a.gain || 1);
-        m.source_usage = exprSlot(cfg, adcExprText(a.axis, gain, change.dz ?? a.dz), true) || m.source_usage;
+        m.source_usage = exprSlot(cfg, adcExprText(a.axis, gain, change.dz ?? a.dz, a.neutral), true) || m.source_usage;
     }));
     sweepExpressions(cfg);
 }

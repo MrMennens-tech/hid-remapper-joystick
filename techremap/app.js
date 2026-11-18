@@ -273,6 +273,7 @@ function renderDetail(control) {
         html += slider('adc-dz', 'Dode zone', 0, 400, adc.dz / 1000, String(adc.dz / 1000));
         const names = control.kind === 'axis' ? [control.targets[0].u === '0x00010031' ? 'Omkeren omhoog/omlaag' : 'Omkeren links/rechts']
             : ['Omkeren links/rechts', 'Omkeren omhoog/omlaag'];
+        html += `<div class="detail-row"><span class="lname">${esc(t('Midden'))}</span><span class="val muted">${esc(t('Laat de stick los en klik. Dan wordt de rustpositie het midden.'))}</span><span class="acts"><button type="button" class="btn" data-center="1">${esc(t('Stel midden in'))}</button></span></div>`;
         names.forEach((n, i) => {
             html += `<div class="detail-row"><span class="lname">${esc(t(n))}</span><span class="val"><input type="checkbox" data-invert="${i}" ${M.inverted(S.cfg, control, i) ? 'checked' : ''} aria-label="${esc(t(n))}"></span><span class="acts"></span></div>`;
         });
@@ -638,6 +639,18 @@ function onInputEvent(e) {
     applyLayerColors();
     previewLed();
 }
+function onCenterClick(e) {
+    const b = e.target.closest && e.target.closest('[data-center]');
+    if (!b || !S.cfg) return;
+    const control = device().controls[S.selected], raw = {};
+    for (const ax of M.adcAxes(S.cfg, control)) { const v = S.values.get(ax); if (v && Date.now() - v.t < 3000) raw[ax] = v.v; }
+    // the monitor only reports changes, so a perfectly still axis may be missing: fall back to its last value
+    for (const ax of M.adcAxes(S.cfg, control)) if (!(ax in raw)) { const v = S.values.get(ax); if (v) raw[ax] = v.v; }
+    const n = M.setAdcNeutral(S.cfg, control, raw);
+    if (!n) { toast(t('Nog geen waarde ontvangen. Beweeg de stick even en probeer het opnieuw.'), true); return; }
+    S.dirty = true; $('save').disabled = false; $('save').textContent = t('Opslaan op bordje');
+    toast(t('Midden ingesteld. Sla op op het bordje.'));
+}
 function onChange(e) {
     const tg = e.target;
     if (!S.cfg) return;
@@ -699,6 +712,7 @@ export function init() {
     showTheme();
     if (!('hid' in navigator)) { $('nohid').hidden = false; $('connect').disabled = true; $('connect2').disabled = true; }
     document.addEventListener('click', onClick);
+    document.addEventListener('click', onCenterClick);
     document.addEventListener('input', onInputEvent);
     document.addEventListener('change', onChange);
     document.addEventListener('keydown', e => {
