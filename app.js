@@ -41,7 +41,7 @@ function sourceName(u, asStick = false) {
     if (page === 0x0002 && low === 0xc4) return t('Gaspedaal');
     if (page === 0x0002 && low === 0xc5) return t('Rempedaal');
     if (page === 0xfff3) return t('Expressie {n}', { n: low });
-    if (page === 0xfff8) return t('Analoge ingang {n}', { n: low + 1 });
+    if (page === 0xfff8) return asStick && M.stickPair(u) ? t('Joystick op de analoge ingangen') : t('Analoge ingang {n}', { n: low + 1 });
     return u;
 }
 function targetName(u) {
@@ -58,6 +58,11 @@ const REASONS = {
     'no-slot': 'Er is geen ruimte meer voor nog een joystick-koppeling. Verwijder eerst een andere, of een expressie in de originele HID Remapper-tool.',
 };
 const stickLike = c => c.kind === 'stick' || c.kind === 'expr';
+// boards that have analog inputs of their own (HID Remapper v8 and the 3-input variant)
+const ANALOG_BOARDS = [5, 7];
+const hasAnalog = () => !!(S.ext && ANALOG_BOARDS.includes(S.ext.board));
+// on the 3-input variant the joystick is X on analog 3 (GPIO28) and Y on analog 1 (GPIO26)
+const ANALOG_PAIRS = { 7: [['0xfff80002', '0xfff80000']] };
 
 // ── changing the config ──────────────────────────────────────────────────────
 function change(text, fn) {
@@ -167,7 +172,7 @@ function chipsHTML(control) {
 }
 
 function renderRemap() {
-    const dev = device(), ctl = dev.controls, scene = dev.scene();
+    const dev = device(), ctl = dev.controls, scene = dev.scene({ axisRows: hasAnalog() });
     S.scene = scene;
     if (!ctl[S.selected]) S.selected = Object.keys(ctl)[0];
     $('device-pill').innerHTML = `<label for="devtype">${esc(t('De pc ziet:'))}</label> ${devtypeSelect('devtype', S.cfg.our_descriptor_number)}`;
@@ -423,6 +428,7 @@ async function connect() {
         const info = await Dev.connectDevice();
         S.cfg = M.normalize(await Dev.loadConfig());
         S.ext = await Dev.loadExt();
+        M.setStickPairs(S.ext ? ANALOG_PAIRS[S.ext.board] || [] : []);
         S.connected = true; S.demo = false; S.dirty = false;
         S.deviceName = info.name || 'HID Remapper';
         S.selected = null; S.listen = S.pending = S.last = S.listenSwitch = null;

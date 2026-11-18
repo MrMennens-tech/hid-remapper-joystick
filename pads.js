@@ -30,9 +30,12 @@ function stickControls(id, name, x, y, click) {
     c[id + '_u'] = { g: '↑', name: name + ' omhoog', kind: 'dir', targets: [{ u: y, d: 0 }] };
     c[id + '_d'] = { g: '↓', name: name + ' omlaag', kind: 'dir', targets: [{ u: y, d: 255000 }] };
     c[id + '_c'] = button(click.g, name + ' indrukken', click.n);
+    // one axis from one analog input, for boards with their own analog inputs
+    c[id + '_ax'] = { g: '↔', name: name + ' as links/rechts', kind: 'axis', targets: [{ u: x }] };
+    c[id + '_ay'] = { g: '↕', name: name + ' as omhoog/omlaag', kind: 'axis', targets: [{ u: y }] };
     return c;
 }
-const STICK_ROWS = id => [id, id + '_l', id + '_r', id + '_u', id + '_d', id + '_c'];
+const STICK_ROWS = (id, axisRows) => [id, id + '_l', id + '_r', id + '_u', id + '_d', id + '_c'].concat(axisRows ? [id + '_ax', id + '_ay'] : []);
 
 // ── gamepads ─────────────────────────────────────────────────────────────────
 const PAD_SPECS = {
@@ -136,7 +139,8 @@ function buildPad(spec) {
     };
     spec.center.forEach(b => { controls[b.id] = { g: b.g, name: b.name, kind: b.kind, targets: b.targets }; });
 
-    function scene() {
+    function scene(opts = {}) {
+        const axisRows = !!opts.axisRows;
         const c = controls;
         const hit = (id, inner) => `<g class="pad-hit" data-id="${id}" tabindex="0" role="button" aria-label="${esc(c[id].name)}">${inner}</g>`;
         const mirror = inner => `<g transform="translate(${2 * CX},0) scale(-1,1)">${inner}</g>`;
@@ -174,7 +178,7 @@ function buildPad(spec) {
             ftop: [fx + 12, fy - o - 12], fright: [fx + o + 12, fy - 12], fbottom: [fx + 12, fy + o - 12], fleft: [fx - o + 12, fy - 12],
         };
         spec.center.forEach(b => { markAt[b.id] = b.rect ? [b.rect[0] + b.rect[2] - 8, b.rect[1] + 8] : [b.at[0] + b.r * 0.8, b.at[1] - b.r * 0.8]; });
-        const stands = { ls: STICK_ROWS('ls'), rs: STICK_ROWS('rs') };
+        const stands = { ls: STICK_ROWS('ls', axisRows), rs: STICK_ROWS('rs', axisRows) };
 
         const panels = [], leaders = [];
         const lead = (d, ex, ey) => leaders.push(`<path class="leader" d="${d}"/><circle class="leader-end" cx="${ex}" cy="${ey}" r="3"/>`);
@@ -198,9 +202,9 @@ function buildPad(spec) {
         panels.push({ title: 'Schouder rechts', ids: ['rt', 'rb'], x: RIGHT_X, y: 62, h: panelH(2) });
         lead(`M${LEFT_X + PANEL_W},113 H${mx(742)}`, mx(742), 113);
         lead(`M${RIGHT_X},113 H742`, 742, 113);
-        const stickL = ['Linker stick', STICK_ROWS('ls'), 'ls'], dpad = ['D-pad', ['du', 'dr', 'dd', 'dl'], 'dpad'];
+        const stickL = ['Linker stick', STICK_ROWS('ls', axisRows), 'ls'], dpad = ['D-pad', ['du', 'dr', 'dd', 'dl'], 'dpad'];
         const yL = column(LEFT_X, -1, off ? [stickL, dpad] : [dpad, stickL]);
-        const yR = column(RIGHT_X, 1, [['Knoppen', ['ftop', 'fright', 'fbottom', 'fleft'], 'face'], ['Rechter stick', STICK_ROWS('rs'), 'rs']]);
+        const yR = column(RIGHT_X, 1, [['Knoppen', ['ftop', 'fright', 'fbottom', 'fleft'], 'face'], ['Rechter stick', STICK_ROWS('rs', axisRows), 'rs']]);
         const cIds = spec.center.map(b => b.id), cy = 486, ch = panelH(cIds.length);
         panels.push({ title: 'Midden', ids: cIds, x: CX - PANEL_W / 2, y: cy, h: ch });
         const br = spec.lead.bracket;

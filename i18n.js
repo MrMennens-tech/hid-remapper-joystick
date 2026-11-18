@@ -50,6 +50,12 @@ const EN = {
         'Modified v8 with GPIO26, 27 and 28 as analog and a NeoPixel (GP16 by default, changeable under Board setup).',
     'Analoge ingang {n}': 'Analog input {n}',
 
+    'Joystick op de analoge ingangen': 'Joystick on the analog inputs',
+    'Linker stick as links/rechts': 'Left stick axis left/right',
+    'Linker stick as omhoog/omlaag': 'Left stick axis up/down',
+    'Rechter stick as links/rechts': 'Right stick axis left/right',
+    'Rechter stick as omhoog/omlaag': 'Right stick axis up/down',
+
     // credits
     'TechRemap is gebouwd op': 'TechRemap is built on',
     'van Jacek Fedoryński (jfedor2). Hij schreef de firmware waar alles op draait; TechRemap voegt een eenvoudigere bediening, lampjes en jacks toe.':
