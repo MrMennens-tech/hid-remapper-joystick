@@ -273,7 +273,7 @@ function renderDetail(control) {
         html += slider('adc-dz', 'Dode zone', 0, 400, adc.dz / 1000, String(adc.dz / 1000));
         const names = control.kind === 'axis' ? [control.targets[0].u === '0x00010031' ? 'Omkeren omhoog/omlaag' : 'Omkeren links/rechts']
             : ['Omkeren links/rechts', 'Omkeren omhoog/omlaag'];
-        html += `<div class="detail-row"><span class="lname">${esc(t('Midden'))}</span><span class="val muted">${esc(t('Laat de stick los en klik. Dan wordt de rustpositie het midden.'))}</span><span class="acts"><button type="button" class="btn" data-center="1">${esc(t('Stel midden in'))}</button></span></div>`;
+        html += `<div class="detail-row"><span class="lname">${esc(t('Midden'))}</span><span class="val muted">${esc(t('Laat de stick los en klik. Dan wordt de rustpositie het midden.'))} <b>${esc(t('Nu:'))} ${M.adcCentres(S.cfg, control).map(c => `${sourceName(c.axis)} ${c.neutral}`).join(' · ')}</b></span><span class="acts"><button type="button" class="btn" data-center="1">${esc(t('Stel midden in'))}</button></span></div>`;
         names.forEach((n, i) => {
             html += `<div class="detail-row"><span class="lname">${esc(t(n))}</span><span class="val"><input type="checkbox" data-invert="${i}" ${M.inverted(S.cfg, control, i) ? 'checked' : ''} aria-label="${esc(t(n))}"></span><span class="acts"></span></div>`;
         });
@@ -649,7 +649,8 @@ function onCenterClick(e) {
     const n = M.setAdcNeutral(S.cfg, control, raw);
     if (!n) { toast(t('Nog geen waarde ontvangen. Beweeg de stick even en probeer het opnieuw.'), true); return; }
     S.dirty = true; $('save').disabled = false; $('save').textContent = t('Opslaan op bordje');
-    toast(t('Midden ingesteld. Sla op op het bordje.'));
+    toast(t('Midden ingesteld op {v}. Sla op op het bordje.', { v: Object.entries(raw).map(([u, v]) => sourceName(u) + ' ' + Math.round(v)).join(' · ') }));
+    renderDetail(control);
 }
 function onChange(e) {
     const tg = e.target;

@@ -66,6 +66,9 @@ const EN = {
     'Nog geen waarde ontvangen. Beweeg de stick even en probeer het opnieuw.': 'No value received yet. Move the stick a little and try again.',
     'Midden ingesteld. Sla op op het bordje.': 'Centre set. Save to the board.',
 
+    'Nu:': 'Now:',
+    'Midden ingesteld op {v}. Sla op op het bordje.': 'Centre set to {v}. Save to the board.',
+
     // credits
     'TechRemap is gebouwd op': 'TechRemap is built on',
     'van Jacek Fedoryński (jfedor2). Hij schreef de firmware waar alles op draait; TechRemap voegt een eenvoudigere bediening, lampjes en jacks toe.':

@@ -345,6 +345,11 @@ export function adcTuning(cfg, control) {
     }
     return null;
 }
+// The centre each analog axis of the control currently uses: [{ axis, neutral }] (neutral in raw steps).
+export function adcCentres(cfg, control) {
+    return entries(control).flatMap((_, i) => own(cfg, control, i).map(m => adcOf(cfg, m.source_usage)).filter(Boolean))
+        .map(a => ({ axis: a.axis, neutral: a.neutral / 1000 }));
+}
 // Take the stick's resting position as its middle. `raw` maps a raw ADC usage to its
 // current 12-bit value. Returns how many axes were set.
 export function setAdcNeutral(cfg, control, raw) {
