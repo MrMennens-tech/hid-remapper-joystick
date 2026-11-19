@@ -1,9 +1,9 @@
 // TechRemap - the screen. State lives in `S`; every change ends in render().
 
-import * as Dev from './device.js?v=2';
-import * as M from './model.js?v=2';
-import { DEVICES, DEVICE_ORDER, PANEL_W, keyName } from './pads.js?v=2';
-import { t, tKey, setLang, lang } from './i18n.js?v=2';
+import * as Dev from './device.js?v=3';
+import * as M from './model.js?v=3';
+import { DEVICES, DEVICE_ORDER, PANEL_W, keyName } from './pads.js?v=3';
+import { t, tKey, setLang, lang } from './i18n.js?v=3';
 
 const CLASSIC_URL = 'https://www.remapper.org/config/';   // HID Remapper's own tool
 const BOARD_NAMES = { 1: 'Waveshare RP2040-Zero', 2: 'Waveshare RP2350-USB-A', 3: 'HID Remapper-bord v1, v2, v5 of v6', 4: 'HID Remapper-bord v7', 5: 'HID Remapper-bord v8', 6: 'HID Remapper-bord v3 of v4', 7: 'HID Remapper-bord v8, 3 analoge ingangen' };
@@ -487,7 +487,7 @@ function renderTest() {
             if (c.source === u || (M.stickPair(c.source) || []).includes(u)) targets.push({ l: c.layer, name: tKey(ctl[id].name) });
         });
         const meter = analog
-            ? `<span class="meter"><i style="left:${pct}%"></i></span><span class="num">${x.v}</span>`
+            ? `<span class="mwrap"><span class="meter"><i style="left:${pct}%"></i></span><span class="num">${x.v}</span></span>`
             : `<span class="state${on ? ' on' : ''}">${esc(t(on ? 'ingedrukt' : 'los'))}</span>`;
         return `<div class="test-row${on ? ' on' : ''}${now - x.t > 5000 ? ' stale' : ''}"><span class="tname">${esc(sourceName(u))}</span>${meter}` +
             `<span class="arrow">→</span><span class="chips">${targets.length ? targets.map(x => chip(x.l, x.name)).join('') : `<span class="muted">${esc(t('Niet toegewezen'))}</span>`}</span></div>`;
